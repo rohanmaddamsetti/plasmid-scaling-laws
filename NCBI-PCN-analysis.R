@@ -75,7 +75,6 @@ NCBI.chromosome.plasmid.copy.number.data <- read.csv("../results/NCBI-replicon_c
     ## remove outlier points with very low coverage.
 ##    filter(CopyNumber > 0.5)
 
-
 ## Make a column representing plasmid length normalized by chromosome length in each AnnotationAccession
 
 # Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
