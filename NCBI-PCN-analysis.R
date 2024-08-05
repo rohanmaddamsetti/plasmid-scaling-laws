@@ -13,6 +13,9 @@ library(ggrepel)
 library(data.table)
 
 
+################################################################################
+## functions and global variables.
+
 ggplotRegression <- function(dat, xvar, yvar){
     ## code from:
     ## https://community.rstudio.com/t/annotate-ggplot2-with-regression-equation-and-r-squared/6112/7  
@@ -51,19 +54,485 @@ antibiotic.keywords <- paste(chloramphenicol.keywords, tetracycline.keywords, ML
     beta.lactam.keywords, glycopeptide.keywords, polypeptide.keywords, diaminopyrimidine.keywords,
     sulfonamide.keywords, quinolone.keywords, aminoglycoside.keywords, macrolide.keywords, antimicrobial.keywords, sep="|")
 
+## require that PCN estimates are supported by a minimum of MIN_READ_COUNT reads per replicon.
+MIN_READ_COUNT <- 10000
+
+################################################################################
+## get the PIRA PCN estimates. These are the main data for this paper.
+
+## SMALL TODO: In PCN_pipeline.py, make sure the ThemistoID_right column is dropped
+## and not written out to this CSV file.
+PIRA.PCN.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
+    rename(
+        PIRACopyNumber = PIRA_CopyNumberEstimate,
+        PIRAReadCount = ReadCount,
+        PIRASequencingCoverage = SequencingCoverage,
+        PIRALongestRepliconCoverage = LongestRepliconCoverage) %>%
+    filter(SeqType == "plasmid") %>%
+    filter(PIRAReadCount > MIN_READ_COUNT)
+
+
+################################################################################
+## get concrete statistics for how many genome papers report plasmid copy number:
+
+## sample 50 genomes with plasmids at random, and examine how many papers report PCN.
+## pick genomes with some plasmid with PCN > 10, so that we are focusing on genomes where people
+## might actually want to report PCN.
+## for reproducibility, use random seed = 60, which I generated using random.org (see screenshot in ../data).
+
+genomes.to.sample.from.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    filter(PIRACopyNumber > 10) %>%
+    select(AnnotationAccession) %>%
+    distinct()
+
+## set the random seed for reproducibility.
+set.seed(60)
+
+## make a vector of the chosen genomes
+chosen.genomes <- sample(
+    x = genomes.to.sample.from.PIRA.PCN.estimates$AnnotationAccession,
+    replace = FALSE,
+    size = 50,
+    )
+
+## turn into a data frame
+chosen.genomes.df <- data.frame(AnnotationAccession = chosen.genomes)
+## and write to file.
+write.csv(chosen.genomes.df, "../results/Fifty-random-genomes-with-multicopy-plasmids.csv",
+          row.names = FALSE, quote=FALSE)
+
+################################################################################
+## before we analyze the PIRA estimates in depth, let's do some benchmarking to examine how PIRA
+## compares to other methods for PCN estimation.
+
+## First set of benchmarking experiments comparisons to alignment software.
+## 1) PIRA versus minimap2 estimates.
+## 2) PIRA versus breseq estimates.
+
+## Benchmarking of PIRA with themisto against PIRA with minimap2 alignments on 100 random genomes
+## with low copy number plasmids (PCN < 0.8) to see whether these results are trustworthy.
+
+low.PCN.minimap2.estimates.df <- read.csv("../results/minimap2-PIRA-low-PCN-benchmark-estimates.csv") %>%
+    rename("minimap2ReadCount" = ReadCount) %>%
+    select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length",
+           "minimap2ReadCount", "minimap2_PIRA_CopyNumberEstimate") %>%
+        ## IMPORTANT: only examine plasmids.
+    filter(SeqType == "plasmid")
+
+## merge with PIRA estimates
+PIRA.vs.minimap2.df <- low.PCN.minimap2.estimates.df %>%
+    left_join(PIRA.PCN.estimates) %>%
+    ## color points with PIRA PCN < 0.8
+    mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
+
+## make S2 Figure panel A
+S2FigA <- PIRA.vs.minimap2.df %>%
+    ggplot(aes(
+        x = log10(minimap2_PIRA_CopyNumberEstimate),
+        y = log10(PIRACopyNumber),
+        color = PIRA_low_PCN)) +
+    geom_point() +
+    scale_color_manual(values=c("black", "red")) +
+    theme_classic() +
+    xlab("log10(minimap2 PCN)")  +
+    ylab("log10(PIRA PCN)") +
+    guides(color = 'none')
+## Nice result, a few cases of underestimation for low PCN plasmids with themisto, but by and large highly accurate.
+
+## S2 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
+S2FigB <- PIRA.vs.minimap2.df %>%
+    filter(PIRA_low_PCN == TRUE) %>%
+    ggplot(aes(
+        x = log10(minimap2_PIRA_CopyNumberEstimate),
+        y = log10(PIRACopyNumber),
+        color = PIRA_low_PCN)) +
+    geom_point() +
+    scale_color_manual(values=c("red")) +
+    theme_classic() +
+    xlab("log10(minimap2 PCN)")  +
+    ylab("log10(PIRA PCN)") +
+    guides(color = 'none')
+
+## Now make Supplementary Figure S2.
+S2Fig <- plot_grid(S2FigA, S2FigB, labels=c("A", "B"))
+ggsave("../results/S2Fig.pdf", S2Fig, height=4, width=8)
+
+
+###################################################################################
+## Benchmarking of these 100 random genomes with breseq as another gold standard control,
+## This additional test makes sure these estimates are accurate,
+## and not artifactual due to low sequencing coverage with minimap2 compared to breseq
+## probably due to default parameters, for now will not discuss in text as tangential.
+
+## first get the metadata we need from the PIRA estimates.
+low.PCN.benchmark.metadata.df <- low.PCN.PIRA.themisto.estimates.df %>%
+    select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length") %>%
+    ## IMPORTANT: trim the ".1" suffixes of the SeqIDs so that we can properly merge
+    ## with the TrimmedSeqID in the breseq low PCN benchmark summary data (see below).
+    mutate(TrimmedSeqID = str_remove(SeqID, "\\..*$"))
+
+## now get the breseq coverage results for the benchmarking genomes.
+low.PCN.breseq.summary.df <- read.csv("../results/breseq-low-PCN-benchmark-estimates.csv") %>%
+    full_join(low.PCN.benchmark.metadata.df) %>%
+    filter(!is.na(mean_coverage))
+
+## make a separate df with a column for the coverage for the longest replicon in each genome
+low.PCN.breseq.chromosomal.coverage.df <- low.PCN.breseq.summary.df %>%
+    group_by(AnnotationAccession) %>%
+    filter(replicon_length == max(replicon_length)) %>%
+    ungroup() %>%
+    rename("chromosomal_coverage" = mean_coverage) %>%
+    select("AnnotationAccession", "chromosomal_coverage")
+
+## now join these data back to the original breseq summary data
+low.PCN.breseq.PCN.estimate.df <- low.PCN.breseq.summary.df %>%
+    left_join(low.PCN.breseq.chromosomal.coverage.df) %>%
+    group_by(AnnotationAccession) %>%
+    ## calculate breseq PCN estimates here.
+    mutate(BreseqCopyNumberEstimate = mean_coverage/chromosomal_coverage) %>%
+    ## and only consider plasmids.
+    filter(SeqType == "plasmid")
+
+
+## merge with the PIRA estimates, and benchmark copy number estimates.
+low.PCN.breseq.PIRA.comparison.df <- low.PCN.breseq.PCN.estimate.df %>%
+    left_join(PIRA.alignment.versus.pseudoalignment.comparison.df)
+
+breseq.versus.PIRA.alignment.comparison.plot <- low.PCN.breseq.PIRA.comparison.df %>%
+    ggplot(aes(
+        x = log10(BreseqCopyNumberEstimate),
+        y = log10(minimap2_PIRA_CopyNumberEstimate))) +
+    geom_point() +
+    theme_classic() +
+    xlab("log10(Short Read Breseq Copy Number)")  +
+    ylab("log10(Short Read minimap2 alignment Copy Number)") +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=log10(BreseqCopyNumberEstimate), y=log10(minimap2_PIRA_CopyNumberEstimate)),
+        color="light blue",
+        formula=y~x)
+
+ggsave(
+    "../results/breseq-versus-short-read-alignment-low-PCN-estimates.pdf",
+    breseq.versus.PIRA.alignment.comparison.plot, height=5, width=5)
+
+
+breseq.PIRA.alignment.PCN.lm.model <- lm(
+    formula = log10(minimap2_PIRA_CopyNumberEstimate) ~ log10(BreseqCopyNumberEstimate),
+    data=low.PCN.breseq.PIRA.comparison.df)
+## look at the linear regression.
+summary(breseq.PIRA.alignment.PCN.lm.model)
+
+
+breseq.versus.PIRA.pseudoalignment.comparison.plot <- low.PCN.breseq.PIRA.comparison.df %>%
+    ggplot(aes(
+        x = log10(BreseqCopyNumberEstimate),
+        y = log10(PIRA_CopyNumberEstimate))) +
+    geom_point() +
+    theme_classic() +
+    xlab("log10(Short Read Breseq Copy Number)")  +
+    ylab("log10(Short Read pseudoalignment Copy Number)") +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=log10(BreseqCopyNumberEstimate), y=log10(PIRA_CopyNumberEstimate)),
+        color="light blue",
+        formula=y~x)
+
+ggsave(
+    "../results/breseq-versus-short-read-pseudoalignment-low-PCN-estimates.pdf",
+    breseq.versus.PIRA.pseudoalignment.comparison.plot, height=5, width=5)
+
+breseq.PIRA.pseudoalignment.PCN.lm.model <- lm(
+    formula = log10(PIRA_CopyNumberEstimate) ~ log10(BreseqCopyNumberEstimate),
+    data=low.PCN.breseq.PIRA.comparison.df)
+## look at the linear regression.
+summary(breseq.PIRA.pseudoalignment.PCN.lm.model)
+
 ################################################################################
 
 
 
 
 
+## Second set of benchmarking experiments:
+
+## 1) compare PIRA to themisto naive method.
+## 2) compare PIRA to kallisto naive method.
+## 3) compare PIRA to themisto simple method (is this really needed??)
+
+
+
+#################################################################################
+## compare PCN estimates using themisto versus kallisto.
+
+## naive calculation with themisto read counts, ignoring multireplicon reads.
+naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimates.csv") %>%
+    rename(
+        ThemistoNaiveCopyNumber = CopyNumber,
+        ThemistoReadCount = ReadCount,
+        ThemistoNaiveSequencingCoverage = SequencingCoverage,
+        ThemistoNaiveLongestRepliconCoverage = LongestRepliconCoverage) %>%
+    filter(SeqType == "plasmid") 
+
+## now compare to kallisto estimates.
+kallisto.themisto.NCBI.plasmid.estimate.data <- NCBI.plasmid.estimate.data %>%
+    inner_join(naive.themisto.PCN.estimates)
+
+## compare naive themisto estimates to gene averaged kallisto estimates.
+themisto.kallisto.comparison.plot1 <- kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoNaiveCopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed")
+
+themisto.kallisto.comparison.plot1
+## again, there are some big outliers.
+
+## let's remove the outliers and see what the plot looks like.
+cropped.themisto.kallisto.comparison.plot1 <- themisto.kallisto.comparison.plot1 +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoNaiveCopyNumber),
+        color="light blue",
+        formula=y~x)
+
+cropped.themisto.kallisto.comparison.plot1
+
+## compare naive themisto estimates to kallisto replicon estimates.
+    
+themisto.kallisto.comparison.plot2 <- kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=KallistoRepliconCopyNumber, y=ThemistoNaiveCopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed")
+
+themisto.kallisto.comparison.plot2
+## again, there are some big outliers.
+
+## let's remove the outliers and see what the plot looks like.
+cropped.themisto.kallisto.comparison.plot2 <- themisto.kallisto.comparison.plot2 +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=KallistoRepliconCopyNumber, y=ThemistoNaiveCopyNumber),
+        color="light blue",
+        formula=y~x)
+
+cropped.themisto.kallisto.comparison.plot2
+ggsave("../results/themisto-kallisto-naive-replicon-PCN-estimate-comparison.pdf",
+       cropped.themisto.kallisto.comparison.plot2,
+       height=5.75,width=5.75)
+
+
+##################################################################
+## now let's compare the simple themisto PCN estimates to the other methods.
+
+## write out a list of all plasmids with PCN > 100, and SequencingCoverage > 0.1 and LongestRepliconCoverage > 0.1
+## for structural variation analysis for the darwinian circuit project.
+high.PCN.plasmids <- read.csv("../results/simple-themisto-PCN-estimates.csv") %>%
+    filter(SeqType == "plasmid") %>%
+    filter(SequencingCoverage > 0.1) %>%
+    filter(LongestRepliconCoverage > 0.1) %>%
+    filter(CopyNumber > 100) %>%
+    ## remove polars cruft from the dataframe.
+    select(-SeqType_right, -replicon_length_right) %>%
+    ## and sort the rows.
+    arrange(AnnotationAccession, desc(CopyNumber))
+write.csv(high.PCN.plasmids, "../results/high-PCN-plasmids.csv",row.names=FALSE,quote=FALSE)
+
+
+## simple calculation with themisto read counts, partitioning multireplicon reads equally among replicons.
+simple.themisto.PCN.estimates <- read.csv("../results/simple-themisto-PCN-estimates.csv") %>%
+    rename(
+        ThemistoSimpleCopyNumber = CopyNumber,
+        ThemistoSimpleCount = ReadCount,
+        ThemistoSimpleSequencingCoverage = SequencingCoverage,
+        ThemistoSimpleLongestRepliconCoverage = LongestRepliconCoverage) %>%
+    filter(SeqType == "plasmid") 
+
+## make the scatterplot.
+NCBI.simple.themisto.plasmid.copy.number.plot <- ggplot(simple.themisto.PCN.estimates,
+                                   aes(x=log10(replicon_length),y=log10(ThemistoSimpleCopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    geom_hline(yintercept=2,linetype="dashed",color="gray") +
+    ylab("log10(Plasmid copy number)")  +
+    xlab("log10(Plasmid length in bp)") +
+    theme(legend.position="top")
+
+NCBI.simple.themisto.plasmid.copy.number.plot
+
+
+full.kallisto.themisto.NCBI.plasmid.estimate.data <- kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    full_join(simple.themisto.PCN.estimates)
+
+cropped.themisto.kallisto.comparison.plot3 <- full.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoSimpleCopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoSimpleCopyNumber),
+        color="light blue",
+        formula=y~x)
+
+cropped.themisto.kallisto.comparison.plot3
+
+cropped.themisto.kallisto.comparison.plot4 <- full.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=ThemistoNaiveCopyNumber, y=ThemistoSimpleCopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=ThemistoNaiveCopyNumber, y=ThemistoSimpleCopyNumber),
+        color="light blue",
+        formula=y~x)
+
+cropped.themisto.kallisto.comparison.plot4
+
+ggsave("../results/simple-themisto-naive-themisto-PCN-estimate-comparison.pdf",
+       cropped.themisto.kallisto.comparison.plot4,
+       height=5.75,width=5.75)
+
+###################################################################################
+## now let's compare the PIRA PCN estimates to the simple and naive themisto PCN estimates, and to the
+## kallisto estimates.
+
+## This analysis shows that PIRA essentially gives the same estimate as the themisto naive method.
+## the themisto naive method is the fastest method, and correlates well with the kallisto replicon method.
+## from a computational point of view, PIRA is not so good.
+## however, PIRA does yield PCN estimates for 2212 plasmids for which the other methods don't get any
+## answer, due to multireads being excluded from the analysis.
+
+
+## now compare to simple and naive themisto estimates, and to kallisto estimates.
+PIRA.kallisto.themisto.NCBI.plasmid.estimate.data <- PIRA.PCN.estimates %>%
+    inner_join(full.kallisto.themisto.NCBI.plasmid.estimate.data) %>%
+    ## only examine plasmids with at least 10,000 mapped reads.
+    filter(PIRAReadCount > 10000)
+
+
+PIRA.naive.themisto.comparison.plot <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=ThemistoNaiveCopyNumber, y=PIRACopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=ThemistoNaiveCopyNumber, y=PIRACopyNumber),
+        color="light blue",
+        formula=y~x)
+
+ggsave("../results/PIRA-naive-themisto-PCN-estimate-comparison.pdf",
+       PIRA.naive.themisto.comparison.plot,
+       height=5.75,width=5.75)
+
+## take a look at the statistics of the fit
+PIRA.naive.PCN.lm.model <- lm(
+    formula=PIRACopyNumber~ThemistoNaiveCopyNumber,
+    data=PIRA.kallisto.themisto.NCBI.plasmid.estimate.data)
+## look at the linear regression.
+summary(PIRA.naive.PCN.lm.model)
+
+
+PIRA.simple.themisto.comparison.plot <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=ThemistoSimpleCopyNumber, y=PIRACopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=ThemistoSimpleCopyNumber, y=PIRACopyNumber),
+        color="light blue",
+        formula=y~x)
+
+## now compare to kallisto estimates.
+PIRA.kallisto.comparison.plot1 <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=KallistoGeneAveragedCopyNumber, y=PIRACopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=KallistoGeneAveragedCopyNumber, y=PIRACopyNumber),
+        color="light blue",
+        formula=y~x)
+
+PIRA.kallisto.comparison.plot2 <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(aes(x=KallistoRepliconCopyNumber, y=PIRACopyNumber)) +
+    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+    xlim(0,1000) + ylim(0,1000) +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=KallistoRepliconCopyNumber, y=PIRACopyNumber),
+        color="light blue",
+        formula=y~x)
+
+
+## do we get more plasmid estimates (AKA plasmids that only have multiread coverage) when we use PIRA?
+## YES!!!
+PIRA.kallisto.themisto.NCBI.plasmid.estimate.data$PIRACopyNumber
+PIRA.kallisto.themisto.NCBI.plasmid.estimate.data$ThemistoNaiveCopyNumber
+
+
+## PIRA gets estimates for 12,829 plasmids.
+PIRA.PCN.plot <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    ggplot(
+        aes(x=log10(replicon_length),y=log10(PIRACopyNumber),
+            color=`Plasmid class`)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    ylab("log10(Plasmid copy number)")  +
+    xlab("log10(Plasmid length in bp)") +
+    theme(legend.position="top") ##+
+    #facet_grid(`Plasmid class`~PredictedMobility)
+
+
+## filter based on PIRAReadCount
+PIRA.PCN.plot2 <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
+    filter(PIRAReadCount > 10000) %>%
+    ggplot(
+        aes(x=log10(replicon_length),y=log10(PIRACopyNumber),
+            color=`Plasmid class`)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    ylab("log10(Plasmid copy number)")  +
+    xlab("log10(Plasmid length in bp)") +
+    theme(legend.position="top")
+
+PIRA.PCN.plot
 
 
 
 
 
-## get lengths of all the replicons.
-NCBI.replicon.length.data <- read.csv("../results/NCBI-replicon_lengths.csv")
+
+
+
+
+################################################################################
+## BIOLOGY ANALYSES STARTING HERE
+
+#### QUICK CHECK OF PIRA estimates.
+log.PIRA.PCN.plot <- PIRA.PCN.estimates %>%
+    filter(PIRAReadCount > 10000) %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.1,alpha=0.5) +
+    theme_classic() +
+    xlab("log10(Replicon Length)")  +
+    ylab("log10(PIRA Plasmid Copy Number)")
+ggsave("../results/log-PIRA-PCN-plot.pdf", log.PIRA.PCN.plot, height=5, width=5)
+
+
 
 ## get ARG copy number data.
 kallisto.ARG.copy.number.data <- read.csv("../results/NCBI-ARG_copy_numbers.csv") %>%
@@ -111,32 +580,6 @@ NCBI.plasmid.copy.number.data <- NCBI.chromosome.plasmid.copy.number.data %>%
     left_join(mobility.results) %>%
     ## for now, remove rows without predicted mobility.
     filter(!is.na(PredictedMobility))
-
-################################################################################
-## get concrete statistics for how many genome papers report plasmid copy number:
-
-## sample 50 genomes with plasmids at random, and examine how many papers report PCN.
-## pick genomes with some plasmid with PCN > 10, so that we are focusing on genomes where people
-## might actually want to report PCN.
-## for reproducibility, use random seed = 60, which I generated using random.org (see screenshot in ../data).
-
-head(NCBI.plasmid.copy.number.data)
-
-genomes.to.sample.from.NCBI.plasmid.copy.number.data <- NCBI.plasmid.copy.number.data %>%
-    filter(CopyNumber > 10) %>%
-    select(AnnotationAccession) %>%
-    distinct()
-
-## set the random seed for reproducibility.
-set.seed(60)
-
-chosen.genomes <- sample(
-    x = genomes.to.sample.from.NCBI.plasmid.copy.number.data$AnnotationAccession,
-    replace = FALSE,
-    size = 50,
-    )
-
-write.csv(chosen.genomes, "../results/Fifty-random-genomes-with-multicopy-plasmids.csv", row.names = FALSE)
 
 ################################################################################
 ## compare results with using each replicon as a 'gene' for read mapping with kallisto.
@@ -417,259 +860,6 @@ plasmid.DNA.content.plot2 <- plasmid.DNA.content.plot + ylim(0,2000000)
 plasmid.DNA.content.plot2
 
 
-#################################################################################
-## compare PCN estimates using themisto versus kallisto.
-
-## naive calculation with themisto read counts, ignoring multireplicon reads.
-naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimates.csv") %>%
-    rename(
-        ThemistoNaiveCopyNumber = CopyNumber,
-        ThemistoReadCount = ReadCount,
-        ThemistoNaiveSequencingCoverage = SequencingCoverage,
-        ThemistoNaiveLongestRepliconCoverage = LongestRepliconCoverage) %>%
-    filter(SeqType == "plasmid") 
-
-## now compare to kallisto estimates.
-kallisto.themisto.NCBI.plasmid.estimate.data <- NCBI.plasmid.estimate.data %>%
-    inner_join(naive.themisto.PCN.estimates)
-
-## compare naive themisto estimates to gene averaged kallisto estimates.
-themisto.kallisto.comparison.plot1 <- kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoNaiveCopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed")
-
-themisto.kallisto.comparison.plot1
-## again, there are some big outliers.
-
-## let's remove the outliers and see what the plot looks like.
-cropped.themisto.kallisto.comparison.plot1 <- themisto.kallisto.comparison.plot1 +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoNaiveCopyNumber),
-        color="light blue",
-        formula=y~x)
-
-cropped.themisto.kallisto.comparison.plot1
-
-## compare naive themisto estimates to kallisto replicon estimates.
-    
-themisto.kallisto.comparison.plot2 <- kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=KallistoRepliconCopyNumber, y=ThemistoNaiveCopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed")
-
-themisto.kallisto.comparison.plot2
-## again, there are some big outliers.
-
-## let's remove the outliers and see what the plot looks like.
-cropped.themisto.kallisto.comparison.plot2 <- themisto.kallisto.comparison.plot2 +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=KallistoRepliconCopyNumber, y=ThemistoNaiveCopyNumber),
-        color="light blue",
-        formula=y~x)
-
-cropped.themisto.kallisto.comparison.plot2
-ggsave("../results/themisto-kallisto-naive-replicon-PCN-estimate-comparison.pdf",
-       cropped.themisto.kallisto.comparison.plot2,
-       height=5.75,width=5.75)
-
-
-##################################################################
-## now let's compare the simple themisto PCN estimates to the other methods.
-
-## write out a list of all plasmids with PCN > 100, and SequencingCoverage > 0.1 and LongestRepliconCoverage > 0.1
-## for structural variation analysis for the darwinian circuit project.
-high.PCN.plasmids <- read.csv("../results/simple-themisto-PCN-estimates.csv") %>%
-    filter(SeqType == "plasmid") %>%
-    filter(SequencingCoverage > 0.1) %>%
-    filter(LongestRepliconCoverage > 0.1) %>%
-    filter(CopyNumber > 100) %>%
-    ## remove polars cruft from the dataframe.
-    select(-SeqType_right, -replicon_length_right) %>%
-    ## and sort the rows.
-    arrange(AnnotationAccession, desc(CopyNumber))
-write.csv(high.PCN.plasmids, "../results/high-PCN-plasmids.csv",row.names=FALSE,quote=FALSE)
-
-
-## simple calculation with themisto read counts, partitioning multireplicon reads equally among replicons.
-simple.themisto.PCN.estimates <- read.csv("../results/simple-themisto-PCN-estimates.csv") %>%
-    rename(
-        ThemistoSimpleCopyNumber = CopyNumber,
-        ThemistoSimpleCount = ReadCount,
-        ThemistoSimpleSequencingCoverage = SequencingCoverage,
-        ThemistoSimpleLongestRepliconCoverage = LongestRepliconCoverage) %>%
-    filter(SeqType == "plasmid") 
-
-## make the scatterplot.
-NCBI.simple.themisto.plasmid.copy.number.plot <- ggplot(simple.themisto.PCN.estimates,
-                                   aes(x=log10(replicon_length),y=log10(ThemistoSimpleCopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    geom_hline(yintercept=2,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top")
-
-NCBI.simple.themisto.plasmid.copy.number.plot
-
-
-full.kallisto.themisto.NCBI.plasmid.estimate.data <- kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    full_join(simple.themisto.PCN.estimates)
-
-cropped.themisto.kallisto.comparison.plot3 <- full.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoSimpleCopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=KallistoGeneAveragedCopyNumber, y=ThemistoSimpleCopyNumber),
-        color="light blue",
-        formula=y~x)
-
-cropped.themisto.kallisto.comparison.plot3
-
-cropped.themisto.kallisto.comparison.plot4 <- full.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=ThemistoNaiveCopyNumber, y=ThemistoSimpleCopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=ThemistoNaiveCopyNumber, y=ThemistoSimpleCopyNumber),
-        color="light blue",
-        formula=y~x)
-
-cropped.themisto.kallisto.comparison.plot4
-
-ggsave("../results/simple-themisto-naive-themisto-PCN-estimate-comparison.pdf",
-       cropped.themisto.kallisto.comparison.plot4,
-       height=5.75,width=5.75)
-
-###################################################################################
-## now let's compare the PIRA PCN estimates to the simple and naive themisto PCN estimates, and to the
-## kallisto estimates.
-
-## This analysis shows that PIRA essentially gives the same estimate as the themisto naive method.
-## the themisto naive method is the fastest method, and correlates well with the kallisto replicon method.
-## from a computational point of view, PIRA is not so good.
-## however, PIRA does yield PCN estimates for 2212 plasmids for which the other methods don't get any
-## answer, due to multireads being excluded from the analysis.
-
-PIRA.PCN.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
-    rename(
-        PIRACopyNumber = PIRA_CopyNumberEstimate,
-        PIRAReadCount = ReadCount,
-        PIRASequencingCoverage = SequencingCoverage,
-        PIRALongestRepliconCoverage = LongestRepliconCoverage) %>%
-    filter(SeqType == "plasmid") 
-
-## now compare to simple and naive themisto estimates, and to kallisto estimates.
-PIRA.kallisto.themisto.NCBI.plasmid.estimate.data <- PIRA.PCN.estimates %>%
-    inner_join(full.kallisto.themisto.NCBI.plasmid.estimate.data) %>%
-    ## only examine plasmids with at least 10,000 mapped reads.
-    filter(PIRAReadCount > 10000)
-
-
-PIRA.naive.themisto.comparison.plot <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=ThemistoNaiveCopyNumber, y=PIRACopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=ThemistoNaiveCopyNumber, y=PIRACopyNumber),
-        color="light blue",
-        formula=y~x)
-
-ggsave("../results/PIRA-naive-themisto-PCN-estimate-comparison.pdf",
-       PIRA.naive.themisto.comparison.plot,
-       height=5.75,width=5.75)
-
-## take a look at the statistics of the fit
-PIRA.naive.PCN.lm.model <- lm(
-    formula=PIRACopyNumber~ThemistoNaiveCopyNumber,
-    data=PIRA.kallisto.themisto.NCBI.plasmid.estimate.data)
-## look at the linear regression.
-summary(PIRA.naive.PCN.lm.model)
-
-
-PIRA.simple.themisto.comparison.plot <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=ThemistoSimpleCopyNumber, y=PIRACopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=ThemistoSimpleCopyNumber, y=PIRACopyNumber),
-        color="light blue",
-        formula=y~x)
-
-## now compare to kallisto estimates.
-PIRA.kallisto.comparison.plot1 <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=KallistoGeneAveragedCopyNumber, y=PIRACopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=KallistoGeneAveragedCopyNumber, y=PIRACopyNumber),
-        color="light blue",
-        formula=y~x)
-
-PIRA.kallisto.comparison.plot2 <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=KallistoRepliconCopyNumber, y=PIRACopyNumber)) +
-    geom_point() + theme_classic() + geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    xlim(0,1000) + ylim(0,1000) +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=KallistoRepliconCopyNumber, y=PIRACopyNumber),
-        color="light blue",
-        formula=y~x)
-
-
-## do we get more plasmid estimates (AKA plasmids that only have multiread coverage) when we use PIRA?
-## YES!!!
-PIRA.kallisto.themisto.NCBI.plasmid.estimate.data$PIRACopyNumber
-PIRA.kallisto.themisto.NCBI.plasmid.estimate.data$ThemistoNaiveCopyNumber
-
-
-## PIRA gets estimates for 12,829 plasmids.
-PIRA.PCN.plot <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(
-        aes(x=log10(replicon_length),y=log10(PIRACopyNumber),
-            color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top") ##+
-    #facet_grid(`Plasmid class`~PredictedMobility)
-
-
-## filter based on PIRAReadCount
-PIRA.PCN.plot2 <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    filter(PIRAReadCount > 10000) %>%
-    ggplot(
-        aes(x=log10(replicon_length),y=log10(PIRACopyNumber),
-            color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top")
-
-PIRA.PCN.plot
-
-
 ##################################################################
 ## let's examine PCN distribution over INC groups, MOB groups, and ecology.
 ## clear association between high PCN plasmids and particular ecological annotations.
@@ -771,157 +961,3 @@ ggsave(
     high.PCN.estimate.comparison.plot, height=5, width=5)
 
 ###################################################################################
-## Benchmarking of PIRA with themisto against PIRA with minimap2 alignments on 100 random genomes
-## with low copy number plasmids (PCN < 0.8) to see whether these results are trustworthy.
-
-## BIG QUESTION: why is the sequencing coverage so low? Might this be artifactual?
-## I should probably re-run these 100 random genomes with breseq as another "gold standard control"
-## to make sure these estimates are accurate, and not artifactual due to low sequencing coverage.
-
-low.PCN.PIRA.themisto.estimates.df <- read.csv("../results/PIRA-low-PCN-benchmark-estimates.csv") %>%
-    rename("ThemistoReadCount" = ReadCount) %>%
-    select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length", "ThemistoReadCount", "PIRA_CopyNumberEstimate")
-
-low.PCN.PIRA.minimap2.estimates.df <- read.csv("../results/minimap2-PIRA-low-PCN-benchmark-estimates.csv") %>%
-    rename("minimap2ReadCount" = ReadCount) %>%
-    select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length", "minimap2ReadCount", "minimap2_PIRA_CopyNumberEstimate")
-
-PIRA.alignment.versus.pseudoalignment.comparison.df <- full_join(
-    low.PCN.PIRA.themisto.estimates.df, low.PCN.PIRA.minimap2.estimates.df) %>%
-    ## IMPORTANT: only examine plasmids.
-    filter(SeqType == "plasmid")
-
-
-PIRA.alignment.versus.pseudoalignment.comparison.plot <- PIRA.alignment.versus.pseudoalignment.comparison.df %>%
-    ggplot(aes(
-        x = log10(minimap2_PIRA_CopyNumberEstimate),
-        y = log10(PIRA_CopyNumberEstimate))) +
-    geom_point() +
-    theme_classic() +
-    xlab("log10(Short Read pseudoalignment Copy Number)")  +
-    ylab("log10(Short Read alignment Copy Number)")
-## Nice result, a few cases of underestimation for low PCN plasmids with themisto, but by and large highly accurate.
-ggsave(
-    "../results/short-read-alignment-versus-short-read-pseudoalignment-low-PCN-estimates.pdf",
-    PIRA.alignment.versus.pseudoalignment.comparison.plot, height=5, width=5)
-
-## now zoom in on the plasmids with minimap2 alignment PCN < 0.8.
-## SUPER IMPORTANT: These data show that there are more aligned reads with themisto than with minimap2,
-## given the parameters that I am using. Perhaps the default parameters I am using for alignment is very stringent?
-low.PCN.PIRA.alignment.versus.pseudoalignment.comparison.df <- PIRA.alignment.versus.pseudoalignment.comparison.df %>% filter(minimap2_PIRA_CopyNumberEstimate < 0.8)
-
-low.PCN.PIRA.alignment.versus.pseudoalignment.comparison.plot <- low.PCN.PIRA.alignment.versus.pseudoalignment.comparison.df %>%
-        ggplot(aes(
-        x = log10(minimap2_PIRA_CopyNumberEstimate),
-        y = log10(PIRA_CopyNumberEstimate))) +
-    geom_point() +
-    theme_classic() +
-    xlab("log10(Short Read pseudoalignment Copy Number)")  +
-    ylab("log10(Short Read alignment Copy Number)")
-
-ggsave(
-    "../results/only-low-PCN-short-read-alignment-versus-short-read-pseudoalignment-low-PCN-estimates.pdf",
-    low.PCN.PIRA.alignment.versus.pseudoalignment.comparison.plot, height=5, width=5)
-
-###################################################################################
-## Benchmarking of these 100 random genomes with breseq as another gold standard control,
-## to make sure these estimates are accurate, and not artifactual due to low sequencing coverage.
-
-## first get the metadata we need from the PIRA estimates.
-low.PCN.benchmark.metadata.df <- low.PCN.PIRA.themisto.estimates.df %>%
-    select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length") %>%
-    ## IMPORTANT: trim the ".1" suffixes of the SeqIDs so that we can properly merge
-    ## with the TrimmedSeqID in the breseq low PCN benchmark summary data (see below).
-    mutate(TrimmedSeqID = str_remove(SeqID, "\\..*$"))
-
-## now get the breseq coverage results for the benchmarking genomes.
-low.PCN.breseq.summary.df <- read.csv("../results/breseq-low-PCN-benchmark-estimates.csv") %>%
-    full_join(low.PCN.benchmark.metadata.df) %>%
-    filter(!is.na(mean_coverage))
-
-## make a separate df with a column for the coverage for the longest replicon in each genome
-low.PCN.breseq.chromosomal.coverage.df <- low.PCN.breseq.summary.df %>%
-    group_by(AnnotationAccession) %>%
-    filter(replicon_length == max(replicon_length)) %>%
-    ungroup() %>%
-    rename("chromosomal_coverage" = mean_coverage) %>%
-    select("AnnotationAccession", "chromosomal_coverage")
-
-## now join these data back to the original breseq summary data
-low.PCN.breseq.PCN.estimate.df <- low.PCN.breseq.summary.df %>%
-    left_join(low.PCN.breseq.chromosomal.coverage.df) %>%
-    group_by(AnnotationAccession) %>%
-    ## calculate breseq PCN estimates here.
-    mutate(BreseqCopyNumberEstimate = mean_coverage/chromosomal_coverage) %>%
-    ## and only consider plasmids.
-    filter(SeqType == "plasmid")
-
-
-## merge with the PIRA estimates, and benchmark copy number estimates.
-low.PCN.breseq.PIRA.comparison.df <- low.PCN.breseq.PCN.estimate.df %>%
-    left_join(PIRA.alignment.versus.pseudoalignment.comparison.df)
-
-breseq.versus.PIRA.alignment.comparison.plot <- low.PCN.breseq.PIRA.comparison.df %>%
-    ggplot(aes(
-        x = log10(BreseqCopyNumberEstimate),
-        y = log10(minimap2_PIRA_CopyNumberEstimate))) +
-    geom_point() +
-    theme_classic() +
-    xlab("log10(Short Read Breseq Copy Number)")  +
-    ylab("log10(Short Read minimap2 alignment Copy Number)") +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=log10(BreseqCopyNumberEstimate), y=log10(minimap2_PIRA_CopyNumberEstimate)),
-        color="light blue",
-        formula=y~x)
-
-ggsave(
-    "../results/breseq-versus-short-read-alignment-low-PCN-estimates.pdf",
-    breseq.versus.PIRA.alignment.comparison.plot, height=5, width=5)
-
-
-breseq.PIRA.alignment.PCN.lm.model <- lm(
-    formula = log10(minimap2_PIRA_CopyNumberEstimate) ~ log10(BreseqCopyNumberEstimate),
-    data=low.PCN.breseq.PIRA.comparison.df)
-## look at the linear regression.
-summary(breseq.PIRA.alignment.PCN.lm.model)
-
-
-breseq.versus.PIRA.pseudoalignment.comparison.plot <- low.PCN.breseq.PIRA.comparison.df %>%
-    ggplot(aes(
-        x = log10(BreseqCopyNumberEstimate),
-        y = log10(PIRA_CopyNumberEstimate))) +
-    geom_point() +
-    theme_classic() +
-    xlab("log10(Short Read Breseq Copy Number)")  +
-    ylab("log10(Short Read pseudoalignment Copy Number)") +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=log10(BreseqCopyNumberEstimate), y=log10(PIRA_CopyNumberEstimate)),
-        color="light blue",
-        formula=y~x)
-
-ggsave(
-    "../results/breseq-versus-short-read-pseudoalignment-low-PCN-estimates.pdf",
-    breseq.versus.PIRA.pseudoalignment.comparison.plot, height=5, width=5)
-
-breseq.PIRA.pseudoalignment.PCN.lm.model <- lm(
-    formula = log10(PIRA_CopyNumberEstimate) ~ log10(BreseqCopyNumberEstimate),
-    data=low.PCN.breseq.PIRA.comparison.df)
-## look at the linear regression.
-summary(breseq.PIRA.pseudoalignment.PCN.lm.model)
-
-
-#### QUICK CHECK OF PIRA estimates.
-log.PIRA.PCN.plot <- PIRA.PCN.estimates %>%
-    filter(PIRAReadCount > 10000) %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.1,alpha=0.5) +
-    theme_classic() +
-    xlab("log10(Replicon Length)")  +
-    ylab("log10(PIRA Plasmid Copy Number)")
-ggsave("../results/log-PIRA-PCN-plot.pdf", log.PIRA.PCN.plot, height=5, width=5)
