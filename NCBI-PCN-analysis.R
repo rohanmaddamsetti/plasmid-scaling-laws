@@ -52,17 +52,27 @@ antibiotic.keywords <- paste(chloramphenicol.keywords, tetracycline.keywords, ML
     sulfonamide.keywords, quinolone.keywords, aminoglycoside.keywords, macrolide.keywords, antimicrobial.keywords, sep="|")
 
 ################################################################################
+
+
+
+
+
+
+
+
+
+
 ## get lengths of all the replicons.
 NCBI.replicon.length.data <- read.csv("../results/NCBI-replicon_lengths.csv")
 
 ## get ARG copy number data.
-NCBI.ARG.copy.number.data <- read.csv("../results/NCBI-ARG_copy_numbers.csv") %>%
+kallisto.ARG.copy.number.data <- read.csv("../results/NCBI-ARG_copy_numbers.csv") %>%
     mutate(beta.lactam.resistance = ifelse(str_detect(product,beta.lactam.keywords), TRUE, FALSE))
 
 beta.lactam.ARGs <- filter(NCBI.ARG.copy.number.data, beta.lactam.resistance==TRUE)
 non.beta.lactam.ARGs <- filter(NCBI.ARG.copy.number.data, beta.lactam.resistance==FALSE)
 
-NCBI.chromosome.plasmid.copy.number.data <- read.csv("../results/NCBI-replicon_copy_numbers_from_genes.csv") %>%
+kallisto.gene.averaged.copy.number.data <- read.csv("../results/NCBI-replicon_copy_numbers_from_genes.csv") %>%
     full_join(NCBI.replicon.length.data) %>%
     mutate(has.ARG = ifelse(SeqID %in% NCBI.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
     mutate(has.beta.lactamase = ifelse(SeqID %in% beta.lactam.ARGs$SeqID, TRUE, FALSE)) %>%
@@ -130,7 +140,7 @@ write.csv(chosen.genomes, "../results/Fifty-random-genomes-with-multicopy-plasmi
 
 ################################################################################
 ## compare results with using each replicon as a 'gene' for read mapping with kallisto.
-NCBI.replicon.data <- read.csv("../results/NCBI-replicon_copy_numbers.csv") %>%
+kallisto.replicon.data <- read.csv("../results/NCBI-replicon_copy_numbers.csv") %>%
     full_join(NCBI.replicon.length.data) %>%
     mutate(has.ARG = ifelse(SeqID %in% NCBI.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
     mutate(has.beta.lactamase = ifelse(SeqID %in% beta.lactam.ARGs$SeqID, TRUE, FALSE)) %>%
