@@ -104,7 +104,117 @@ write.csv(chosen.genomes.df, "../results/Fifty-random-genomes-with-multicopy-pla
           row.names = FALSE, quote=FALSE)
 
 ################################################################################
-## Supplementary Figure S2.
+## Supplementary Figure S2: Effect of PIRA compared to naive themisto estimates.
+
+## naive calculation with themisto read counts, ignoring multireplicon reads.
+naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimates.csv") %>%
+    rename(
+        ThemistoNaiveCopyNumber = CopyNumber,
+        ThemistoNaiveReadCount = ReadCount,
+        ThemistoNaiveSequencingCoverage = SequencingCoverage,
+        ThemistoNaiveLongestRepliconCoverage = LongestRepliconCoverage) %>%
+    filter(SeqType == "plasmid") %>%
+    ## IMPORTANT: label plasmids with reads below the threshold.
+    ## in the figure, put a different shape for points with insufficient reads.
+    mutate(InsufficientReads = ifelse(ThemistoNaiveReadCount < MIN_READ_COUNT, TRUE, FALSE)) %>%
+    select(AnnotationAccession, SeqID, SeqType, ThemistoNaiveCopyNumber, ThemistoNaiveReadCount, InsufficientReads)
+
+PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
+    left_join(PIRA.PCN.estimates) %>%
+    ## color points with PIRA PCN < 0.8
+    mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
+
+## 1,561 plasmids have sufficient reads with PIRA, but not with the naive themisto read mapping.
+sum(PIRA.vs.naive.themisto.df$InsufficientReads == TRUE)
+    
+
+## Now make S2 Figure panel A.
+S2FigA <- PIRA.vs.naive.themisto.df %>%
+    ggplot(aes(
+        x = log10(ThemistoNaiveCopyNumber),
+        y = log10(PIRACopyNumber),
+        color = PIRA_low_PCN,
+        shape = InsufficientReads)) +
+    geom_point() +
+    geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+    scale_color_manual(values=c("black", "red")) +
+    theme_classic() +
+    xlab("log10(Naive Themisto PCN)")  +
+    ylab("log10(PIRA PCN)") +
+    guides(color = 'none', shape = 'none') +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=log10(ThemistoNaiveCopyNumber), y=log10(PIRACopyNumber)),
+        color="light blue",
+        formula=y~x)
+
+
+## S2 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
+S2FigB <- PIRA.vs.naive.themisto.df %>%
+    filter(PIRA_low_PCN == TRUE) %>%
+    ggplot(aes(
+        x = log10(ThemistoNaiveCopyNumber),
+        y = log10(PIRACopyNumber),
+        color = PIRA_low_PCN,
+        shape = InsufficientReads)) +
+    geom_point() +
+    geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+    scale_color_manual(values=c("red")) +
+    theme_classic() +
+    xlab("log10(Naive Themisto PCN)")  +
+    ylab("log10(PIRA PCN)") +
+    guides(color = 'none', shape = 'none')
+
+## S2 Figure panels C and D remove points with insufficient reads.
+
+## Now make S2 Figure panel C
+S2FigC <- PIRA.vs.naive.themisto.df %>%
+    filter(InsufficientReads == FALSE) %>%
+    ggplot(aes(
+        x = log10(ThemistoNaiveCopyNumber),
+        y = log10(PIRACopyNumber),
+        color = PIRA_low_PCN)) +
+    geom_point() +
+    geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+    scale_color_manual(values=c("black", "red")) +
+    theme_classic() +
+    xlab("log10(Naive Themisto PCN)")  +
+    ylab("log10(PIRA PCN)") +
+    guides(color = 'none') +
+    ## add the linear regression.
+    geom_smooth(
+        method='lm',
+        aes(x=log10(ThemistoNaiveCopyNumber), y=log10(PIRACopyNumber)),
+        color="light blue",
+        formula=y~x)
+
+
+## S2 Figure panel D zooms in on the plasmids with PIRA PCN < 0.8.
+S2FigD <- PIRA.vs.naive.themisto.df %>%
+    filter(InsufficientReads == FALSE) %>%
+    filter(PIRA_low_PCN == TRUE) %>%
+    ggplot(aes(
+        x = log10(ThemistoNaiveCopyNumber),
+        y = log10(PIRACopyNumber),
+        color = PIRA_low_PCN)) +
+    geom_point() +
+    geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+    scale_color_manual(values=c("red")) +
+    theme_classic() +
+    xlab("log10(Naive Themisto PCN)")  +
+    ylab("log10(PIRA PCN)") +
+    guides(color = 'none')
+
+
+## make Supplementary Figure S2.
+S2Fig <- plot_grid(S2FigA, S2FigB, S2FigC, S2FigD, labels=c("A", "B", "C", "D"))
+ggsave("../results/S2Fig.pdf", S2Fig, height=6, width=8)
+
+
+
+################################################################################
+## Supplementary Figure S3.
 ## Benchmarking of PIRA with themisto against PIRA with minimap2 alignments on 100 random genomes
 ## with low copy number plasmids (PCN < 0.8).
 
@@ -121,8 +231,8 @@ PIRA.vs.minimap2.df <- low.PCN.minimap2.estimates.df %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
-## make S2 Figure panel A
-S2FigA <- PIRA.vs.minimap2.df %>%
+## make S3 Figure panel A
+S3FigA <- PIRA.vs.minimap2.df %>%
     ggplot(aes(
         x = log10(minimap2_PIRA_CopyNumberEstimate),
         y = log10(PIRACopyNumber),
@@ -141,8 +251,8 @@ S2FigA <- PIRA.vs.minimap2.df %>%
         color="light blue",
         formula=y~x)
 
-## S2 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
-S2FigB <- PIRA.vs.minimap2.df %>%
+## S3 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
+S3FigB <- PIRA.vs.minimap2.df %>%
     filter(PIRA_low_PCN == TRUE) %>%
     ggplot(aes(
         x = log10(minimap2_PIRA_CopyNumberEstimate),
@@ -157,9 +267,9 @@ S2FigB <- PIRA.vs.minimap2.df %>%
     guides(color = 'none')
 
 
-## Now make Supplementary Figure S2.
-S2Fig <- plot_grid(S2FigA, S2FigB, labels=c("A", "B"))
-ggsave("../results/S2Fig.pdf", S2Fig, height=4, width=8)
+## Now make Supplementary Figure S3.
+S3Fig <- plot_grid(S3FigA, S3FigB, labels=c("A", "B"))
+ggsave("../results/S3Fig.pdf", S3Fig, height=4, width=8)
 
 ## make a linear model and examine it.
 minimap2.PIRA.PCN.lm.model <- lm(
@@ -170,7 +280,7 @@ summary(minimap2.PIRA.PCN.lm.model)
 
 
 ###################################################################################
-## Supplementary Figure S3.
+## Supplementary Figure S4.
 ## Benchmarking of these 100 random genomes with breseq as another gold standard control,
 ## This additional test makes sure these estimates are accurate,
 ## and not artifactual due to low sequencing coverage with minimap2 compared to breseq.
@@ -214,8 +324,8 @@ PIRA.vs.breseq.df <- low.PCN.breseq.estimate.df %>%
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
 
-## Now make S3 Figure panel A.
-S3FigA <- PIRA.vs.breseq.df %>%
+## Now make S4 Figure panel A.
+S4FigA <- PIRA.vs.breseq.df %>%
     ggplot(aes(
         x = log10(BreseqCopyNumberEstimate),
         y = log10(PIRACopyNumber),
@@ -235,8 +345,8 @@ S3FigA <- PIRA.vs.breseq.df %>%
         formula=y~x)
 
 
-## S3 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
-S3FigB <- PIRA.vs.breseq.df %>%
+## S4 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
+S4FigB <- PIRA.vs.breseq.df %>%
     filter(PIRA_low_PCN == TRUE) %>%
     ggplot(aes(
         x = log10(BreseqCopyNumberEstimate),
@@ -250,9 +360,9 @@ S3FigB <- PIRA.vs.breseq.df %>%
     ylab("log10(PIRA PCN)") +
     guides(color = 'none') 
 
-## Now make Supplementary Figure S3.
-S3Fig <- plot_grid(S3FigA, S3FigB, labels=c("A", "B"))
-ggsave("../results/S3Fig.pdf", S3Fig, height=4, width=8)
+## Now make Supplementary Figure S4.
+S4Fig <- plot_grid(S4FigA, S4FigB, labels=c("A", "B"))
+ggsave("../results/S4Fig.pdf", S4Fig, height=4, width=8)
 
 
 ## make a linear model and examine it.
@@ -263,20 +373,9 @@ breseq.PIRA.PCN.lm.model <- lm(
 summary(breseq.PIRA.PCN.lm.model)
 
 ################################################################################
-## Supplementary Figure S4:
+## Supplementary Figure S5:
 ## compare naive kallisto to naive themisto PCN estimates to show that PCN numbers by pseudoalignment
 ## are reproducible irrespective of the specific software implementation.
-
-
-## naive calculation with themisto read counts, ignoring multireplicon reads.
-naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimates.csv") %>%
-    rename(
-        ThemistoNaiveCopyNumber = CopyNumber,
-        ThemistoNaiveReadCount = ReadCount,
-        ThemistoNaiveSequencingCoverage = SequencingCoverage,
-        ThemistoNaiveLongestRepliconCoverage = LongestRepliconCoverage) %>%
-    filter(SeqType == "plasmid") %>%
-    select(AnnotationAccession, SeqID, SeqType, ThemistoNaiveCopyNumber, ThemistoNaiveReadCount)
 
 ## kallisto replicon mapping PCN estimates.
 kallisto.replicon.metadata <- read.csv("../results/NCBI-replicon_lengths.csv")
@@ -288,11 +387,13 @@ kallisto.replicon.PCN.estimates <- read.csv("../results/kallisto-replicon_copy_n
 
 ## compare naive themisto to naive kallisto estimates.
 naive.themisto.vs.naive.kallisto.df <- naive.themisto.PCN.estimates %>%
+    ## IMPORTANT: remove plasmids with insufficient reads.
+    filter(InsufficientReads == FALSE) %>%
     left_join(kallisto.replicon.PCN.estimates) %>%
     filter(SeqType == "plasmid")
 
-## make Supplementary Figure S4.   
-S4Fig <- naive.themisto.vs.naive.kallisto.df %>%
+## make Supplementary Figure S5.   
+S5Fig <- naive.themisto.vs.naive.kallisto.df %>%
     ggplot(
         aes(x=log10(KallistoNaiveCopyNumber), y=log10(ThemistoNaiveCopyNumber))) +
     geom_point(size=1) +
@@ -306,15 +407,8 @@ S4Fig <- naive.themisto.vs.naive.kallisto.df %>%
         aes(x=log10(KallistoNaiveCopyNumber), y=log10(ThemistoNaiveCopyNumber)),
         color="light blue",
         formula=y~x)
-## save Supplementary Figure S4.
-S4Fig <- ggsave("../results/S4Fig.pdf", S4Fig, height=4, width=4)
-
-
-
-
-
-
-
+## save Supplementary Figure S5.
+S5Fig <- ggsave("../results/S5Fig.pdf", S5Fig, height=4, width=4)
 
 ################################################################################
 ## BIOLOGY ANALYSES STARTING HERE
