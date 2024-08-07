@@ -2,10 +2,12 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## Make a scatterplot of plasmid copy numbers against plasmid length,
-## and color dots by presence of ARGs.
+## CRITICAL TODO:
+## THIS Supplementary Figure does not look right!!
+## is this a bug in the data???
 
-## redo the same analysis, focusing on conjugative, mobilizable, and non-mobilizable plasmids.
+## TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
+## (minimap2 and breseq).
 
 library(tidyverse)
 library(cowplot)
@@ -63,8 +65,9 @@ MIN_READ_COUNT <- 10000
 ## SMALL TODO: In PCN_pipeline.py, make sure the ThemistoID_right column is dropped
 ## and not written out to this CSV file.
 
-## IMPORTANT: this needs to include chromosomes for proper comparison with breseq results.
-PIRA.PCN.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
+## IMPORTANT: do NOT filter this for just plasmids just yet--
+## we need to include chromosomes for proper comparison with breseq results.
+PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
     rename(
         PIRACopyNumber = PIRA_CopyNumberEstimate,
         PIRAReadCount = ReadCount,
@@ -82,7 +85,7 @@ PIRA.PCN.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
 ## might actually want to report PCN.
 ## for reproducibility, use random seed = 60, which I generated using random.org (see screenshot in ../data).
 
-genomes.to.sample.from.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+genomes.to.sample.from.PIRA.PCN.estimates <- PIRA.estimates %>%
     filter(PIRACopyNumber > 10) %>%
     select(AnnotationAccession) %>%
     distinct()
@@ -120,7 +123,7 @@ naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimate
     select(AnnotationAccession, SeqID, SeqType, ThemistoNaiveCopyNumber, ThemistoNaiveReadCount, InsufficientReads)
 
 PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
-    left_join(PIRA.PCN.estimates) %>%
+    left_join(PIRA.estimates) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -227,7 +230,7 @@ low.PCN.minimap2.estimates.df <- read.csv("../results/minimap2-PIRA-low-PCN-benc
 
 ## merge with PIRA estimates
 PIRA.vs.minimap2.df <- low.PCN.minimap2.estimates.df %>%
-    left_join(PIRA.PCN.estimates) %>%
+    left_join(PIRA.estimates) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -266,7 +269,6 @@ S3FigB <- PIRA.vs.minimap2.df %>%
     ylab("log10(PIRA PCN)") +
     guides(color = 'none')
 
-
 ## Now make Supplementary Figure S3.
 S3Fig <- plot_grid(S3FigA, S3FigB, labels=c("A", "B"))
 ggsave("../results/S3Fig.pdf", S3Fig, height=4, width=8)
@@ -287,7 +289,7 @@ summary(minimap2.PIRA.PCN.lm.model)
 ## probably due to stringent minimap2 parameters by default, for now will not explore or discuss in text.
 
 ## first get the metadata we need from the PIRA estimates.
-PCN.benchmark.metadata.df <- PIRA.PCN.estimates %>%
+PCN.benchmark.metadata.df <- PIRA.estimates %>%
     select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length") %>%
     ## IMPORTANT: trim the ".1" suffixes of the SeqIDs so that we can properly merge
     ## with the TrimmedSeqID in the breseq low PCN benchmark summary data (see below).
@@ -319,7 +321,7 @@ low.PCN.breseq.estimate.df <- low.PCN.breseq.summary.df %>%
 
 ## merge with the PIRA estimates, and benchmark copy number estimates.
 PIRA.vs.breseq.df <- low.PCN.breseq.estimate.df %>%
-    left_join(PIRA.PCN.estimates) %>%
+    left_join(PIRA.estimates) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -413,417 +415,120 @@ S5Fig <- ggsave("../results/S5Fig.pdf", S5Fig, height=4, width=4)
 ################################################################################
 ## BIOLOGY ANALYSES STARTING HERE
 
+## This is the full file of MOBTyper results
+## CRITICAL TODO: analyze all the additional correlates that may be in these data.
+MOBTyper.results <- read.csv("../data/Maddamsetti2024_FileS5-MOBTyper-plasmid-annotations.csv")
 
 
-
-
-
-
-
-
-#### QUICK CHECK OF PIRA estimates.
-log.PIRA.PCN.plot <- PIRA.PCN.estimates %>%
-    filter(PIRAReadCount > 10000) %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.1,alpha=0.5) +
-    theme_classic() +
-    xlab("log10(Replicon Length)")  +
-    ylab("log10(PIRA Plasmid Copy Number)")
-ggsave("../results/log-PIRA-PCN-plot.pdf", log.PIRA.PCN.plot, height=5, width=5)
-
-
-
-
-## PIRA gets estimates for 12,829 plasmids.
-PIRA.PCN.plot <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    ggplot(
-        aes(x=log10(replicon_length),y=log10(PIRACopyNumber),
-            color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top") ##+
-    #facet_grid(`Plasmid class`~PredictedMobility)
-
-
-## filter based on PIRAReadCount
-PIRA.PCN.plot2 <- PIRA.kallisto.themisto.NCBI.plasmid.estimate.data %>%
-    filter(PIRAReadCount > 10000) %>%
-    ggplot(
-        aes(x=log10(replicon_length),y=log10(PIRACopyNumber),
-            color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top")
-
-PIRA.PCN.plot
-
-
-
-## get ARG copy number data.
-kallisto.ARG.copy.number.data <- read.csv("../results/NCBI-ARG_copy_numbers.csv") %>%
-    mutate(beta.lactam.resistance = ifelse(str_detect(product,beta.lactam.keywords), TRUE, FALSE))
-
-beta.lactam.ARGs <- filter(NCBI.ARG.copy.number.data, beta.lactam.resistance==TRUE)
-non.beta.lactam.ARGs <- filter(NCBI.ARG.copy.number.data, beta.lactam.resistance==FALSE)
-
-kallisto.gene.averaged.copy.number.data <- read.csv("../results/NCBI-replicon_copy_numbers_from_genes.csv") %>%
-    full_join(NCBI.replicon.length.data) %>%
-    mutate(has.ARG = ifelse(SeqID %in% NCBI.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
-    mutate(has.beta.lactamase = ifelse(SeqID %in% beta.lactam.ARGs$SeqID, TRUE, FALSE)) %>%
-    ## 0 == no ARG, 1 == has ARG, 2 == has beta-lactamase.
-    mutate(ARG.classification = has.ARG + has.beta.lactamase) %>%
-    mutate(ARG.classification = as.factor(ARG.classification)) %>%
-    mutate(`Plasmid class` = recode(ARG.classification, `0` = "No ARGs",
-                                    `1` = "Non-beta-lactamase ARGs",
-                                    `2` = "Beta-lactamases")) ##%>%
-    ## remove outlier points with very low coverage.
-##    filter(CopyNumber > 0.5)
-
-## Make a column representing plasmid length normalized by chromosome length in each AnnotationAccession
-
-# Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
-max_replicon_lengths <- NCBI.chromosome.plasmid.copy.number.data %>%
-  group_by(`AnnotationAccession`) %>%
-  summarise(max_replicon_length = max(replicon_length))
-
-# Merging the maximum replicon lengths back to the original data frame
-NCBI.chromosome.plasmid.copy.number.data <- NCBI.chromosome.plasmid.copy.number.data %>%
-  left_join(max_replicon_lengths, by = "AnnotationAccession") %>%
-## Creating a new column 'normalized_replicon_length' by dividing 'replicon_length' by 'max_replicon_length'
-    mutate(normalized_replicon_length = replicon_length / max_replicon_length)
-
+## This is just the mobiliity data from the above big table.
 ## Import MOBTyper mobility results for merging with the plasmid copy number data.
 mobility.results <- read.csv("../results/mobility-results.csv")
 
+## get ARG copy number data-- this is only used for annotating ARGs.
+kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.csv") %>%
+    mutate(beta.lactam.resistance = ifelse(str_detect(product,beta.lactam.keywords), TRUE, FALSE))
+## this is used for annotating plasmids containing beta-lactamases.
+beta.lactam.ARGs <- filter(kallisto.ARG.copy.number.data, beta.lactam.resistance==TRUE)
 
-NCBI.plasmid.copy.number.data <- NCBI.chromosome.plasmid.copy.number.data %>%
+
+## take the PIRA estimates, filter for plasmids,
+## and annotate plasmids with ARGs, and MOB type.
+PIRA.PCN.estimates <- PIRA.estimates %>%
     filter(SeqType == "plasmid") %>%
-    arrange(CopyNumber) %>%
     ## add Plasmid column to merge mobility.results,
     ## by splitting the SeqID string on the underscore and taking the second part.
     mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
     left_join(mobility.results) %>%
-    ## for now, remove rows without predicted mobility.
-    filter(!is.na(PredictedMobility))
-
-################################################################################
-## compare results with using each replicon as a 'gene' for read mapping with kallisto.
-kallisto.replicon.data <- read.csv("../results/NCBI-replicon_copy_numbers.csv") %>%
-    full_join(NCBI.replicon.length.data) %>%
-    mutate(has.ARG = ifelse(SeqID %in% NCBI.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
+    mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
     mutate(has.beta.lactamase = ifelse(SeqID %in% beta.lactam.ARGs$SeqID, TRUE, FALSE)) %>%
     ## 0 == no ARG, 1 == has ARG, 2 == has beta-lactamase.
     mutate(ARG.classification = has.ARG + has.beta.lactamase) %>%
     mutate(ARG.classification = as.factor(ARG.classification)) %>%
-    mutate(`Plasmid class` = recode(ARG.classification, `0` = "No ARGs",
+    mutate(`Plasmid class` = recode(ARG.classification,
+                                    `0` = "No ARGs",
                                     `1` = "Non-beta-lactamase ARGs",
                                     `2` = "Beta-lactamases"))
 
-## compare results with using each replicon as a 'gene' for read mapping with kallisto.
-kallisto.replicon.PCN.estimates <- read.csv("../results/kallisto-replicon_copy_numbers.csv") %>%
-    full_join(NCBI.replicon.length.data) %>%
-    mutate(has.ARG = ifelse(SeqID %in% NCBI.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
-    mutate(has.beta.lactamase = ifelse(SeqID %in% beta.lactam.ARGs$SeqID, TRUE, FALSE)) %>%
-    ## 0 == no ARG, 1 == has ARG, 2 == has beta-lactamase.
-    mutate(ARG.classification = has.ARG + has.beta.lactamase) %>%
-    mutate(ARG.classification = as.factor(ARG.classification)) %>%
-    mutate(`Plasmid class` = recode(ARG.classification, `0` = "No ARGs",
-                                    `1` = "Non-beta-lactamase ARGs",
-                                    `2` = "Beta-lactamases"))
+## Make a column representing plasmid length normalized by chromosome length in each AnnotationAccession
+# Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
+max_replicon_lengths <- PIRA.PCN.estimates %>%
+  group_by(`AnnotationAccession`) %>%
+  summarise(max_replicon_length = max(replicon_length))
+
+# Merging the maximum replicon lengths back to the original data frame
+PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    left_join(max_replicon_lengths, by = "AnnotationAccession") %>%
+    ## Creating a new column 'normalized_replicon_length' by dividing 'replicon_length' by 'max_replicon_length'
+    mutate(normalized_replicon_length = replicon_length / max_replicon_length)
 
 
-
-NCBI.replicon.data.for.comparison <- NCBI.replicon.data %>%
-    mutate(KallistoRepliconCopyNumber = CopyNumber) %>%
-    select(RefSeqID, SeqID, SeqType, AnnotationAccession, KallistoRepliconCopyNumber)
-
-## merge the gene-level and replicon-level estimates.
-NCBI.plasmid.estimate.data <- NCBI.replicon.data.for.comparison %>%
-    filter(SeqType == "plasmid") %>%
-    full_join(NCBI.plasmid.copy.number.data) %>%
-    mutate(KallistoGeneAveragedCopyNumber = CopyNumber)
-
-kallisto.comparison.plot <- NCBI.plasmid.estimate.data %>%
-    ggplot(aes(x=KallistoGeneAveragedCopyNumber, y=KallistoRepliconCopyNumber)) +
-    geom_point() + theme_classic()
-
-## There are 1944 big outliers, on the ends of both axes!
-kallisto.comparison.plot
-
-## let's remove the outliers and see what the plot looks like.
-cropped.kallisto.comparison.plot <- kallisto.comparison.plot +
-    xlim(0,1000) + ylim(0,1000) +
-    ## Add diagonal line to compare estimates for the whole replicon,
-    ## compared to the average over all genes.
-    geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-    ## add the linear regression.
-    geom_smooth(
-        method='lm',
-        aes(x=KallistoGeneAveragedCopyNumber,y=KallistoRepliconCopyNumber),
-        color="light blue",
-        formula=y~x)
-
-cropped.kallisto.comparison.plot
-ggsave("../results/NCBI-kallisto-PCN-method-comparison.pdf",
-       cropped.kallisto.comparison.plot,height=5.75,width=5.75)
-
-
-## make a linear regression model:
-## Kallisto gene-level PCN estimates vs. replicon-level PCN estimates.
-## but first, trim the data.
-trimmed.plasmid.estimate.data <- NCBI.plasmid.estimate.data %>%
-    filter(KallistoGeneAveragedCopyNumber < 1000) %>%
-    filter(KallistoRepliconCopyNumber < 1000)
-
-kallisto.PCN.lm.model <- lm(
-    formula = KallistoRepliconCopyNumber ~ KallistoGeneAveragedCopyNumber,
-    data=trimmed.plasmid.estimate.data)
-## look at the linear regression.
-summary(kallisto.PCN.lm.model)
-
-################################################################################
-
-## Plasmids with ARGs actually have lower copy numbers than
-## plasmids without ARGs.
-
-beta.lactamase.plasmid.data <- NCBI.plasmid.copy.number.data %>%
-    filter(has.beta.lactamase==TRUE)
-
-no.beta.lactamase.plasmid.data <- NCBI.plasmid.copy.number.data %>%
-    filter(has.beta.lactamase == FALSE)
-
-ARG.plasmid.data <- NCBI.plasmid.copy.number.data %>%
-    filter(has.ARG==TRUE)
-
-no.ARG.plasmid.data <- NCBI.plasmid.copy.number.data %>%
-    filter(has.ARG == FALSE)
-
-## plasmids with beta-lactamases have lower PCN than those without beta-lactamases.
-mean(beta.lactamase.plasmid.data$CopyNumber)
-mean(no.beta.lactamase.plasmid.data$CopyNumber)
-
-median(beta.lactamase.plasmid.data$CopyNumber)
-median(no.beta.lactamase.plasmid.data$CopyNumber)
-
-## plasmids with ARGs have lower PCN than those without ARGs.
-mean(ARG.plasmid.data$CopyNumber)
-mean(no.ARG.plasmid.data$CopyNumber)
-
-median(ARG.plasmid.data$CopyNumber)
-median(no.ARG.plasmid.data$CopyNumber)
-
-## make a linear regression model:
-## log10(Plasmid copy number) vs. log10(Plasmid length).
-#plasmid.lm.model <- lm(
-#    formula=log10(CopyNumber)~log10(replicon_length),
- #   data=NCBI.plasmid.copy.number.data)
-## look at the linear regression.
-#summary(plasmid.lm.model)
-
-#second.order.plasmid.lm.model <- lm(
-#    formula=log10(CopyNumber)~poly(log10(replicon_length),2,raw=TRUE),
-#    data=NCBI.plasmid.copy.number.data)
-## look at the second order regression.
-#summary(second.order.plasmid.lm.model)
-
-## let's compare these models. The model with lower AIC is better.
-#AIC(plasmid.lm.model)
-#AIC(second.order.plasmid.lm.model)
-## also compare the models using an ANOVA.
-#print(anova(
- #   plasmid.lm.model,
- #   second.order.plasmid.lm.model))
-
-## scatterplot of log10(Plasmid copy number) vs. log10(Plasmid length).
-NCBI.plasmid.copy.number.plot <- ggplot(NCBI.plasmid.copy.number.data,
-                                   aes(x=log10(replicon_length),y=log10(CopyNumber),
-                                       color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
+## plot the PIRA PCN estimates. 10,261 plasmids in these data.
+Fig3A <- PIRA.PCN.estimates %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber),
+        color=`Plasmid class`)) +
+    geom_point(size=0.1,alpha=0.5) +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top") +
-    facet_grid(`Plasmid class`~PredictedMobility)
-    ## add the linear regression.
-    #geom_smooth(
-     #   data=NCBI.plasmid.copy.number.data,
-      #  inherit.aes=FALSE,
-       # method='lm',
-      #  aes(x=log10(replicon_length),y=log10(CopyNumber)),
-      #  color="light blue",
-      #  formula=y~x) +
-    ## let's look at second-order polynomial fit.
-    #geom_smooth(
-     #   data=NCBI.plasmid.copy.number.data,
-      #  inherit.aes=FALSE,
-       # method='lm',
-       # aes(x=log10(replicon_length),y=log10(CopyNumber)),
-       # color="light green",
-        #formula=y~poly(x, 2, raw=TRUE))
-## save the plot.
-ggsave("../results/NCBI2024-plasmid-copy-number.pdf",
-       NCBI.plasmid.copy.number.plot,height=5.75,width=5.75)
-
-## repeat this plot, using kallisto replicon-level estimates.
-NCBI.plasmid.replicon.copy.number.plot <- NCBI.replicon.data %>%
-    filter(SeqType == "plasmid") %>%
-    ggplot(
-        aes(x=log10(replicon_length),y=log10(CopyNumber),
-            color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top")
-## save the plot.
-ggsave("../results/NCBI2024-replicon-plasmid-copy-number.pdf",
-       NCBI.plasmid.replicon.copy.number.plot,height=5.75,width=5.75)
+    xlab("log10(Plasmid Length in bp)")  +
+    ylab("log10(PIRA Plasmid Copy Number)") +
+    theme(legend.position="right")
 
-## plot for Duke retreat
-Duke.Retreat.plasmid.replicon.copy.number.plot <- NCBI.replicon.data %>%
-    filter(SeqType == "plasmid") %>%
-    filter(CopyNumber > 0.1) %>%
-    filter(CopyNumber < 5000) %>%
-    ggplot(
-        aes(x=log10(replicon_length),y=log10(CopyNumber),
-            color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    guides(color = 'none')
-## save the plot.
-ggsave("../results/Duke-Retreat-2024-replicon-plasmid-copy-number.pdf",
-       Duke.Retreat.plasmid.replicon.copy.number.plot,height=4,width=4)
+## Break down this result by predicted plasmid mobility.
+Fig3B <- Fig3A + facet_grid(`Plasmid class`~ PredictedMobility)
 
+## make Figure 3.
+Fig3 <- plot_grid(Fig3A, Fig3B, labels=c('A', 'B'),nrow=2)
+ggsave("../results/Fig3.pdf", Fig3, height=12, width=12)
 
+## Make a Supplementary Figure S6 that is the same as Figure 3,
+## but plotting normalized plasmid length relative to the length of the longest
+## chromosome.
 
-## scatterplot of log10(Plasmid copy number) vs. log10(Plasmid length).
-normalized.NCBI.plasmid.copy.number.plot1 <- ggplot(NCBI.plasmid.copy.number.data,
-                                   aes(x=log10(normalized_replicon_length),y=log10(CopyNumber),
-                                       color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
+## CRITICAL TODO:
+## THIS Supplementary Figure does not look right!!
+## is this a bug in the data???
+
+## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
+S6FigA <- ggplot(PIRA.PCN.estimates,
+                 aes(
+                     x = normalized_replicon_length,
+                     y = log10(PIRACopyNumber),
+                     color = `Plasmid class`)) +
+    geom_point(size=0.1, alpha=0.5) +
     theme_classic() +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
     ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top") +
-    facet_grid(`Plasmid class`~PredictedMobility)
+    xlab("Normalized Plasmid length") +
+    theme(legend.position="right")
 
-ggsave("../results/NCBI2024-plasmid-copy-number-normalized-length-facets.pdf",
-       normalized.NCBI.plasmid.copy.number.plot1,height=5.75,width=5.75)
+## Break down this result by predicted plasmid mobility.
+S6FigB <- S6FigA + facet_grid(`Plasmid class`~ PredictedMobility)
 
-## scatterplot of log10(Plasmid copy number) vs. log10(Plasmid length).
-normalized.NCBI.plasmid.copy.number.plot2 <- ggplot(NCBI.plasmid.copy.number.data,
-                                   aes(x=log10(normalized_replicon_length),y=log10(CopyNumber),
-                                       color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    geom_vline(xintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="top")
-
-ggsave("../results/NCBI2024-plasmid-copy-number-normalized-length.pdf",
-       normalized.NCBI.plasmid.copy.number.plot2,height=5.75,width=5.75)
-
-## scatterplot of log10(Plasmid copy number) vs. log10(Plasmid length).
-NCBI.plasmid.copy.number.plot2 <- ggplot(NCBI.plasmid.copy.number.data,
-                                   aes(x=log10(replicon_length),y=log10(CopyNumber),
-                                       color=`Plasmid class`)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="bottom")
-
-ggsave("../results/NCBI2024-PCN.pdf",
-       NCBI.plasmid.copy.number.plot2,height=5.75,width=5.75)
-
-## just plot plasmids with PCN > 100.
-NCBI.plasmid.copy.number.plot3 <- NCBI.plasmid.copy.number.data %>%
-    mutate(highPCN =  ifelse(CopyNumber > 100, TRUE, FALSE)) %>%
-    ggplot(aes(x=log10(replicon_length),y=log10(CopyNumber),
-                                       color=highPCN)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    theme(legend.position="bottom")
-
-ggsave("../results/NCBI2024-high-PCN.pdf",
-       NCBI.plasmid.copy.number.plot3,height=5.75,width=5.75)
-
-## calculate the total number of plasmids and the number of plasmids with PCN > 100.
-nrow(NCBI.plasmid.copy.number.data) ## 10,729 plasmids here
-
-NCBI.plasmid.copy.number.data %>% filter(CopyNumber > 100) %>% nrow() ## 265 plasmids here.
-
-################################################################################
-## let's make a histogram of PCN in these data.
-
-NCBI.plasmid.histogram <- NCBI.plasmid.copy.number.data %>%
-    ggplot(aes(x = log10(CopyNumber))) +
-    geom_histogram(bins=1000) +
-    theme_classic()
-
-NCBI.plasmid.histogram
+## make Supplementary Figure S6.
+S6Fig <- plot_grid(S6FigA, S6FigB, labels=c('A', 'B'),nrow=2)
+ggsave("../results/S6Fig.pdf", S6Fig, height=12, width=12)
 
 
 ################################################################################
-## let's examine total plasmid DNA per genome.
-
-plasmid.DNA.content.data <- NCBI.plasmid.copy.number.data %>%
-    filter(SeqType == "plasmid") %>%
-    mutate(DNAContent = replicon_length * CopyNumber) %>%
-    group_by(AnnotationAccession, max_replicon_length) %>%
-    summarize(TotalPlasmidDNAContent = sum(DNAContent))
-
-plasmid.DNA.content.plot <- plasmid.DNA.content.data %>%
-    ggplot(aes(x=max_replicon_length, y=TotalPlasmidDNAContent)) +
-    geom_point() +
-    theme_classic() +
-    geom_smooth()
-
-plasmid.DNA.content.plot
-
-plasmid.DNA.content.plot2 <- plasmid.DNA.content.plot + ylim(0,2000000)
-
-plasmid.DNA.content.plot2
-
-
-##################################################################
-## let's examine PCN distribution over INC groups, MOB groups, and ecology.
+## Figure 4. PCN distribution over INC groups, MOB groups, and ecology.
 ## clear association between high PCN plasmids and particular ecological annotations.
 
 ## First examine over ecology.
 ecological.annotation <- read.csv("../results/computationally-annotated-gbk-annotation-table.csv")
 
-ecologically.annotated.PCN.data <- simple.themisto.PCN.estimates %>%
+ecologically.annotated.PCN.data <- PIRA.PCN.estimates %>%
     left_join(ecological.annotation) %>%
     filter(Annotation != "NA") %>%
     filter(Annotation != "blank")
 
-ecological.NCBI.simple.themisto.plasmid.copy.number.plot <- ggplot(
+Fig4A <- ggplot(
     ecologically.annotated.PCN.data,
     aes(
         x = log10(replicon_length),
-        y = log10(ThemistoSimpleCopyNumber),
+        y = log10(PIRACopyNumber),
         color = Annotation)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
@@ -834,35 +539,88 @@ ecological.NCBI.simple.themisto.plasmid.copy.number.plot <- ggplot(
     guides(color = "none") +
     facet_wrap(.~Annotation)
 
-ecological.NCBI.simple.themisto.plasmid.copy.number.plot
-## save the plot
-ggsave(
-    "../results/ecological-associations-with-PCN.pdf",
-    ecological.NCBI.simple.themisto.plasmid.copy.number.plot, height=5, width=5)
-
-
-
 ## let's examine the ecology of high copy number plasmids.
 ## very cool! we see association with high PCN with humans, human-impacted environments, and livestock.
-
-ecological.high.plasmid.copy.number.plot <- ecologically.annotated.PCN.data %>%
-    filter(ThemistoSimpleCopyNumber > 100) %>%
+Fig4B <- ecologically.annotated.PCN.data %>%
     ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(ThemistoSimpleCopyNumber),
+        x = log10(PIRACopyNumber),
+        y = Annotation,
         color = Annotation)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_boxplot() +
     theme_classic() +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)")
+    ylab("Ecological Annotation") +
+    xlab("log10(Plasmid copy number)") 
 
-ecological.high.plasmid.copy.number.plot
-
-
-
-MOBTyper.results <- read.csv("../data/Maddamsetti2024_FileS5-MOBTyper-plasmid-annotations.csv")
+Fig4 <- plot_grid(Fig4A, Fig4B, labels=c("A","B"), nrow=2)
+## save the plot
+ggsave("../results/Fig4.pdf", Fig4, height=12, width=12)
 
 
+################################################################################
+## Plasmids with ARGs actually have lower copy numbers than
+## plasmids without ARGs.
+
+beta.lactamase.plasmid.data <- PIRA.PCN.estimates %>%
+    filter(has.beta.lactamase==TRUE)
+
+no.beta.lactamase.plasmid.data <- PIRA.PCN.estimates %>%
+    filter(has.beta.lactamase == FALSE)
+
+ARG.plasmid.data <- PIRA.PCN.estimates %>%
+    filter(has.ARG==TRUE)
+
+no.ARG.plasmid.data <- PIRA.PCN.estimates %>%
+    filter(has.ARG == FALSE)
+
+## plasmids with beta-lactamases have lower PCN than those without beta-lactamases.
+mean(beta.lactamase.plasmid.data$PIRACopyNumber)
+mean(no.beta.lactamase.plasmid.data$PIRACopyNumber)
+
+median(beta.lactamase.plasmid.data$PIRACopyNumber)
+median(no.beta.lactamase.plasmid.data$PIRACopyNumber)
+
+## plasmids with ARGs have lower PCN than those without ARGs.
+mean(ARG.plasmid.data$PIRACopyNumber)
+mean(no.ARG.plasmid.data$PIRACopyNumber)
+
+median(ARG.plasmid.data$PIRACopyNumber)
+median(no.ARG.plasmid.data$PIRACopyNumber)
+
+################################################################################
+## calculate the total number of plasmids and the number of plasmids with PCN > 100.
+nrow(PIRA.PCN.estimates) ## 10,261 plasmids here
+## There are 176 plasmids with PCN > 100 in these data.
+PIRA.PCN.estimates %>% filter(PIRACopyNumber > 100) %>% nrow()
+
+
+################################################################################
+## Supplementary Figure S7. let's make a histogram of PCN in these data.
+
+S7Fig <- PIRA.PCN.estimates %>%
+    ggplot(aes(x = log10(PIRACopyNumber))) +
+    geom_histogram(bins=1000) +
+    theme_classic()
+
+ggsave("../results/S7Fig.pdf", S7Fig, height = 6, width = 6)
+
+
+################################################################################
+## Supplementary Figure S8. examine total DNA (chromosomes and plasmids) per genome.
+
+DNA.content.data <- PIRA.estimates %>%
+    mutate(DNAContent = replicon_length * PIRACopyNumber) %>%
+    group_by(AnnotationAccession) %>%
+    summarize(TotalDNAContent = sum(DNAContent))
+
+S8Fig <- DNA.content.data %>%
+    ggplot(aes(x=TotalDNAContent)) +
+    geom_histogram(bins=1000) +
+    theme_classic() +
+## IMPORTANT TODO: EXAMINE OUTLIERS IN THIS PLOT.
+    xlim(0,15000000)
+
+
+ggsave("../results/S8Fig.pdf", S8Fig, height = 6, width = 6)
 
 ###################################################################################
 ## let's compare long read PCN estimates from minimap2 and pseudoalignment for high PCN plasmids--
@@ -871,13 +629,16 @@ MOBTyper.results <- read.csv("../data/Maddamsetti2024_FileS5-MOBTyper-plasmid-an
 ## I found about inferring PCN with Oxford nanopore suggests that long-read sequencing
 ## is not appropriate for inferring PCN.
 
+high.PCN.plasmids <- PIRA.PCN.estimates %>%
+    filter(PIRACopyNumber > 100)
+
 ## merge high.PCN.plasmid.RunID.df with high.PCN.plasmids.
 high.PCN.plasmid.RunID.df <- read.csv("../results/high-PCN-plasmid-RunID_table.csv")
 
 longread.high.PCN.estimates <- read.csv("../results/longread-alignment-PCN-estimates.csv") %>%
     rename(longread.minimap2.CopyNumber = CopyNumber)
 
-## 126 plasmids in this comparison.
+## 115 plasmids in this comparison.
 long.read.alignment.versus.short.read.pseudoalignment.high.PCN.estimates <- high.PCN.plasmids %>%
     ## add RefSeq_ID column to merge RunID.df,
     ## by splitting the AnnotationAccession string on the second underscore in the string.
@@ -886,18 +647,17 @@ long.read.alignment.versus.short.read.pseudoalignment.high.PCN.estimates <- high
     ## there are duplicate rows??? remove these.
     distinct() %>%
     inner_join(longread.high.PCN.estimates) %>%
-    rename(shortread.themisto.CopyNumber = CopyNumber) %>%
     distinct()
 
 
 high.PCN.estimate.comparison.plot <- long.read.alignment.versus.short.read.pseudoalignment.high.PCN.estimates %>%
     ggplot(aes(
-        x = log10(shortread.themisto.CopyNumber),
+        x = log10(PIRACopyNumber),
         y = log10(longread.minimap2.CopyNumber),
         color = LongReadDataType)) +
     geom_point() +
     theme_classic() +
-    xlab("log10(Short Read Themisto Copy Number)")  +
+    xlab("log10(PIRA Copy Number)")  +
     ylab("log10(Long Read Minimap2 Copy Number)") +
     theme(legend.position="top") +
     xlim(-2,3) +
@@ -908,3 +668,29 @@ ggsave(
     high.PCN.estimate.comparison.plot, height=5, width=5)
 
 ###################################################################################
+## POTENTIAL TODO: compare a mixture model fit (two lines, with a breakpoint as an extra parameter),
+## to a second-order polynomial fit.
+
+## make a linear regression model:
+## log10(Plasmid copy number) vs. log10(Plasmid length).
+plasmid.lm.model <- lm(
+    formula=log10(PIRACopyNumber)~log10(replicon_length),
+    data=PIRA.PCN.estimates)
+## look at the linear regression.
+summary(plasmid.lm.model)
+
+second.order.plasmid.lm.model <- lm(
+    formula=log10(PIRACopyNumber)~poly(log10(replicon_length),2,raw=TRUE),
+    data=PIRA.PCN.estimates)
+## look at the second order regression.
+summary(second.order.plasmid.lm.model)
+
+## let's compare these models. The model with lower AIC is better.
+AIC(plasmid.lm.model)
+AIC(second.order.plasmid.lm.model)
+## also compare the models using an ANOVA.
+print(anova(
+    plasmid.lm.model,
+    second.order.plasmid.lm.model))
+
+
