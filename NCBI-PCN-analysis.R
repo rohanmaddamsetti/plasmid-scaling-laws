@@ -462,25 +462,31 @@ PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     mutate(normalized_replicon_length = replicon_length / max_replicon_length)
 
 
+## CRITICAL TODO: POLISH THIS CODE
+## shape := ARG- or ARG+ (don't worry about beta-lactamases)
+## color := conjugative, mobilizable, etc.
+## keep consistent coding throughout the paper.
+
 ## plot the PIRA PCN estimates. 10,261 plasmids in these data.
 Fig3A <- PIRA.PCN.estimates %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
-        color=`Plasmid class`)) +
-    geom_point(size=0.1,alpha=0.5) +
+        shape = has.ARG,
+        color = PredictedMobility)) +
+    geom_point(size=0.2,alpha=0.5) +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     theme_classic() +
-    xlab("log10(Plasmid Length in bp)")  +
-    ylab("log10(PIRA Plasmid Copy Number)") +
-    theme(legend.position="right")
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    theme(legend.position="bottom")
 
 ## Break down this result by predicted plasmid mobility.
 Fig3B <- Fig3A + facet_grid(`Plasmid class`~ PredictedMobility)
 
 ## make Figure 3.
-Fig3 <- plot_grid(Fig3A, Fig3B, labels=c('A', 'B'),nrow=2)
-ggsave("../results/Fig3.pdf", Fig3, height=12, width=12)
+#Fig3 <- plot_grid(Fig3A, Fig3B, labels=c('A', 'B'),nrow=2)
+ggsave("../results/Fig3.pdf", Fig3A, height=4, width=4)
 
 ## Make a Supplementary Figure S6 that is the same as Figure 3,
 ## but plotting normalized plasmid length relative to the length of the longest
