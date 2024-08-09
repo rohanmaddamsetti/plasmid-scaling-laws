@@ -6,7 +6,7 @@
 ## THIS Supplementary Figure does not look right!!
 ## is this a bug in the data???
 
-## TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
+## POTENTIAL TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
 ## (minimap2 and breseq).
 
 library(tidyverse)

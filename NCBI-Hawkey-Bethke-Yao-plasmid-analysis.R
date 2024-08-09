@@ -281,7 +281,7 @@ NHBY.lm.model <- lm(
 summary(NHBY.lm.model)
 
 ################################################################################
-## Let's play with Zhengqing's his notion of plasmid capacity.
+## Let's play with Zhengqing's notion of plasmid capacity.
 NCBI.Hawkey.Bethke.Yao.data2 <- NCBI.Hawkey.Bethke.Yao.data %>%
     mutate(PlasmidCapacity1 = replicon_length*CopyNumber) %>%
     mutate(PlasmidCapacity2 = log10(replicon_length)*log10(CopyNumber))
@@ -475,3 +475,9 @@ benchmarking.lm.model <- lm(
     data=benchmarking.PCN.estimate.data)
 ## look at the linear regression.
 summary(benchmarking.lm.model)
+
+
+## confidence intervals for parameters
+benchmarking.conf.intervals <- confint(benchmarking.lm.model)
+benchmarking.conf.intervals
+
