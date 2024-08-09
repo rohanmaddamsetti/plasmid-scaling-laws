@@ -3,7 +3,7 @@
 ## PCN-pipeline.py.
 
 ## CRITICAL TODO:
-## THIS Supplementary Figure does not look right!!
+## Supplementary Figure S7 does not look right!!
 ## is this a bug in the data???
 
 ## POTENTIAL TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
@@ -107,7 +107,7 @@ write.csv(chosen.genomes.df, "../results/Fifty-random-genomes-with-multicopy-pla
           row.names = FALSE, quote=FALSE)
 
 ################################################################################
-## Supplementary Figure S2: Effect of PIRA compared to naive themisto estimates.
+## Supplementary Figure S3: Effect of PIRA compared to naive themisto estimates.
 
 ## naive calculation with themisto read counts, ignoring multireplicon reads.
 naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimates.csv") %>%
@@ -131,8 +131,8 @@ PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
 sum(PIRA.vs.naive.themisto.df$InsufficientReads == TRUE)
     
 
-## Now make S2 Figure panel A.
-S2FigA <- PIRA.vs.naive.themisto.df %>%
+## Now make S3 Figure panel A.
+S3FigA <- PIRA.vs.naive.themisto.df %>%
     ggplot(aes(
         x = log10(ThemistoNaiveCopyNumber),
         y = log10(PIRACopyNumber),
@@ -153,8 +153,8 @@ S2FigA <- PIRA.vs.naive.themisto.df %>%
         formula=y~x)
 
 
-## S2 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
-S2FigB <- PIRA.vs.naive.themisto.df %>%
+## S3 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
+S3FigB <- PIRA.vs.naive.themisto.df %>%
     filter(PIRA_low_PCN == TRUE) %>%
     ggplot(aes(
         x = log10(ThemistoNaiveCopyNumber),
@@ -169,10 +169,10 @@ S2FigB <- PIRA.vs.naive.themisto.df %>%
     ylab("log10(PIRA PCN)") +
     guides(color = 'none', shape = 'none')
 
-## S2 Figure panels C and D remove points with insufficient reads.
+## S3 Figure panels C and D remove points with insufficient reads.
 
-## Now make S2 Figure panel C
-S2FigC <- PIRA.vs.naive.themisto.df %>%
+## Now make S3 Figure panel C
+S3FigC <- PIRA.vs.naive.themisto.df %>%
     filter(InsufficientReads == FALSE) %>%
     ggplot(aes(
         x = log10(ThemistoNaiveCopyNumber),
@@ -193,8 +193,8 @@ S2FigC <- PIRA.vs.naive.themisto.df %>%
         formula=y~x)
 
 
-## S2 Figure panel D zooms in on the plasmids with PIRA PCN < 0.8.
-S2FigD <- PIRA.vs.naive.themisto.df %>%
+## S3 Figure panel D zooms in on the plasmids with PIRA PCN < 0.8.
+S3FigD <- PIRA.vs.naive.themisto.df %>%
     filter(InsufficientReads == FALSE) %>%
     filter(PIRA_low_PCN == TRUE) %>%
     ggplot(aes(
@@ -210,14 +210,14 @@ S2FigD <- PIRA.vs.naive.themisto.df %>%
     guides(color = 'none')
 
 
-## make Supplementary Figure S2.
-S2Fig <- plot_grid(S2FigA, S2FigB, S2FigC, S2FigD, labels=c("A", "B", "C", "D"))
-ggsave("../results/S2Fig.pdf", S2Fig, height=6, width=8)
+## make Supplementary Figure S3.
+S3Fig <- plot_grid(S3FigA, S3FigB, S3FigC, S3FigD, labels=c("A", "B", "C", "D"))
+ggsave("../results/S3Fig.pdf", S3Fig, height=6, width=8)
 
 
 
 ################################################################################
-## Supplementary Figure S3.
+## Supplementary Figure S4.
 ## Benchmarking of PIRA with themisto against PIRA with minimap2 alignments on 100 random genomes
 ## with low copy number plasmids (PCN < 0.8).
 
@@ -234,8 +234,8 @@ PIRA.vs.minimap2.df <- low.PCN.minimap2.estimates.df %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
-## make S3 Figure panel A
-S3FigA <- PIRA.vs.minimap2.df %>%
+## make S4 Figure panel A
+S4FigA <- PIRA.vs.minimap2.df %>%
     ggplot(aes(
         x = log10(minimap2_PIRA_CopyNumberEstimate),
         y = log10(PIRACopyNumber),
@@ -254,8 +254,8 @@ S3FigA <- PIRA.vs.minimap2.df %>%
         color="light blue",
         formula=y~x)
 
-## S3 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
-S3FigB <- PIRA.vs.minimap2.df %>%
+## S4 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
+S4FigB <- PIRA.vs.minimap2.df %>%
     filter(PIRA_low_PCN == TRUE) %>%
     ggplot(aes(
         x = log10(minimap2_PIRA_CopyNumberEstimate),
@@ -269,9 +269,9 @@ S3FigB <- PIRA.vs.minimap2.df %>%
     ylab("log10(PIRA PCN)") +
     guides(color = 'none')
 
-## Now make Supplementary Figure S3.
-S3Fig <- plot_grid(S3FigA, S3FigB, labels=c("A", "B"))
-ggsave("../results/S3Fig.pdf", S3Fig, height=4, width=8)
+## Now make Supplementary Figure S4.
+S4Fig <- plot_grid(S4FigA, S4FigB, labels=c("A", "B"))
+ggsave("../results/S4Fig.pdf", S4Fig, height=4, width=8)
 
 ## make a linear model and examine it.
 minimap2.PIRA.PCN.lm.model <- lm(
@@ -280,9 +280,13 @@ minimap2.PIRA.PCN.lm.model <- lm(
 ## look at the linear regression.
 summary(minimap2.PIRA.PCN.lm.model)
 
+## confidence intervals for parameters
+minimap2.PIRA.conf.intervals <- confint(minimap2.PIRA.PCN.lm.model)
+minimap2.PIRA.conf.intervals
+
 
 ###################################################################################
-## Supplementary Figure S4.
+## Supplementary Figure S5.
 ## Benchmarking of these 100 random genomes with breseq as another gold standard control,
 ## This additional test makes sure these estimates are accurate,
 ## and not artifactual due to low sequencing coverage with minimap2 compared to breseq.
@@ -326,8 +330,8 @@ PIRA.vs.breseq.df <- low.PCN.breseq.estimate.df %>%
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
 
-## Now make S4 Figure panel A.
-S4FigA <- PIRA.vs.breseq.df %>%
+## Now make S5 Figure panel A.
+S5FigA <- PIRA.vs.breseq.df %>%
     ggplot(aes(
         x = log10(BreseqCopyNumberEstimate),
         y = log10(PIRACopyNumber),
@@ -347,8 +351,8 @@ S4FigA <- PIRA.vs.breseq.df %>%
         formula=y~x)
 
 
-## S4 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
-S4FigB <- PIRA.vs.breseq.df %>%
+## S5 Figure panel B zooms in on the plasmids with PIRA PCN < 0.8.
+S5FigB <- PIRA.vs.breseq.df %>%
     filter(PIRA_low_PCN == TRUE) %>%
     ggplot(aes(
         x = log10(BreseqCopyNumberEstimate),
@@ -362,9 +366,9 @@ S4FigB <- PIRA.vs.breseq.df %>%
     ylab("log10(PIRA PCN)") +
     guides(color = 'none') 
 
-## Now make Supplementary Figure S4.
-S4Fig <- plot_grid(S4FigA, S4FigB, labels=c("A", "B"))
-ggsave("../results/S4Fig.pdf", S4Fig, height=4, width=8)
+## Now make Supplementary Figure S5.
+S5Fig <- plot_grid(S5FigA, S5FigB, labels=c("A", "B"))
+ggsave("../results/S5Fig.pdf", S5Fig, height=4, width=8)
 
 
 ## make a linear model and examine it.
@@ -374,8 +378,13 @@ breseq.PIRA.PCN.lm.model <- lm(
 ## look at the linear regression.
 summary(breseq.PIRA.PCN.lm.model)
 
+## confidence intervals for parameters
+breseq.PIRA.conf.intervals <- confint(breseq.PIRA.PCN.lm.model)
+breseq.PIRA.conf.intervals
+
+
 ################################################################################
-## Supplementary Figure S5:
+## Supplementary Figure S6:
 ## compare naive kallisto to naive themisto PCN estimates to show that PCN numbers by pseudoalignment
 ## are reproducible irrespective of the specific software implementation.
 
@@ -394,8 +403,8 @@ naive.themisto.vs.naive.kallisto.df <- naive.themisto.PCN.estimates %>%
     left_join(kallisto.replicon.PCN.estimates) %>%
     filter(SeqType == "plasmid")
 
-## make Supplementary Figure S5.   
-S5Fig <- naive.themisto.vs.naive.kallisto.df %>%
+## make Supplementary Figure S6.
+S6Fig <- naive.themisto.vs.naive.kallisto.df %>%
     ggplot(
         aes(x=log10(KallistoNaiveCopyNumber), y=log10(ThemistoNaiveCopyNumber))) +
     geom_point(size=1) +
@@ -409,8 +418,8 @@ S5Fig <- naive.themisto.vs.naive.kallisto.df %>%
         aes(x=log10(KallistoNaiveCopyNumber), y=log10(ThemistoNaiveCopyNumber)),
         color="light blue",
         formula=y~x)
-## save Supplementary Figure S5.
-S5Fig <- ggsave("../results/S5Fig.pdf", S5Fig, height=4, width=4)
+## save Supplementary Figure S6.
+S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 
 ################################################################################
 ## BIOLOGY ANALYSES STARTING HERE
@@ -468,7 +477,7 @@ PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
 ## keep consistent coding throughout the paper.
 
 ## plot the PIRA PCN estimates. 10,261 plasmids in these data.
-Fig3A <- PIRA.PCN.estimates %>%
+Fig1A <- PIRA.PCN.estimates %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
@@ -482,13 +491,50 @@ Fig3A <- PIRA.PCN.estimates %>%
     theme(legend.position="bottom")
 
 ## Break down this result by predicted plasmid mobility.
-Fig3B <- Fig3A + facet_grid(`Plasmid class`~ PredictedMobility)
+Fig1B <- Fig1A + facet_grid(`Plasmid class`~ PredictedMobility)
 
-## make Figure 3.
-#Fig3 <- plot_grid(Fig3A, Fig3B, labels=c('A', 'B'),nrow=2)
-ggsave("../results/Fig3.pdf", Fig3A, height=4, width=4)
+## make Figure 1.
+#Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'),nrow=2)
+ggsave("../results/Fig1.pdf", Fig1A, height=4, width=4)
 
-## Make a Supplementary Figure S6 that is the same as Figure 3,
+################################################################################
+## Supplementary Figure S7. Inverse relationship between plasmid size and copy number
+## in data from Yao et al. (2022) Supplementary Table S4
+## and Bethke et al. (2023) Supplementary Table S1.
+
+YouLab.PCN.data <- read.csv("../data/YouLab-PCN-data.csv") %>%
+    mutate(replicon_length = Length_in_kbp*1000)
+
+## Now combine PIRA PCN estimates with You lab data.
+PIRA.Bethke.Yao.data <- PIRA.PCN.estimates %>%
+    select(SeqID, SeqType, replicon_length, PIRACopyNumber) %>%
+    mutate(Reference="NCBI") %>%
+    ## for joining with Bethke and Yao estimates.
+    mutate(CopyNumber = PIRACopyNumber) %>%
+    mutate(Plasmid = SeqID) %>%
+    full_join(YouLab.PCN.data)
+
+
+## scatterplot of log10(Plasmid copy number) vs. log10(Plasmid length).
+S7Fig <- ggplot(PIRA.Bethke.Yao.data,
+                        aes(x=log10(replicon_length),
+                            y=log10(CopyNumber),
+                            color=Reference)) +
+    geom_point(size=0.2, alpha=0.5) +
+    scale_color_manual(values=c("purple", "light gray", "red")) +
+    theme_classic() +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    ylab("log10(Plasmid copy number)")  +
+    xlab("log10(Length)") +
+    theme(legend.position="top")
+  
+## save the plot.
+ggsave("../results/S7Fig.pdf", S7Fig, height=3.75,width=5)
+
+
+
+################################################################################
+## Make a Supplementary Figure S8 that is the same as Figure 3,
 ## but plotting normalized plasmid length relative to the length of the longest
 ## chromosome.
 
@@ -497,7 +543,7 @@ ggsave("../results/Fig3.pdf", Fig3A, height=4, width=4)
 ## is this a bug in the data???
 
 ## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
-S6FigA <- ggplot(PIRA.PCN.estimates,
+S8FigA <- ggplot(PIRA.PCN.estimates,
                  aes(
                      x = normalized_replicon_length,
                      y = log10(PIRACopyNumber),
@@ -511,11 +557,11 @@ S6FigA <- ggplot(PIRA.PCN.estimates,
     theme(legend.position="right")
 
 ## Break down this result by predicted plasmid mobility.
-S6FigB <- S6FigA + facet_grid(`Plasmid class`~ PredictedMobility)
+S8FigB <- S8FigA + facet_grid(`Plasmid class`~ PredictedMobility)
 
-## make Supplementary Figure S6.
-S6Fig <- plot_grid(S6FigA, S6FigB, labels=c('A', 'B'),nrow=2)
-ggsave("../results/S6Fig.pdf", S6Fig, height=12, width=12)
+## make Supplementary Figure S8.
+S8Fig <- plot_grid(S8FigA, S8FigB, labels=c('A', 'B'),nrow=2)
+ggsave("../results/S8Fig.pdf", S8Fig, height=12, width=12)
 
 
 ################################################################################
@@ -600,25 +646,25 @@ PIRA.PCN.estimates %>% filter(PIRACopyNumber > 100) %>% nrow()
 
 
 ################################################################################
-## Supplementary Figure S7. let's make a histogram of PCN in these data.
+## Supplementary Figure S9. let's make a histogram of PCN in these data.
 
-S7Fig <- PIRA.PCN.estimates %>%
+S9Fig <- PIRA.PCN.estimates %>%
     ggplot(aes(x = log10(PIRACopyNumber))) +
     geom_histogram(bins=1000) +
     theme_classic()
 
-ggsave("../results/S7Fig.pdf", S7Fig, height = 6, width = 6)
+ggsave("../results/S9Fig.pdf", S9Fig, height = 6, width = 6)
 
 
 ################################################################################
-## Supplementary Figure S8. examine total DNA (chromosomes and plasmids) per genome.
+## Supplementary Figure S10. examine total DNA (chromosomes and plasmids) per genome.
 
 DNA.content.data <- PIRA.estimates %>%
     mutate(DNAContent = replicon_length * PIRACopyNumber) %>%
     group_by(AnnotationAccession) %>%
     summarize(TotalDNAContent = sum(DNAContent))
 
-S8Fig <- DNA.content.data %>%
+S10Fig <- DNA.content.data %>%
     ggplot(aes(x=TotalDNAContent)) +
     geom_histogram(bins=1000) +
     theme_classic() +
@@ -626,7 +672,7 @@ S8Fig <- DNA.content.data %>%
     xlim(0,15000000)
 
 
-ggsave("../results/S8Fig.pdf", S8Fig, height = 6, width = 6)
+ggsave("../results/S10Fig.pdf", S10Fig, height = 6, width = 6)
 
 ###################################################################################
 ## let's compare long read PCN estimates from minimap2 and pseudoalignment for high PCN plasmids--
@@ -700,3 +746,110 @@ print(anova(
     second.order.plasmid.lm.model))
 
 
+################################################################################
+################################################################################
+################################################################################
+## Let's play with Zhengqing's notion of plasmid capacity.
+
+## summarize average plasmid length and copy number (geometric mean)
+geom.mean.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    group_by(AnnotationAccession) %>%
+    summarize(
+        geomean_PIRACopyNumber = exp(mean(log(PIRACopyNumber))),
+        geomean_replicon_length = exp(mean(log(replicon_length))))
+
+geomean.plasmid.copy.number.plot <- ggplot(
+    geom.mean.PIRA.PCN.estimates,
+    aes(
+        x=log10(geomean_replicon_length),
+        y=log10(geomean_PIRACopyNumber))) +
+    geom_point() +
+    theme_classic() +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    ylab("log10(geometric mean Plasmid copy number)")  +
+    xlab("log10(geometric mean Plasmid length in bp)") +
+    theme(legend.position="top") +
+    ## add the linear regression.
+    geom_smooth(
+        data=geom.mean.PIRA.PCN.estimates,
+        inherit.aes=FALSE,
+        method='lm',
+        aes(x=log10(geomean_replicon_length),y=log10(geomean_PIRACopyNumber)),
+        color="light blue",
+        formula=y~x)
+## save the plot.
+ggsave("../results/NCBI-geometric-mean-plasmid-copy-number.pdf",
+       geomean.plasmid.copy.number.plot,height=5.75,width=5.75)
+
+geomean.plasmid.lm.model <- lm(
+    formula=log10(geomean_PIRACopyNumber)~log10(geomean_replicon_length),
+    data=geom.mean.PIRA.PCN.estimates)
+summary(geomean.plasmid.lm.model)
+
+testplot2 <- ggplotRegression(
+    geom.mean.PIRA.PCN.estimates,
+    "log10(geomean_replicon_length)",
+    "log10(geomean_PIRACopyNumber)")
+testplot2
+
+## Notes from Zhengqing on Slack about his methods:
+## Say one cell has 20 copies of 5kB plasmid, and 5 copies of 20 KB.
+## Altogether there are 200K bps.
+## One method (constant copy number) to get a coherent representation as a dot
+## on the scatterplot is by defining a total copy number of 25, and weighted size
+## as 200K/25=8KB — approximating the cell has 25 copies of identical
+## hypothetical 8KB plasmids.
+## The other method (average size) is assuming all the plasmids have a geometrical
+## averaged size of 10KB, and with a hypothetical copy number of 200K/10K = 10 copies.
+
+## This first method preserves total plasmid copy number and total plasmid DNA in bp,
+## and partitions DNA equally among the "average" plasmid.
+
+test3 <- PIRA.PCN.estimates %>%
+    mutate(total.plasmid.bp = replicon_length*PIRACopyNumber) %>%
+    group_by(AnnotationAccession) %>%
+    summarize(
+        totalCN = sum(PIRACopyNumber),
+        totalBP = sum(total.plasmid.bp)) %>%
+    mutate(weightedSize = totalBP/totalCN)
+
+## write to disk
+write.csv(test3, file="../results/data-for-Zhengqing-style-plot1.csv")
+
+testplot3 <- ggplotRegression(
+    test3,
+    "log10(weightedSize)", "log10(totalCN)")
+testplot3
+## save the plot.
+ggsave("../results/Zhengqing-style-plot1.pdf",
+       testplot3,height=5.75,width=5.75)
+
+testplot3.5 <- ggplotRegression(
+    test3,
+    "log10(weightedSize)", "log10(totalBP)")
+testplot3.5
+
+## This second method preserves total plasmid bp,
+## and assigns a copy number based on the geometric mean of plasmid size.
+test4 <- PIRA.PCN.estimates %>%
+    mutate(total.plasmid.bp = replicon_length*PIRACopyNumber) %>%
+    group_by(AnnotationAccession) %>%
+    summarize(
+        geomean_length = exp(mean(log(replicon_length))),
+        totalPlasmidLength = sum(total.plasmid.bp)) %>%
+    mutate(normalizedCN = totalPlasmidLength/geomean_length)
+
+testplot4 <- ggplotRegression(
+    test4,
+    "log10(geomean_length)", "log10(normalizedCN)")
+testplot4
+## save the plot.
+ggsave("../results/Zhengqing-style-plot2.pdf",
+       testplot4,height=5.75,width=5.75)
+
+testplot4.5 <- ggplotRegression(
+    test4,
+    "log10(geomean_length)", "log10(totalPlasmidLength)")
+testplot4.5
+
+################################################################################
