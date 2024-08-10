@@ -9,7 +9,7 @@
 Make a top-level directory with three directories inside, named "data", "results", and "src".  
 Now copy all source code files in this repository into "src".
 
-Now, download prokaryotes.txt into ../data/GENOME_REPORTS:  
+Now, download prokaryotes.txt into ../data/:  
 
 wget https://ftp.ncbi.nlm.nih.gov/genomes/GENOME_REPORTS/prokaryotes.txt  
 
@@ -138,7 +138,7 @@ unique_mob_results.txt is the final file of MOB-typer results used in the Data a
 
 ## Data analysis.
 
-Then run the R script "make-plasmid-metabolic-gene-scatterplot.R" to generate figures and analyses.
+Then run the R script "PCN-analysis.R" to generate figures and analyses.
 
 
 

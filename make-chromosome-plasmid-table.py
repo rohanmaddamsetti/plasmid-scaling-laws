@@ -12,7 +12,7 @@ found_genomes = 0
 accessions_not_found_in_refseq = []
 
 with open("../results/chromosome-plasmid-table.csv",'w') as out_fh:
-    header = "Organism,Strain,NCBI_Nucleotide_Accession,SequenceType,Annotation_Accession\n"
+    header = "Organism,Strain,NCBI_Nucleotide_Accession,SequenceType,AnnotationAccession\n"
     out_fh.write(header)
     ## open the genome report file, and parse line by line.
     with open("../results/complete-prokaryotes-with-plasmids.txt", "r") as genome_report_fh:

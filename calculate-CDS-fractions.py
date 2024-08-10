@@ -17,7 +17,7 @@ gbk_annotation_path = "../results/gbk-annotation/"
 gbk_files = [x for x in os.listdir(gbk_annotation_path) if x.endswith(".gbff")]
 
 ## print the header of the file
-print("Annotation_Accession,SeqID,SeqLength,CDSLength,CDSFraction")
+print("AnnotationAccession,SeqID,SeqLength,CDSLength,CDSFraction")
 for gbk in gbk_files:
     AnnotationAccession = gbk.split("_genomic.gbff")[0]
     gbk_path = os.path.join(gbk_annotation_path, gbk)
