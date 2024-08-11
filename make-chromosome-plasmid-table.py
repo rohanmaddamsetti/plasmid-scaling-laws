@@ -6,13 +6,14 @@ make-chromosome-plasmid-table.py by Rohan Maddamsetti.
 This script reads in ../results/complete-prokaryotes-with-plasmids.txt.
 '''
 import os
+from Bio import SeqIO
 
 warning_count = 0
 found_genomes = 0
 accessions_not_found_in_refseq = []
 
 with open("../results/chromosome-plasmid-table.csv",'w') as out_fh:
-    header = "AnnotationAccession,SeqID,SeqType,Organism,Strain\n"
+    header = "AnnotationAccession,Organism,Strain,SeqID,SeqType,replicon_length\n"
     out_fh.write(header)
     ## open the genome report file, and parse line by line.
     with open("../results/complete-prokaryotes-with-plasmids.txt", "r") as genome_report_fh:
@@ -38,27 +39,25 @@ with open("../results/chromosome-plasmid-table.csv",'w') as out_fh:
                 continue
             ## if we got here, then the RefSeq genbank annotation file was found.
             found_genomes += 1
+            
             ## get the SeqID and SeqType from the Genbank annotation file.
+            with open(my_annotation_file, "rt") as genome_fh:
+                for i, replicon in enumerate(SeqIO.parse(genome_fh, "gb")):
+                    SeqID = replicon.id
+                    if "chromosome" in replicon.description or i == 0:
+                        ## IMPORTANT: we assume here that the first record is a chromosome.
+                        SeqType = "chromosome"
+                    elif "plasmid" in replicon.description:
+                        SeqType = "plasmid"
+                    else:
+                        continue
+                    replicon_length = str(len(replicon))
+                    ## now write out the data for the replicon.
+                    row_data = [annotation_accession, organism, strain, SeqID, SeqType, replicon_length]
+                    ## replace all commas with semicolon to respect the csv output format.
+                    row_string = ','.join([x.replace(',',';') for x in row_data]) + '\n'
+                    out_fh.write(row_string)
 
-
-            replicon_list = replicons.split(';')
-            for s in replicon_list:
-                s = s.strip()
-                seq_name, raw_seq_id_string = s.split(":")
-                seq_type = seq_name.split(" ")[0]
-                seq_id = raw_seq_id_string.split("/")[0]
-                if seq_type not in ("chromosome", "plasmid"):
-                    print("PROBABLE PHAGE (not chromosome or plasmid):")
-                    print(s)
-                    continue
-
-
-
-
-                row_data = [annotation_accession, seq_id, seq_type, organism, strain]
-                ## replace all commas with semicolon to respect the csv output format.
-                row_string = ','.join([x.replace(',',';') for x in row_data]) + '\n'
-                out_fh.write(row_string)
 
 ## now print out warnings.
 print("Warning: the following accessions were not found in RefSeq. ")
