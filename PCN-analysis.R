@@ -9,6 +9,8 @@
 ## POTENTIAL TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
 ## (minimap2 and breseq).
 
+## CRITICAL TODO: Examine plasmid mobility in the context of plasmid copy number and plasmid length.
+
 library(tidyverse)
 library(cowplot)
 library(ggrepel)
@@ -795,7 +797,9 @@ metabolic.gene.scatterplot.data <- plasmid.length.data %>%
     ## make the dataframe compatible with plasmid.annotation.data
     mutate(NCBI_Nucleotide_Accession = str_remove(SeqID, "N(C|Z)_")) %>%
     ## and join.
-    left_join(plasmid.annotation.data)
+    left_join(plasmid.annotation.data) %>%
+    ## set NA values of metabolic_protein_count to zeros.
+    mutate(metabolic_protein_count = ifelse(is.na(metabolic_protein_count), 0, metabolic_protein_count))
 
 ## annotate big.plasmids.
 big.plasmid.protein.threshold <- 750
@@ -807,15 +811,16 @@ metabolic.gene.scatterplot.data <- metabolic.gene.scatterplot.data %>%
 
 metabolic.gene.log.scatterplot <- ggplot(
     data = metabolic.gene.scatterplot.data,
-    aes(x = log2(protein_count), y = log2(metabolic_protein_count), color = big_plasmids)) +
+    aes(x = log2(replicon_length), y = log2(metabolic_protein_count), color = big_plasmids)) +
     geom_point(size=0.2, alpha=0.5) +
     theme_classic()
 ## save the plot.
 ggsave("../results/plasmid-metabolic-gene-log-scatterplot.pdf", metabolic.gene.log.scatterplot)
 
+
 metabolic.gene.scatterplot <- ggplot(
     data = metabolic.gene.scatterplot.data,
-    aes(x = protein_count, y = metabolic_protein_count, color = big_plasmids)) +
+    aes(x = replicon_length, y = metabolic_protein_count, color = big_plasmids)) +
     geom_point(size=0.2, alpha=0.5) +
     theme_classic()
 ## save the plot.
@@ -824,7 +829,7 @@ ggsave("../results/plasmid-metabolic-gene-scatterplot.pdf", metabolic.gene.scatt
 
 metabolic.gene.log.scatterplot2 <- ggplotRegression(
     metabolic.gene.scatterplot.data,
-    "log2(protein_count)", "log2(metabolic_protein_count)")
+    "log2(replicon_length)", "log2(metabolic_protein_count)")
 ## save the plot.
 ggsave("../results/plasmid-metabolic-gene-log-scatterplot2.pdf", metabolic.gene.log.scatterplot2)
 
@@ -832,9 +837,8 @@ ggsave("../results/plasmid-metabolic-gene-log-scatterplot2.pdf", metabolic.gene.
 metabolic.gene.log.scatterplot3 <- metabolic.gene.scatterplot.data %>%
     filter(Annotation != "blank") %>%
     filter(Annotation != "NA") %>%
-    filter(Annotation != "Unannotated") %>%
     ggplot(
-    aes(x = log2(protein_count), y = log2(metabolic_protein_count), color = Annotation)) +
+    aes(x = log2(replicon_length), y = log2(metabolic_protein_count), color = Annotation)) +
     geom_point(size=0.2, alpha=0.5) +
     theme_classic()
 ## save the plot.
@@ -843,9 +847,8 @@ ggsave("../results/plasmid-metabolic-gene-log-scatterplot3.pdf", metabolic.gene.
 metabolic.gene.scatterplot3 <- metabolic.gene.scatterplot.data %>%
     filter(Annotation != "blank") %>%
     filter(Annotation != "NA") %>%
-    filter(Annotation != "Unannotated") %>%
     ggplot(
-    aes(x = protein_count, y = metabolic_protein_count, color = Annotation)) +
+    aes(x = replicon_length, y = metabolic_protein_count, color = Annotation)) +
     geom_point(size=0.2, alpha=0.5) +
     theme_classic()
 ## save the plot.
@@ -855,9 +858,8 @@ ggsave("../results/plasmid-metabolic-gene-scatterplot3.pdf", metabolic.gene.scat
 metabolic.gene.log.scatterplot4 <- metabolic.gene.scatterplot.data %>%
     filter(Annotation != "blank") %>%
     filter(Annotation != "NA") %>%
-    filter(Annotation != "Unannotated") %>%
     ggplot(
-    aes(x = log2(protein_count), y = log2(metabolic_protein_count), color = Annotation)) +
+    aes(x = log2(replicon_length), y = log2(metabolic_protein_count), color = Annotation)) +
     geom_point(size=0.2, alpha=0.5) +
     theme_classic() +
     facet_wrap(.~Annotation)
@@ -867,9 +869,8 @@ ggsave("../results/plasmid-metabolic-gene-log-scatterplot4.pdf", metabolic.gene.
 metabolic.gene.scatterplot4 <- metabolic.gene.scatterplot.data %>%
     filter(Annotation != "blank") %>%
     filter(Annotation != "NA") %>%
-    filter(Annotation != "Unannotated") %>%
     ggplot(
-    aes(x = protein_count, y = metabolic_protein_count, color = Annotation)) +
+    aes(x = replicon_length, y = metabolic_protein_count, color = Annotation)) +
     geom_point(size=0.2, alpha=0.5) +
     theme_classic() +
     facet_wrap(.~Annotation)
@@ -885,7 +886,7 @@ write.csv(x=big.plasmid.data, file="../results/big-plasmids-threshold750proteins
 ## calculate slope for the correlation.
 metabolic.gene.log.scatterplot3 <- ggplotRegression(
     metabolic.gene.scatterplot.data,
-    "protein_count", "metabolic_protein_count")
+    "replicon_length", "metabolic_protein_count")
 ## save the plot.
 ggsave("../results/plasmid-metabolic-gene-log-scatterplot3.pdf", metabolic.gene.log.scatterplot3)
 
@@ -899,7 +900,7 @@ ggsave("../results/plasmid-metabolic-gene-log-scatterplot3.pdf", metabolic.gene.
 ## found on these plasmids across different ecological categories.
     
 
-## CRITICAL TODO: Examine plasmid mobility in the context of plasmid copy number and plasmid length.
+
 
 
 
