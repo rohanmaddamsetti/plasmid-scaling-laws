@@ -2,18 +2,15 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## CRITICAL TODO: Investigate why CDS.fraction.data has so many NA values
+## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
+
+## CRITICAL TODO: recalculate CDS fraction data,
+## and Investigate why CDS.fraction.data has so many NA values
 ## in the Annotation and SeqType columns, and rewrite upstream code to
 ## solve this problem.
 
-## CRITICAL TODO:
-## Supplementary Figure S7 does not look right!!
-## is this a bug in the data???
-
 ## POTENTIAL TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
 ## (minimap2 and breseq).
-
-## CRITICAL TODO: Examine plasmid mobility in the context of plasmid copy number and plasmid length.
 
 library(tidyverse)
 library(cowplot)
@@ -39,6 +36,23 @@ ggplotRegression <- function(dat, xvar, yvar){
                        "Intercept =",signif(fit$coef[[1]],5 ),
                        " Slope =",signif(fit$coef[[2]], 5),
                        " P =",signif(summary(fit)$coef[2,4], 5)))
+}
+
+
+normalize.plasmid.lengths <- function(df.with.AnnotationAccessions) {
+    ## Make a column representing plasmid length normalized by chromosome length in each AnnotationAccession
+    ## Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
+    max_replicon_lengths <- df.with.AnnotationAccessions %>%
+        group_by(AnnotationAccession) %>%
+        summarise(max_replicon_length = max(replicon_length))
+    
+    ## update the df with the maximum replicon lengths and normalized
+    updated.df <- df.with.AnnotationAccessions %>%
+        left_join(max_replicon_lengths, by = "AnnotationAccession") %>%
+        ## Creating a new column 'normalized_replicon_length' by dividing 'replicon_length' by 'max_replicon_length'
+        mutate(normalized_replicon_length = replicon_length / max_replicon_length)
+
+    return(updated.df)
 }
 
 
@@ -139,8 +153,9 @@ CDS.fraction.data <- read.csv("../results/CDS-fractions.csv") %>%
     ## make the dataframe compatible with replicon.annotation.data,
     mutate(NCBI_Nucleotide_Accession = str_remove(SeqID, "N(C|Z)_")) %>%
     ## and join.
-    left_join(replicon.annotation.data)
-
+    left_join(replicon.annotation.data) %>%
+    ## add a column for nomalized plasmid lengths.
+    normalize.plasmid.lengths()
 
 ################################################################################
 ## Get the PIRA PCN estimates. These are the main data for this paper.
@@ -153,14 +168,15 @@ CDS.fraction.data <- read.csv("../results/CDS-fractions.csv") %>%
 
 ## IMPORTANT: do NOT filter this for just plasmids just yet--
 ## we need to include chromosomes for proper comparison with breseq results.
+
 PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
     rename(
         PIRACopyNumber = PIRA_CopyNumberEstimate,
         PIRAReadCount = ReadCount,
         PIRASequencingCoverage = SequencingCoverage,
         PIRALongestRepliconCoverage = LongestRepliconCoverage) %>%
-    filter(PIRAReadCount > MIN_READ_COUNT)
-
+    filter(PIRAReadCount > MIN_READ_COUNT) %>%
+    normalize.plasmid.lengths()
 
 ################################################################################
 ## Genomes for Supplementary Table 1.
@@ -510,10 +526,7 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 ## associations with PCN.
 
 ## get ARG copy number data-- this is only used for annotating ARGs.
-kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.csv") %>%
-    mutate(beta.lactam.resistance = ifelse(str_detect(product,beta.lactam.keywords), TRUE, FALSE))
-## this is used for annotating plasmids containing beta-lactamases.
-beta.lactam.ARGs <- filter(kallisto.ARG.copy.number.data, beta.lactam.resistance==TRUE)
+kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.csv")
 
 
 ## take the PIRA estimates, filter for plasmids,
@@ -524,41 +537,31 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
     ## by splitting the SeqID string on the underscore and taking the second part.
     mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
     left_join(plasmid.mobility.data) %>%
-    mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
-    mutate(has.beta.lactamase = ifelse(SeqID %in% beta.lactam.ARGs$SeqID, TRUE, FALSE)) %>%
-    ## 0 == no ARG, 1 == has ARG, 2 == has beta-lactamase.
-    mutate(ARG.classification = has.ARG + has.beta.lactamase) %>%
-    mutate(ARG.classification = as.factor(ARG.classification)) %>%
-    mutate(`Plasmid class` = recode(ARG.classification,
-                                    `0` = "No ARGs",
-                                    `1` = "Non-beta-lactamase ARGs",
-                                    `2` = "Beta-lactamases"))
-
-## Make a column representing plasmid length normalized by chromosome length in each AnnotationAccession
-# Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
-max_replicon_lengths <- PIRA.PCN.estimates %>%
-  group_by(AnnotationAccession) %>%
-  summarise(max_replicon_length = max(replicon_length))
-
-# Merging the maximum replicon lengths back to the original data frame
-PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
-    left_join(max_replicon_lengths, by = "AnnotationAccession") %>%
-    ## Creating a new column 'normalized_replicon_length' by dividing 'replicon_length' by 'max_replicon_length'
-    mutate(normalized_replicon_length = replicon_length / max_replicon_length)
+    ## add taxonomic and ecological annotation.
+    left_join(replicon.annotation.data) %>%
+    ## annotate by presence of ARGs
+    mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE))
 
 
-## CRITICAL TODO: POLISH THIS CODE
-## shape := ARG- or ARG+ (don't worry about beta-lactamases)
-## color := conjugative, mobilizable, etc.
-## keep consistent coding throughout the paper.
 
-## plot the PIRA PCN estimates. 10,261 plasmids in these data.
+## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
+unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
+
+    
+
+## CRITICAL TODO: POLISH THIS FIGURE.
+## keep consistent color/symbol coding throughout the paper.
+
+## plot the PIRA PCN estimates.
 Fig1A <- PIRA.PCN.estimates %>%
+    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    filter(Annotation != "NA") %>%
+    filter(Annotation != "blank") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
-        shape = has.ARG,
-        color = PredictedMobility)) +
+        color = Annotation)) +
     geom_point(size=0.2,alpha=0.5) +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     theme_classic() +
@@ -567,23 +570,29 @@ Fig1A <- PIRA.PCN.estimates %>%
     theme(legend.position="bottom")
 
 ## Break down this result by predicted plasmid mobility.
-Fig1B <- Fig1A + facet_grid(`Plasmid class`~ PredictedMobility)
+Fig1B <- Fig1A + facet_wrap(. ~ PredictedMobility)
+
+## Break down by taxonomic group.
+Fig1C <- Fig1A + facet_wrap(. ~ TaxonomicGroup)
+
+## Break down by taxonomic subgroup
+Fig1D <- Fig1A + facet_wrap(. ~ TaxonomicSubgroup)
 
 
-## Figure 1CDE. PCN distribution over INC groups, MOB groups, and ecology.
+## CRITICAL TODO: examine PCN distribution over INC groups and MOB groups.
+
+## Figure 1EF. PCN distribution over ecology.
 ## clear association between high PCN plasmids and particular ecological annotations.
 
-ecologically.annotated.PCN.data <- PIRA.PCN.estimates %>%
-    left_join(gbk.annotation) %>%
+Fig1E <- PIRA.PCN.estimates %>%
+    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
     filter(Annotation != "NA") %>%
-    filter(Annotation != "blank")
-
-Fig1C <- ggplot(
-    ecologically.annotated.PCN.data,
-    aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber),
-        color = Annotation)) +
+    filter(Annotation != "blank") %>%
+    ggplot(
+        aes(
+            x = log10(replicon_length),
+            y = log10(PIRACopyNumber),
+            color = Annotation)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
@@ -595,7 +604,10 @@ Fig1C <- ggplot(
 
 ## let's examine the ecology of high copy number plasmids.
 ## very cool! we see association with high PCN with humans, human-impacted environments, and livestock.
-Fig1D <- ecologically.annotated.PCN.data %>%
+Fig1F <- PIRA.PCN.estimates %>%
+    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    filter(Annotation != "NA") %>%
+    filter(Annotation != "blank") %>%
     ggplot(aes(
         x = log10(PIRACopyNumber),
         y = Annotation,
@@ -650,53 +662,55 @@ ggsave("../results/S7Fig.pdf", S7Fig, height=3.75,width=5)
 ## but plotting normalized plasmid length relative to the length of the longest
 ## chromosome.
 
-## CRITICAL TODO:
-## THIS Supplementary Figure does not look right!!
-## is this a bug in the data???
+## CRITICAL TODO: there are still a few points at normalized plasmid length == 1
+## that look like bugs! Investigate and fix or verify!
+
+## POTENTIAL TODO: move this result into the main figures.
+## This is a really nice result showing how the variance in plasmid copy number decreases
+## as length increases.
+
+## CRITICAL TODO: kick the tires on this result to make sure it is true, and not an artifact of doing the math wrong.
 
 ## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
-S8FigA <- ggplot(PIRA.PCN.estimates,
-                 aes(
-                     x = normalized_replicon_length,
-                     y = log10(PIRACopyNumber),
-                     color = `Plasmid class`)) +
+S8Fig <- PIRA.PCN.estimates %>%
+    filter(!is.na(Annotation)) %>%
+    ggplot(
+        aes(
+            x = normalized_replicon_length,
+            y = log10(PIRACopyNumber),
+            color = Annotation)) +
     geom_point(size=0.1, alpha=0.5) +
     theme_classic() +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
     ylab("log10(Plasmid copy number)")  +
     xlab("Normalized Plasmid length") +
-    theme(legend.position="right")
+    guides(color = "none")
 
 ## Break down this result by predicted plasmid mobility.
-S8FigB <- S8FigA + facet_grid(`Plasmid class`~ PredictedMobility)
+S8FigB <- S8FigA + facet_grid(. ~ PredictedMobility)
 
 ## make Supplementary Figure S8.
 S8Fig <- plot_grid(S8FigA, S8FigB, labels=c('A', 'B'),nrow=2)
-ggsave("../results/S8Fig.pdf", S8Fig, height=12, width=12)
+
+ggsave("../results/S8Fig.pdf", S8Fig, height=6, width=7)
 
 ################################################################################
+## Analysis of ARGs and plasmid copy number.
+
+## TODO: make a supplementary figure.
+
+## CRITICAL TODO: specifically test whether plasmids with duplicated ARGs
+## tend to have higher PCN than plasmids with singleton ARGs.
+
 ## Plasmids with ARGs actually have lower copy numbers than
 ## plasmids without ARGs.
-
-beta.lactamase.plasmid.data <- PIRA.PCN.estimates %>%
-    filter(has.beta.lactamase==TRUE)
-
-no.beta.lactamase.plasmid.data <- PIRA.PCN.estimates %>%
-    filter(has.beta.lactamase == FALSE)
 
 ARG.plasmid.data <- PIRA.PCN.estimates %>%
     filter(has.ARG==TRUE)
 
 no.ARG.plasmid.data <- PIRA.PCN.estimates %>%
     filter(has.ARG == FALSE)
-
-## plasmids with beta-lactamases have lower PCN than those without beta-lactamases.
-mean(beta.lactamase.plasmid.data$PIRACopyNumber)
-mean(no.beta.lactamase.plasmid.data$PIRACopyNumber)
-
-median(beta.lactamase.plasmid.data$PIRACopyNumber)
-median(no.beta.lactamase.plasmid.data$PIRACopyNumber)
 
 ## plasmids with ARGs have lower PCN than those without ARGs.
 mean(ARG.plasmid.data$PIRACopyNumber)
@@ -721,7 +735,6 @@ S9Fig <- PIRA.PCN.estimates %>%
     theme_classic()
 
 ggsave("../results/S9Fig.pdf", S9Fig, height = 6, width = 6)
-
 
 ################################################################################
 ## Supplementary Figure S10. examine total DNA (chromosomes and plasmids) per genome.
@@ -752,54 +765,65 @@ ggsave("../results/S10Fig.pdf", S10Fig, height = 6, width = 6)
 ## in the Annotation and SeqType columns, and rewrite upstream code to
 ## solve this problem.
 
-## remove NA values. haven't checked causes for this yet.
-clean.CDS.fraction.data <- CDS.fraction.data #%>%
-#    filter(!is.na(Annotation)) %>%
-#    filter(!is.na(SeqType))
-
-test1 <- CDS.fraction.data %>%
-    filter(is.na(Annotation))
-
-Fig2A <- ggplot(
-    data = clean.CDS.fraction.data,
-    aes(x = log10(SeqLength), y = log10(CDSLength), color = Annotation)) +
-    geom_point(size=0.05,alpha=0.5) +
-    facet_wrap(.~SeqType) +
-    theme_classic()
-
-CDS.fraction.plot2 <- ggplot(
-    data = clean.CDS.fraction.data,
-    aes(x = CDSFraction, fill = Annotation)) +
-    geom_histogram(bins=100) +
-    facet_grid(Annotation~SeqType) +
-    theme_classic()
+## TEMPORARY HACK:
+## remove NA values. CRITICAL TODO: find and fix the causes for this.
+clean.CDS.fraction.data <- CDS.fraction.data %>%
+    filter(!is.na(Annotation)) %>%
+    filter(!is.na(SeqType))
 
 
-CDS.fraction.plot3 <- ggplot(
-    data = clean.CDS.fraction.data,
-    aes(x = log10(SeqLength), y = CDSFraction, shape = SeqType, color = SeqType)) +
-    geom_point(size=0.01,alpha=0.5) +
-    #facet_grid(Annotation~SeqType) +
-    theme_classic()
+Fig2A <- clean.CDS.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(SeqLength),
+            y = log10(CDSLength),
+            color = SeqType)) +
+    geom_point(size=0.2,alpha=0.5) +
+    xlab("log10(replicon length)") +
+    ylab("log10(coding sequence length)") +
+    theme_classic() + guides(color = "none")
 
-CDS.fraction.plot4 <- ggplot(
-    data = clean.CDS.fraction.data,
-    aes(x = log10(SeqLength), y = CDSFraction, shape = SeqType, color = SeqType)) +
-    geom_point(size=0.01,alpha=0.5) +
-    facet_wrap(.~Annotation) +
-    theme_classic()
+Fig2B <- clean.CDS.fraction.data %>%
+    ggplot(    
+        aes(
+            x = log10(SeqLength),
+            y = CDSFraction,
+            color = SeqType)) +
+    geom_point(size=0.2,alpha=0.5) +
+    xlab("log10(replicon length)") +
+    ylab("log10(coding sequence fraction)") +
+    theme_classic() +
+    guides(color = "none")
 
-## save the plot.
-ggsave("../results/CDS-fraction-plot1.pdf", CDS.fraction.plot1, width=9)
+Fig2C <- clean.CDS.fraction.data %>%
+    ggplot(
+        aes(
+            x = CDSFraction,
+            fill = SeqType)) +
+    geom_histogram(position = 'identity', bins=100,alpha=0.5) +
+    coord_flip() +
+    xlab("log10(coding sequence fraction)") +
+    theme_classic() +
+    guides(fill = "none")
 
-## save the plot.
-ggsave("../results/CDS-fraction-plot2.pdf", CDS.fraction.plot2, width=9)
-
-## save the plot.
-ggsave("../results/CDS-fraction-plot3.pdf", CDS.fraction.plot3, width=9)
+Fig2 <- plot_grid(Fig2A, Fig2B, Fig2C, labels = c("A", "B", "C"), nrow=1)
 
 ## save the plot.
-ggsave("../results/CDS-fraction-plot4.pdf", CDS.fraction.plot4, width=9)
+ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
+
+## examine the same thing for plasmids, but normalized by chromosome length.
+S11Fig <- clean.CDS.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(normalized_replicon_length),
+            y = CDSFraction,
+            color = SeqType)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    guides(color = "none")
+
+## save the plot.
+ggsave("../results/S11Fig.pdf", S11Fig)
 
 
 ########################################################################
