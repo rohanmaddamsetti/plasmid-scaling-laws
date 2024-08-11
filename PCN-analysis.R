@@ -9,6 +9,12 @@
 ## in the Annotation and SeqType columns, and rewrite upstream code to
 ## solve this problem.
 
+## CRITICAL TODO: repeat the metabolic gene analysis with MGE-associated genes.
+## examine the proportion of MGE-associated genes
+## found on these plasmids across different ecological categories,
+## as replicon length varies.
+
+
 ## POTENTIAL TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
 ## (minimap2 and breseq).
 
@@ -771,6 +777,11 @@ clean.CDS.fraction.data <- CDS.fraction.data %>%
     filter(!is.na(Annotation)) %>%
     filter(!is.na(SeqType))
 
+## FOR DEBUGGING
+bad.annotations.vec <- unique(filter(CDS.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
+bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
+write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS-FRACTIONS.csv", row.names=F, quote=F)
+
 
 Fig2A <- clean.CDS.fraction.data %>%
     ggplot(
@@ -840,10 +851,9 @@ metabolic.gene.scatterplot.data <- plasmid.length.data %>%
     ## set NA values of metabolic_protein_count to zeros.
     mutate(metabolic_protein_count = ifelse(is.na(metabolic_protein_count), 0, metabolic_protein_count))
 
-## annotate big.plasmids.
-big.plasmid.protein.threshold <- 750
+## annotate big.plasmids as plasmids > 500 kB.
 big.plasmid.data <- metabolic.gene.scatterplot.data %>%
-    filter(protein_count > big.plasmid.protein.threshold)
+    filter(replicon_length > 500000)
 
 metabolic.gene.scatterplot.data <- metabolic.gene.scatterplot.data %>%
     mutate(big_plasmids = ifelse(SeqID %in% big.plasmid.data$SeqID, TRUE, FALSE))
@@ -869,6 +879,7 @@ ggsave("../results/plasmid-metabolic-gene-scatterplot.pdf", metabolic.gene.scatt
 metabolic.gene.log.scatterplot2 <- ggplotRegression(
     metabolic.gene.scatterplot.data,
     "log2(replicon_length)", "log2(metabolic_protein_count)")
+
 ## save the plot.
 ggsave("../results/plasmid-metabolic-gene-log-scatterplot2.pdf", metabolic.gene.log.scatterplot2)
 
