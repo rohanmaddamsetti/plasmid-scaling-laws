@@ -506,6 +506,8 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 ################################################################################
 ## PLASMID BIOLOGY ANALYSIS
 ################################################################################
+## Figure 1. Patterns in Plasmid copy number, and analysis of ecological and phylogenetic
+## associations with PCN.
 
 ## get ARG copy number data-- this is only used for annotating ARGs.
 kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.csv") %>%
@@ -567,8 +569,45 @@ Fig1A <- PIRA.PCN.estimates %>%
 ## Break down this result by predicted plasmid mobility.
 Fig1B <- Fig1A + facet_grid(`Plasmid class`~ PredictedMobility)
 
+
+## Figure 1CDE. PCN distribution over INC groups, MOB groups, and ecology.
+## clear association between high PCN plasmids and particular ecological annotations.
+
+ecologically.annotated.PCN.data <- PIRA.PCN.estimates %>%
+    left_join(gbk.annotation) %>%
+    filter(Annotation != "NA") %>%
+    filter(Annotation != "blank")
+
+Fig1C <- ggplot(
+    ecologically.annotated.PCN.data,
+    aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber),
+        color = Annotation)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    geom_hline(yintercept=2,linetype="dashed",color="gray") +
+    ylab("log10(Plasmid copy number)")  +
+    xlab("log10(Plasmid length in bp)") +
+    guides(color = "none") +
+    facet_wrap(.~Annotation)
+
+## let's examine the ecology of high copy number plasmids.
+## very cool! we see association with high PCN with humans, human-impacted environments, and livestock.
+Fig1D <- ecologically.annotated.PCN.data %>%
+    ggplot(aes(
+        x = log10(PIRACopyNumber),
+        y = Annotation,
+        color = Annotation)) +
+    geom_boxplot() +
+    theme_classic() +
+    ylab("Ecological Annotation") +
+    xlab("log10(Plasmid copy number)") 
+
+
 ## make Figure 1.
-#Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'),nrow=2)
+#Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B', 'C','D'),nrow=2)
 ggsave("../results/Fig1.pdf", Fig1A, height=4, width=4)
 
 ################################################################################
@@ -607,7 +646,7 @@ ggsave("../results/S7Fig.pdf", S7Fig, height=3.75,width=5)
 
 
 ################################################################################
-## Make a Supplementary Figure S8 that is the same as Figure 3,
+## Make a Supplementary Figure S8 that is the same as Figure 1,
 ## but plotting normalized plasmid length relative to the length of the longest
 ## chromosome.
 
@@ -635,48 +674,6 @@ S8FigB <- S8FigA + facet_grid(`Plasmid class`~ PredictedMobility)
 ## make Supplementary Figure S8.
 S8Fig <- plot_grid(S8FigA, S8FigB, labels=c('A', 'B'),nrow=2)
 ggsave("../results/S8Fig.pdf", S8Fig, height=12, width=12)
-
-
-################################################################################
-## Figure 4. PCN distribution over INC groups, MOB groups, and ecology.
-## clear association between high PCN plasmids and particular ecological annotations.
-
-ecologically.annotated.PCN.data <- PIRA.PCN.estimates %>%
-    left_join(gbk.annotation) %>%
-    filter(Annotation != "NA") %>%
-    filter(Annotation != "blank")
-
-Fig4A <- ggplot(
-    ecologically.annotated.PCN.data,
-    aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber),
-        color = Annotation)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    geom_hline(yintercept=2,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Plasmid length in bp)") +
-    guides(color = "none") +
-    facet_wrap(.~Annotation)
-
-## let's examine the ecology of high copy number plasmids.
-## very cool! we see association with high PCN with humans, human-impacted environments, and livestock.
-Fig4B <- ecologically.annotated.PCN.data %>%
-    ggplot(aes(
-        x = log10(PIRACopyNumber),
-        y = Annotation,
-        color = Annotation)) +
-    geom_boxplot() +
-    theme_classic() +
-    ylab("Ecological Annotation") +
-    xlab("log10(Plasmid copy number)") 
-
-Fig4 <- plot_grid(Fig4A, Fig4B, labels=c("A","B"), nrow=2)
-## save the plot
-ggsave("../results/Fig4.pdf", Fig4, height=12, width=12)
-
 
 ################################################################################
 ## Plasmids with ARGs actually have lower copy numbers than
