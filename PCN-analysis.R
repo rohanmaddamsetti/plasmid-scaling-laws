@@ -4,16 +4,10 @@
 
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
 
-## CRITICAL TODO: recalculate CDS fraction data,
-## and Investigate why CDS.fraction.data has so many NA values
-## in the Annotation and SeqType columns, and rewrite upstream code to
-## solve this problem.
-
 ## CRITICAL TODO: repeat the metabolic gene analysis with MGE-associated genes.
 ## examine the proportion of MGE-associated genes
 ## found on these plasmids across different ecological categories,
 ## as replicon length varies.
-
 
 ## POTENTIAL TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
 ## (minimap2 and breseq).
@@ -163,6 +157,20 @@ CDS.fraction.data <- read.csv("../results/CDS-fractions.csv") %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths()
 
+
+## TODO WHEN RERUNNING FROM SCRATCH:
+## Make sure all the genomes in ../results/gbk-annotation are consistent
+## with the genomes annotated in computationally-annotated-genomes etc.
+## (that is, there are no suppressed RefSeq genomes in this folder, and everything is annotated.)
+## in the Annotation and SeqType columns, and rewrite upstream code to
+## solve this problem.
+## FOR DEBUGGING
+bad.annotations.vec <- unique(filter(CDS.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
+bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
+write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS-FRACTIONS.csv", row.names=F, quote=F)
+
+
+
 ################################################################################
 ## Get the PIRA PCN estimates. These are the main data for this paper.
 ## IMPORTANT NOTE: We only have PCN estimates for ~10,000 plasmids in ~4,500 genomes,
@@ -183,6 +191,8 @@ PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
         PIRALongestRepliconCoverage = LongestRepliconCoverage) %>%
     filter(PIRAReadCount > MIN_READ_COUNT) %>%
     normalize.plasmid.lengths()
+## write the normalized data to disk.
+write.csv(PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
 
 ################################################################################
 ## Genomes for Supplementary Table 1.
@@ -554,7 +564,6 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
 unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
 
-    
 
 ## CRITICAL TODO: POLISH THIS FIGURE.
 ## keep consistent color/symbol coding throughout the paper.
@@ -668,30 +677,22 @@ ggsave("../results/S7Fig.pdf", S7Fig, height=3.75,width=5)
 ## but plotting normalized plasmid length relative to the length of the longest
 ## chromosome.
 
-## CRITICAL TODO: there are still a few points at normalized plasmid length == 1
+## CRITICAL TODO: there are still a point or two at normalized plasmid length == 1
 ## that look like bugs! Investigate and fix or verify!
 
-## POTENTIAL TODO: move this result into the main figures.
-## This is a really nice result showing how the variance in plasmid copy number decreases
-## as length increases.
-
-## CRITICAL TODO: kick the tires on this result to make sure it is true, and not an artifact of doing the math wrong.
-
 ## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
-S8Fig <- PIRA.PCN.estimates %>%
+S8FigA <- PIRA.PCN.estimates %>%
     filter(!is.na(Annotation)) %>%
     ggplot(
         aes(
-            x = normalized_replicon_length,
-            y = log10(PIRACopyNumber),
-            color = Annotation)) +
+            x = log10(normalized_replicon_length),
+            y = log10(PIRACopyNumber))) +
     geom_point(size=0.1, alpha=0.5) +
     theme_classic() +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
     ylab("log10(Plasmid copy number)")  +
-    xlab("Normalized Plasmid length") +
-    guides(color = "none")
+    xlab("log10(Normalized Plasmid length)")
 
 ## Break down this result by predicted plasmid mobility.
 S8FigB <- S8FigA + facet_grid(. ~ PredictedMobility)
@@ -767,23 +768,7 @@ ggsave("../results/S10Fig.pdf", S10Fig, height = 6, width = 6)
 ## Main figure, all the points together.
 ## supplementary figure: same figure, separated by Annotation category.
 
-## CRITICAL TODO: Investigate why CDS.fraction.data has so many NA values
-## in the Annotation and SeqType columns, and rewrite upstream code to
-## solve this problem.
-
-## TEMPORARY HACK:
-## remove NA values. CRITICAL TODO: find and fix the causes for this.
-clean.CDS.fraction.data <- CDS.fraction.data %>%
-    filter(!is.na(Annotation)) %>%
-    filter(!is.na(SeqType))
-
-## FOR DEBUGGING
-bad.annotations.vec <- unique(filter(CDS.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
-bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
-write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS-FRACTIONS.csv", row.names=F, quote=F)
-
-
-Fig2A <- clean.CDS.fraction.data %>%
+Fig2A <- CDS.fraction.data %>%
     ggplot(
         aes(
             x = log10(SeqLength),
@@ -794,7 +779,7 @@ Fig2A <- clean.CDS.fraction.data %>%
     ylab("log10(coding sequence length)") +
     theme_classic() + guides(color = "none")
 
-Fig2B <- clean.CDS.fraction.data %>%
+Fig2B <- CDS.fraction.data %>%
     ggplot(    
         aes(
             x = log10(SeqLength),
@@ -802,18 +787,18 @@ Fig2B <- clean.CDS.fraction.data %>%
             color = SeqType)) +
     geom_point(size=0.2,alpha=0.5) +
     xlab("log10(replicon length)") +
-    ylab("log10(coding sequence fraction)") +
+    ylab("log10(coding sequence ratio)") +
     theme_classic() +
     guides(color = "none")
 
-Fig2C <- clean.CDS.fraction.data %>%
+Fig2C <- CDS.fraction.data %>%
     ggplot(
         aes(
             x = CDSFraction,
             fill = SeqType)) +
     geom_histogram(position = 'identity', bins=100,alpha=0.5) +
     coord_flip() +
-    xlab("log10(coding sequence fraction)") +
+    xlab("log10(coding sequence ratio)") +
     theme_classic() +
     guides(fill = "none")
 
@@ -823,7 +808,7 @@ Fig2 <- plot_grid(Fig2A, Fig2B, Fig2C, labels = c("A", "B", "C"), nrow=1)
 ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
 
 ## examine the same thing for plasmids, but normalized by chromosome length.
-S11Fig <- clean.CDS.fraction.data %>%
+S11Fig <- CDS.fraction.data %>%
     ggplot(
         aes(
             x = log10(normalized_replicon_length),
@@ -838,6 +823,11 @@ ggsave("../results/S11Fig.pdf", S11Fig)
 
 
 ########################################################################
+## CRITICAL TODO: repeat this analysis with MGE-associated genes. examine the proportion of MGE-associated genes
+## found on these plasmids across different ecological categories.
+
+## IDEA: follow the idea in my ARG duplications paper of subdividing genes into MGE-genes or functional genes.
+
 ##  analysis of metabolic genes on plasmids.
 ## data structures for analysis of metabolic genes on plasmids.
 
@@ -853,115 +843,57 @@ metabolic.gene.scatterplot.data <- plasmid.length.data %>%
 
 ## annotate big.plasmids as plasmids > 500 kB.
 big.plasmid.data <- metabolic.gene.scatterplot.data %>%
-    filter(replicon_length > 500000)
+    filter(replicon_length > 1000000)
 
 metabolic.gene.scatterplot.data <- metabolic.gene.scatterplot.data %>%
     mutate(big_plasmids = ifelse(SeqID %in% big.plasmid.data$SeqID, TRUE, FALSE))
 
-metabolic.gene.log.scatterplot <- ggplot(
-    data = metabolic.gene.scatterplot.data,
-    aes(x = log2(replicon_length), y = log2(metabolic_protein_count), color = big_plasmids)) +
-    geom_point(size=0.2, alpha=0.5) +
-    theme_classic()
-## save the plot.
-ggsave("../results/plasmid-metabolic-gene-log-scatterplot.pdf", metabolic.gene.log.scatterplot)
-
-
-metabolic.gene.scatterplot <- ggplot(
-    data = metabolic.gene.scatterplot.data,
-    aes(x = replicon_length, y = metabolic_protein_count, color = big_plasmids)) +
-    geom_point(size=0.2, alpha=0.5) +
-    theme_classic()
-## save the plot.
-ggsave("../results/plasmid-metabolic-gene-scatterplot.pdf", metabolic.gene.scatterplot)
-
-
-metabolic.gene.log.scatterplot2 <- ggplotRegression(
-    metabolic.gene.scatterplot.data,
-    "log2(replicon_length)", "log2(metabolic_protein_count)")
-
-## save the plot.
-ggsave("../results/plasmid-metabolic-gene-log-scatterplot2.pdf", metabolic.gene.log.scatterplot2)
-
-
-metabolic.gene.log.scatterplot3 <- metabolic.gene.scatterplot.data %>%
-    filter(Annotation != "blank") %>%
-    filter(Annotation != "NA") %>%
-    ggplot(
-    aes(x = log2(replicon_length), y = log2(metabolic_protein_count), color = Annotation)) +
-    geom_point(size=0.2, alpha=0.5) +
-    theme_classic()
-## save the plot.
-ggsave("../results/plasmid-metabolic-gene-log-scatterplot3.pdf", metabolic.gene.log.scatterplot3)
-
-metabolic.gene.scatterplot3 <- metabolic.gene.scatterplot.data %>%
-    filter(Annotation != "blank") %>%
-    filter(Annotation != "NA") %>%
-    ggplot(
-    aes(x = replicon_length, y = metabolic_protein_count, color = Annotation)) +
-    geom_point(size=0.2, alpha=0.5) +
-    theme_classic()
-## save the plot.
-ggsave("../results/plasmid-metabolic-gene-scatterplot3.pdf", metabolic.gene.scatterplot3)
-
-
-metabolic.gene.log.scatterplot4 <- metabolic.gene.scatterplot.data %>%
-    filter(Annotation != "blank") %>%
-    filter(Annotation != "NA") %>%
-    ggplot(
-    aes(x = log2(replicon_length), y = log2(metabolic_protein_count), color = Annotation)) +
-    geom_point(size=0.2, alpha=0.5) +
-    theme_classic() +
-    facet_wrap(.~Annotation)
-## save the plot.
-ggsave("../results/plasmid-metabolic-gene-log-scatterplot4.pdf", metabolic.gene.log.scatterplot4)
-
-metabolic.gene.scatterplot4 <- metabolic.gene.scatterplot.data %>%
-    filter(Annotation != "blank") %>%
-    filter(Annotation != "NA") %>%
-    ggplot(
-    aes(x = replicon_length, y = metabolic_protein_count, color = Annotation)) +
-    geom_point(size=0.2, alpha=0.5) +
-    theme_classic() +
-    facet_wrap(.~Annotation)
-## save the plot.
-ggsave("../results/plasmid-metabolic-gene-scatterplot4.pdf", metabolic.gene.scatterplot4)
-
-
 ## Super interesting. the big plasmids basically all come from nitrogen-fixing bacteria and plant pathogens!
 big.plasmid.data
-write.csv(x=big.plasmid.data, file="../results/big-plasmids-threshold750proteins.csv")
+write.csv(x=big.plasmid.data, file="../results/big-plasmids-threshold1Mb.csv", row.names=FALSE, quote=FALSE)
 
 
-## calculate slope for the correlation.
-metabolic.gene.log.scatterplot3 <- ggplotRegression(
-    metabolic.gene.scatterplot.data,
-    "replicon_length", "metabolic_protein_count")
+metabolic.gene.scatterplot1 <- ggplot(
+    data = metabolic.gene.scatterplot.data,
+    aes(x = replicon_length, y = metabolic_protein_count)) +
+    geom_point(size=0.2, alpha=0.5) +
+    theme_classic()
 ## save the plot.
-ggsave("../results/plasmid-metabolic-gene-log-scatterplot3.pdf", metabolic.gene.log.scatterplot3)
+ggsave("../results/plasmid-metabolic-gene-scatterplot1.pdf", metabolic.gene.scatterplot1)
 
-## TODO:
-## calculate the slope of the regression across the different ecological categories.
-## look at this distribution of slope parameters, and ask whether the slope
-## use a binned average, so that each range of the data gives equal contribution,
-## so that this calculation does not overly favor small plasmids with few metabolic genes.
+metabolic.gene.scatterplot2 <- metabolic.gene.scatterplot.data %>%
+    filter(Annotation != "blank") %>%
+    filter(Annotation != "NA") %>%
+    ggplot(
+    aes(x = replicon_length, y = metabolic_protein_count)) +
+    geom_point(size=0.2, alpha=0.5) +
+    geom_vline(xintercept=1000000,linetype="dashed",color="gray") +
+    geom_hline(yintercept=100,linetype="dashed",color="gray") +
+    theme_classic() +
+    facet_wrap(.~Annotation) +
+    guides(color = "none")
+## save the plot.
+ggsave("../results/plasmid-metabolic-gene-scatterplot2.pdf", metabolic.gene.scatterplot2)
 
-## ALSO: repeat this analysis with MGE-associated genes. examine the proportion of MGE-associated genes
-## found on these plasmids across different ecological categories.
-    
 
-
-
-
-
-
-
+metabolic.gene.histogram <- metabolic.gene.scatterplot.data %>%
+    filter(Annotation != "blank") %>%
+    filter(Annotation != "NA") %>%
+    ggplot(aes(x = metabolic_protein_count, fill=Annotation)) +
+    geom_histogram(position = 'identity', bins=30, alpha=0.5) +
+    ##    log(1+x) transformation to show the data better.
+    scale_y_continuous(trans="log1p") +
+    facet_wrap(.~Annotation) +
+    theme_classic() +
+    theme(legend.position="bottom")
+## save the plot.
+ggsave("../results/plasmid-metabolic-gene-histogram.pdf", metabolic.gene.histogram, height=6,width=8)
 
 
 ###################################################################################
 ###################################################################################
 ## The following are analyses which are not in the paper, but that I want to keep for now,
-## in case they make it in later.
+## in case they make it in later, or for future follow-up papers.
 ###################################################################################
 ###################################################################################
 ## let's compare long read PCN estimates from minimap2 and pseudoalignment for high PCN plasmids--
@@ -1007,6 +939,10 @@ high.PCN.estimate.comparison.plot <- long.read.alignment.versus.short.read.pseud
 ggsave(
     "../results/long-read-alignment-versus-short-read-pseudoalignment-high-PCN-estimates.pdf",
     high.PCN.estimate.comparison.plot, height=5, width=5)
+
+
+###################################################################################
+
 
 ###################################################################################
 ## POTENTIAL TODO: compare a mixture model fit (two lines, with a breakpoint as an extra parameter),
