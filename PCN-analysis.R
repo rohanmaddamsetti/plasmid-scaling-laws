@@ -146,10 +146,10 @@ metabolic.genes.per.plasmid <- plasmid.proteins.in.KEGG.metabolism %>%
     mutate(metabolic_protein_count = replace_na(metabolic_protein_count, 0))
 
 
-##  get output from calculate-CDS-fractions.py.
+##  get output from calculate-CDS-MGE-ARG-fractions.py.
 ## We want to answer a basic question that Lingchong asked:
 ## for a typical plasmid or bacterial chromosome, what percentage is genuinely encoding proteins?
-CDS.fraction.data <- read.csv("../results/CDS-fractions.csv") %>%
+CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>%
     ## make the dataframe compatible with replicon.annotation.data,
     mutate(NCBI_Nucleotide_Accession = str_remove(SeqID, "N(C|Z)_")) %>%
     ## and join.
@@ -165,9 +165,9 @@ CDS.fraction.data <- read.csv("../results/CDS-fractions.csv") %>%
 ## in the Annotation and SeqType columns, and rewrite upstream code to
 ## solve this problem.
 ## FOR DEBUGGING
-bad.annotations.vec <- unique(filter(CDS.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
+bad.annotations.vec <- unique(filter(CDS.MGE.ARG.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
 bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
-write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS-FRACTIONS.csv", row.names=F, quote=F)
+write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS--MGE-ARG-FRACTIONS.csv", row.names=F, quote=F)
 
 
 
@@ -768,7 +768,7 @@ ggsave("../results/S10Fig.pdf", S10Fig, height = 6, width = 6)
 ## Main figure, all the points together.
 ## supplementary figure: same figure, separated by Annotation category.
 
-Fig2A <- CDS.fraction.data %>%
+Fig2A <- CDS.MGE.ARGfraction.data %>%
     ggplot(
         aes(
             x = log10(SeqLength),
@@ -779,7 +779,7 @@ Fig2A <- CDS.fraction.data %>%
     ylab("log10(coding sequence length)") +
     theme_classic() + guides(color = "none")
 
-Fig2B <- CDS.fraction.data %>%
+Fig2B <- CDS.MGE.ARG.fraction.data %>%
     ggplot(    
         aes(
             x = log10(SeqLength),
@@ -791,7 +791,7 @@ Fig2B <- CDS.fraction.data %>%
     theme_classic() +
     guides(color = "none")
 
-Fig2C <- CDS.fraction.data %>%
+Fig2C <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = CDSFraction,
@@ -808,7 +808,7 @@ Fig2 <- plot_grid(Fig2A, Fig2B, Fig2C, labels = c("A", "B", "C"), nrow=1)
 ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
 
 ## examine the same thing for plasmids, but normalized by chromosome length.
-S11Fig <- CDS.fraction.data %>%
+S11Fig <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = log10(normalized_replicon_length),
