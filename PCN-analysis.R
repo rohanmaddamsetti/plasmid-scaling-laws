@@ -957,12 +957,12 @@ median(ARG.plasmid.data$PIRACopyNumber)
 median(no.ARG.plasmid.data$PIRACopyNumber)
 
 ###################################################################################
-## Figure 2. Coding Sequence (CDS) analysis.
+## Figure 3. Coding Sequences (CDS) on plasmids follow an empirical scaling law.
 
 ## Main figure, all the points together.
 ## supplementary figure: same figure, separated by Annotation category.
 
-Fig2A <- CDS.MGE.ARG.fraction.data %>%
+Fig3A <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = log10(SeqLength),
@@ -973,7 +973,7 @@ Fig2A <- CDS.MGE.ARG.fraction.data %>%
     ylab("log10(coding sequence length)") +
     theme_classic() + guides(color = "none")
 
-Fig2B <- CDS.MGE.ARG.fraction.data %>%
+Fig3B <- CDS.MGE.ARG.fraction.data %>%
     ggplot(    
         aes(
             x = log10(SeqLength),
@@ -985,7 +985,7 @@ Fig2B <- CDS.MGE.ARG.fraction.data %>%
     theme_classic() +
     guides(color = "none")
 
-Fig2C <- CDS.MGE.ARG.fraction.data %>%
+Fig3C <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = CDS_fraction,
@@ -996,13 +996,13 @@ Fig2C <- CDS.MGE.ARG.fraction.data %>%
     theme_classic() +
     guides(fill = "none")
 
-Fig2 <- plot_grid(Fig2A, Fig2B, Fig2C, labels = c("A", "B", "C"), nrow=1)
+Fig3 <- plot_grid(Fig3A, Fig3B, Fig3C, labels = c("A", "B", "C"), nrow=1)
 
 ## save the plot.
-ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
+ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
 
-S17Fig <- Fig2A + facet_wrap(. ~ Annotation)
+S17Fig <- Fig3A + facet_wrap(. ~ Annotation)
 ## save the plot.
 ggsave("../results/S17Fig.pdf", S17Fig)
 
@@ -1029,7 +1029,7 @@ ggsave("../results/S18Fig.pdf", S18Fig)
 S19FigD <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
-            x = SeqLength,
+            x = replicon_length,
             y = MGE_count,
             color = SeqType)) +
     geom_point(size=0.05,alpha=0.2) +
@@ -1259,10 +1259,15 @@ write.csv(x=big.metabolic.plasmid.data, file="../results/big-metabolic-plasmids-
 ## save the plot.
 ##ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
-metabolic.gene.scatterplot0 <- ggplot(
-    data = metabolic.gene.scatterplot.data,
-    aes(x = log10(replicon_length), y = log10(metabolic_protein_count))) +
+metabolic.gene.scatterplot0 <- metabolic.gene.scatterplot.data %>%
+    filter(Annotation != "blank") %>%
+    filter(Annotation != "NA") %>%
+    mutate(Megaplasmid = ifelse(replicon_length > 1000000, TRUE, FALSE)) %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(metabolic_protein_count))) +
     geom_point(size=0.2, alpha=0.5) +
+    geom_vline(xintercept = 6, linetype = "dashed", color = "light gray") +
     theme_classic()
 ## save the plot.
 ggsave("../results/plasmid-metabolic-gene-scatterplot0.pdf", metabolic.gene.scatterplot0)
