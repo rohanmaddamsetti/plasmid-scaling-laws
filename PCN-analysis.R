@@ -14,8 +14,8 @@
 
 library(tidyverse)
 library(cowplot)
-library(ggrepel)
-library(data.table)
+library(ggbeeswarm)
+##library(data.table)
 
 
 ################################################################################
@@ -86,7 +86,7 @@ calc.plasmid.confints <- function(df) {
 }
 
 
-make.highPCN.table <- function(PIRA.PCN.estimates, highPCNthreshold = 100) {
+make.highPCN.table <- function(PIRA.PCN.estimates, highPCNthreshold = 50) {
     
     ## count the number of isolates with high PCNs in each category.
     high.PCN.category.counts <- PIRA.PCN.estimates %>%
@@ -105,6 +105,31 @@ make.highPCN.table <- function(PIRA.PCN.estimates, highPCNthreshold = 100) {
         mutate(high_PCN_plasmids =
                    replace_na(high_PCN_plasmids,0)) %>%
         mutate(p = high_PCN_plasmids/total_plasmids) %>%
+        calc.plasmid.confints()
+    
+    return(Table)
+}
+
+
+make.lowPCN.table <- function(PIRA.PCN.estimates, lowPCNthreshold = 1) {
+    
+    ## count the number of isolates with high PCNs in each category.
+    low.PCN.category.counts <- PIRA.PCN.estimates %>%
+        ## extra check to make sure no chromosomes here.
+        filter(SeqType == "plasmid") %>%
+        filter(PIRACopyNumber < lowPCNthreshold) %>%
+        ## next two lines is to count isolates rather than genes
+        select(AnnotationAccession, Annotation) %>%
+        distinct() %>%
+        count(Annotation, sort = TRUE) %>%
+        rename(low_PCN_plasmids = n)
+    
+    ## join columns to make the Table.
+    Table <- make.plasmid.totals.col(PIRA.PCN.estimates) %>%
+        left_join(low.PCN.category.counts) %>%
+        mutate(low_PCN_plasmids =
+                   replace_na(low_PCN_plasmids,0)) %>%
+        mutate(p = low_PCN_plasmids/total_plasmids) %>%
         calc.plasmid.confints()
     
     return(Table)
@@ -247,6 +272,8 @@ bad.annotations.vec <- unique(filter(CDS.MGE.ARG.fraction.data, is.na(SeqType) |
 bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
 write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS--MGE-ARG-FRACTIONS.csv", row.names=F, quote=F)
 
+## get ARG copy number data-- this is only used for annotating ARGs.
+kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.csv")
 
 
 ################################################################################
@@ -268,6 +295,9 @@ PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
         PIRASequencingCoverage = SequencingCoverage,
         PIRALongestRepliconCoverage = LongestRepliconCoverage) %>%
     filter(PIRAReadCount > MIN_READ_COUNT) %>%
+    mutate(RepliconDNAContent = replicon_length * PIRACopyNumber) %>%
+    ## add taxonomic and ecological annotation.
+    left_join(replicon.annotation.data) %>%
     normalize.plasmid.lengths()
 ## write the normalized data to disk.
 write.csv(PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
@@ -619,9 +649,7 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 ## Figure 1. Patterns in Plasmid copy number, and analysis of ecological and phylogenetic
 ## associations with PCN.
 
-## get ARG copy number data-- this is only used for annotating ARGs.
-kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.csv")
-
+## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
 
 ## take the PIRA estimates, filter for plasmids,
 ## and annotate plasmids with ARGs, and MOB type.
@@ -631,8 +659,6 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
     ## by splitting the SeqID string on the underscore and taking the second part.
     mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
     left_join(plasmid.mobility.data) %>%
-    ## add taxonomic and ecological annotation.
-    left_join(replicon.annotation.data) %>%
     ## annotate by presence of ARGs
     mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE))
 
@@ -643,8 +669,7 @@ unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
 
 
-## CRITICAL TODO: POLISH THIS FIGURE.
-## keep consistent color/symbol coding throughout the paper.
+
 
 ## plot the PIRA PCN estimates.
 Fig1A <- PIRA.PCN.estimates %>%
@@ -664,14 +689,16 @@ Fig1A <- PIRA.PCN.estimates %>%
 Fig1B <- Fig1A + facet_grid(PredictedMobility ~ .)
 
 ## make Figure 1.
-Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1)
-ggsave("../results/Fig1.pdf", Fig1AB, height=8, width=4)
+Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
+ggsave("../results/Fig1.pdf", Fig1, height=8, width=4)
 
 
 ################################################################################
 ## Make a Supplementary Figure S7 that is the same as Figure 1,
 ## but plotting normalized plasmid length relative to the length of the longest
 ## chromosome.
+
+## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
 
 ## CRITICAL TODO: there are still a point or two at normalized plasmid length == 1
 ## that look like bugs! Investigate and fix or verify!
@@ -693,11 +720,11 @@ S7FigA <- PIRA.PCN.estimates %>%
     ylab("log2(Copy number)") 
 
 ## Break down this result by predicted plasmid mobility.
-S7FigB <- S7FigA + facet_grid(. ~ PredictedMobility)
+S7FigB <- S7FigA + facet_grid(PredictedMobility ~ .)
 
 ## make Supplementary Figure S8.
-S7Fig <- plot_grid(S7FigA, S7FigB, labels=c('A', 'B'),ncol=1)
-ggsave("../results/S7Fig.pdf", S7Fig, height=6, width=7)
+S7Fig <- plot_grid(S7FigA, S7FigB, labels=c('A', 'B'),ncol=1, rel_heights = c(1, 2.5))
+ggsave("../results/S7Fig.pdf", S7Fig, height=8, width=4)
 
 ################################################################################
 ## Supplementary Figures S8 through S11. Break down the result in Figure 1 by taxonomy
@@ -775,30 +802,132 @@ ggsave("../results/S12Fig.pdf", S12Fig, height=4,width=5)
 ## Supplementary Figure S13.
 ## The PCN vs. plasmid length anticorrelation largely holds within individual genomes.
 
+within.genome.correlation.data.df <- PIRA.PCN.estimates %>%
+    group_by(AnnotationAccession) %>%
+    summarize(
+        replicons_within_genome = n(),
+        correlation = cor(log10(replicon_length), log10(PIRACopyNumber)))
 
+S13Fig <- within.genome.correlation.data.df %>%
+    ## turn replicons_within_genome into a discrete factor for plotting.
+    mutate(replicons_within_genome = as.factor(replicons_within_genome)) %>%
+    ggplot(aes(x = replicons_within_genome, y = correlation)) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "light gray") +
+    geom_boxplot(outlier.size = 0.1) +
+    facet_wrap(. ~ replicons_within_genome, scales = "free_x") +
+    theme_classic() +
+    theme(
+    axis.text.x = element_blank(),   # Remove x-axis text labels
+    axis.ticks.x = element_blank()   # Remove x-axis ticks
+    ) +
+    xlab("replicons within genome")
 
-
+ggsave("../results/S13Fig.pdf", S13Fig, height=8, width=8)
 
 ################################################################################
+## Supplementary Figure S14. let's make a histogram of PCN in these data.
 
-## are high PCN plasmids associated with any ecology?
-## calculate the fraction of high PCN plasmids in each category.
-## there is a weak enrichment of high PCN plasmids in human-impacted environments.
+S14Fig <- PIRA.PCN.estimates %>%
+    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    filter(Annotation != "NA") %>%
+    filter(Annotation != "blank") %>%
+    ggplot(aes(x = log10(PIRACopyNumber))) +
+    geom_histogram(bins=1000) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
+    geom_vline(xintercept = 2, linetype = "dashed", color = "light gray") +
+    facet_wrap(. ~ Annotation) +
+    theme_classic()
 
-## Make Z-distributed confidence intervals for the fraction of isolates with
-## PCN > 100.
+ggsave("../results/S14Fig.pdf", S14Fig, height = 6, width = 6)
 
-high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates)
-## This vector is used for ordering axes in this figure
+################################################################################
+## Supplementary Figure S15. Examine the tails of the PCN distribution.
+## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
+## there is an enrichment of high PCN plasmids in human-impacted environments.
+
+## This vector is used for ordering axes in this figure and the next figure.
 order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotation
 
+## calculate the fraction of low PCN plasmids in each category.
+## Make Z-distributed confidence intervals for the fraction of isolates with
+## PCN < 1.
+
+low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates)
+## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
+low.PCN.fraction.plot <- make.confint.figure.panel(low.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN < 1")
+
+## calculate the fraction of high PCN plasmids in each category.
+## there is an enrichment of  PCN > 50 plasmids in human-impacted environments.
+## Make Z-distributed confidence intervals for the fraction of isolates with
+## PCN > 50.
+
+high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates)
 ## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
-high.PCN.fraction.plot <- make.confint.figure.panel(high.PCN.plasmids.table, order.by.total.plasmids, "high PCN plasmids")
+high.PCN.fraction.plot <- make.confint.figure.panel(high.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN > 50")
+
+S15Fig <- plot_grid(low.PCN.fraction.plot, high.PCN.fraction.plot, labels=c('A','B'), ncol=1)
+ggsave("../results/S15Fig.pdf", S15Fig, height = 8, width = 6)
+
+## calculate the total number of plasmids,
+## and the number of plasmids with PCN < 1 and PCN > 50.
+PCN.count <- nrow(PIRA.PCN.estimates) ## 10,261 plasmids here
+PCN.count
+
+## There are 2238 plasmids with PCN < 1 in these data.
+## this is 22% of plasmids
+low.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber < 1) %>% nrow()
+low.PCN.count
+low.PCN.count/PCN.count
+
+## There are 473 plasmids with PCN > 50 in these data.
+## This is 4.6% of plasmids.
+high.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 50) %>% nrow()
+high.PCN.count
+high.PCN.count/PCN.count
 
 
 ################################################################################
+## Supplementary Figure S16. Chromosome DNA content does not constraint Plasmid DNA content.
 
+total.DNA.content.data <- PIRA.estimates %>%
+    group_by(AnnotationAccession) %>%
+    summarize(TotalDNAContent = sum(RepliconDNAContent))
+
+chromosome.DNA.content.data <- PIRA.estimates %>%
+    filter(SeqType == "chromosome") %>%
+    group_by(AnnotationAccession) %>%
+    summarize(ChromosomeDNAContent = sum(RepliconDNAContent))
+
+plasmid.DNA.content.data <- PIRA.estimates %>%
+    filter(SeqType == "plasmid") %>%
+    group_by(AnnotationAccession) %>%
+    summarize(PlasmidDNAContent = sum(RepliconDNAContent))
+
+DNA.content.data <- total.DNA.content.data %>%
+    left_join(chromosome.DNA.content.data) %>%
+    left_join(plasmid.DNA.content.data) %>%
+    left_join(PIRA.estimates) ## basically to get the Annotation column.
+
+
+S16Fig <- DNA.content.data %>%
+    ggplot(aes(
+        x = log10(ChromosomeDNAContent),
+        y = log10(PlasmidDNAContent))) +
+    geom_point(size=0.2) +
+    facet_wrap(. ~ Annotation) +
+    theme_classic()
+## save the plot
+ggsave("../results/S16Fig.pdf", S16Fig)
+
+
+################################################################################
 ## CRITICAL TODO: examine PCN distribution over INC groups and MOB groups.
+
+
+
+
+
+
 
 
 
@@ -826,42 +955,6 @@ mean(no.ARG.plasmid.data$PIRACopyNumber)
 
 median(ARG.plasmid.data$PIRACopyNumber)
 median(no.ARG.plasmid.data$PIRACopyNumber)
-
-################################################################################
-## calculate the total number of plasmids and the number of plasmids with PCN > 100.
-nrow(PIRA.PCN.estimates) ## 10,261 plasmids here
-## There are 176 plasmids with PCN > 100 in these data.
-PIRA.PCN.estimates %>% filter(PIRACopyNumber > 100) %>% nrow()
-
-
-################################################################################
-## Supplementary Figure S9. let's make a histogram of PCN in these data.
-
-S9Fig <- PIRA.PCN.estimates %>%
-    ggplot(aes(x = log10(PIRACopyNumber))) +
-    geom_histogram(bins=1000) +
-    theme_classic()
-
-ggsave("../results/S9Fig.pdf", S9Fig, height = 6, width = 6)
-
-################################################################################
-## Supplementary Figure S10. examine total DNA (chromosomes and plasmids) per genome.
-
-DNA.content.data <- PIRA.estimates %>%
-    mutate(DNAContent = replicon_length * PIRACopyNumber) %>%
-    group_by(AnnotationAccession) %>%
-    summarize(TotalDNAContent = sum(DNAContent))
-
-S10Fig <- DNA.content.data %>%
-    ggplot(aes(x=TotalDNAContent)) +
-    geom_histogram(bins=1000) +
-    theme_classic() +
-## IMPORTANT TODO: EXAMINE OUTLIERS IN THIS PLOT.
-    xlim(0,15000000)
-
-
-ggsave("../results/S10Fig.pdf", S10Fig, height = 6, width = 6)
-
 
 ###################################################################################
 ## Figure 2. Coding Sequence (CDS) analysis.
@@ -909,13 +1002,13 @@ Fig2 <- plot_grid(Fig2A, Fig2B, Fig2C, labels = c("A", "B", "C"), nrow=1)
 ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
 
 
-S11Fig <- Fig2A + facet_wrap(. ~ Annotation)
+S17Fig <- Fig2A + facet_wrap(. ~ Annotation)
 ## save the plot.
-ggsave("../results/S11Fig.pdf", S11Fig)
+ggsave("../results/S17Fig.pdf", S17Fig)
 
 
 ## examine the same thing for plasmids, but normalized by chromosome length.
-S12Fig <- CDS.MGE.ARG.fraction.data %>%
+S18Fig <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = log10(normalized_replicon_length),
@@ -926,14 +1019,14 @@ S12Fig <- CDS.MGE.ARG.fraction.data %>%
     guides(color = "none")
 
 ## save the plot.
-ggsave("../results/S12Fig.pdf", S12Fig)
+ggsave("../results/S18Fig.pdf", S18Fig)
 
 
 ########################################################################
 ## examine the proportion of MGE-associated genes
 ## found on these plasmids across different ecological categories.
 
-S12FigD <- CDS.MGE.ARG.fraction.data %>%
+S19FigD <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = SeqLength,
@@ -945,7 +1038,7 @@ S12FigD <- CDS.MGE.ARG.fraction.data %>%
     theme_classic() + guides(color = "none")
 
 
-S12FigA <- CDS.MGE.ARG.fraction.data %>%
+S19FigA <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = log10(SeqLength),
@@ -957,7 +1050,7 @@ S12FigA <- CDS.MGE.ARG.fraction.data %>%
     ylab("log10(MGE sequence length)") +
     theme_classic() + guides(color = "none")
 
-S12FigB <- CDS.MGE.ARG.fraction.data %>%
+S19FigB <- CDS.MGE.ARG.fraction.data %>%
     ggplot(    
         aes(
             x = log10(SeqLength),
@@ -969,7 +1062,7 @@ S12FigB <- CDS.MGE.ARG.fraction.data %>%
     theme_classic() +
     guides(color = "none")
 
-S12FigC <- CDS.MGE.ARG.fraction.data %>%
+S19FigC <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = MGE_fraction,
@@ -980,15 +1073,15 @@ S12FigC <- CDS.MGE.ARG.fraction.data %>%
     theme_classic() +
     guides(fill = "none")
 
-S12Fig <- plot_grid(S12FigA, S12FigB, S12FigC, labels = c("A", "B", "C"), nrow=1)
+S19Fig <- plot_grid(S19FigA, S19FigB, S19FigC, labels = c("A", "B", "C"), nrow=1)
 
 ## save the plot.
-ggsave("../results/S12Fig.pdf", S12Fig, height=4, width=7.5)
+ggsave("../results/S19Fig.pdf", S19Fig, height=4, width=7.5)
 
 
 ## examine the proportion of MGE-associated genes
 ## found on these plasmids across different ecological categories.
-S13Fig <- CDS.MGE.ARG.fraction.data %>%
+S20Fig <- CDS.MGE.ARG.fraction.data %>%
     ggplot(    
         aes(
             x = log10(SeqLength),
@@ -1002,14 +1095,14 @@ S13Fig <- CDS.MGE.ARG.fraction.data %>%
     guides(color = "none")
 
 ## save the plot.
-ggsave("../results/S13Fig.pdf", S13Fig, height=4, width=7.5)
+ggsave("../results/S20Fig.pdf", S20Fig, height=4, width=7.5)
 
 
 ########################################################################
 ## examine the proportion of ARG-associated genes
 ## found on these plasmids across different ecological categories.
 
-S14FigD <- CDS.MGE.ARG.fraction.data %>%
+S21FigD <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = SeqLength,
@@ -1020,7 +1113,7 @@ S14FigD <- CDS.MGE.ARG.fraction.data %>%
     ylab("ARG count") +
     theme_classic() + guides(color = "none")
 
-S14FigE <- CDS.MGE.ARG.fraction.data %>%
+S21FigE <- CDS.MGE.ARG.fraction.data %>%
     filter(SeqType == "plasmid") %>%
     ggplot(
         aes(
@@ -1034,7 +1127,7 @@ S14FigE <- CDS.MGE.ARG.fraction.data %>%
 
 
 
-S14FigA <- CDS.MGE.ARG.fraction.data %>%
+S21FigA <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = log10(SeqLength),
@@ -1045,7 +1138,7 @@ S14FigA <- CDS.MGE.ARG.fraction.data %>%
     ylab("log10(ARG sequence length)") +
     theme_classic() + guides(color = "none")
 
-S14FigB <- CDS.MGE.ARG.fraction.data %>%
+S21FigB <- CDS.MGE.ARG.fraction.data %>%
     ggplot(    
         aes(
             x = log10(SeqLength),
@@ -1057,7 +1150,7 @@ S14FigB <- CDS.MGE.ARG.fraction.data %>%
     theme_classic() +
     guides(color = "none")
 
-S14FigC <- CDS.MGE.ARG.fraction.data %>%
+S21FigC <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
             x = ARG_fraction,
@@ -1068,15 +1161,15 @@ S14FigC <- CDS.MGE.ARG.fraction.data %>%
     theme_classic() +
     guides(fill = "none")
 
-S14Fig <- plot_grid(S14FigA, S14FigB, S14FigC, labels = c("A", "B", "C"), nrow=1)
+S21Fig <- plot_grid(S21FigA, S21FigB, S21FigC, labels = c("A", "B", "C"), nrow=1)
 
 ## save the plot.
-ggsave("../results/S14Fig.pdf", S14Fig, height=4, width=7.5)
+ggsave("../results/S21Fig.pdf", S21Fig, height=4, width=7.5)
 
 
 ## examine the proportion of MGE-associated genes
 ## found on these plasmids across different ecological categories.
-S15Fig <- CDS.MGE.ARG.fraction.data %>%
+S22Fig <- CDS.MGE.ARG.fraction.data %>%
     ggplot(    
         aes(
             x = log10(SeqLength),
@@ -1090,7 +1183,7 @@ S15Fig <- CDS.MGE.ARG.fraction.data %>%
     guides(color = "none")
 
 ## save the plot.
-ggsave("../results/S15Fig.pdf", S15Fig, height=4, width=7.5)
+ggsave("../results/S22Fig.pdf", S22Fig, height=4, width=7.5)
 
 
 ########################################################################
@@ -1261,9 +1354,6 @@ high.PCN.estimate.comparison.plot <- long.read.alignment.versus.short.read.pseud
 ggsave(
     "../results/long-read-alignment-versus-short-read-pseudoalignment-high-PCN-estimates.pdf",
     high.PCN.estimate.comparison.plot, height=5, width=5)
-
-
-###################################################################################
 
 
 ###################################################################################
