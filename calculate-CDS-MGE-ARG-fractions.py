@@ -95,15 +95,16 @@ def main():
             ## Iterate through features and calculate CDS length
             for feature in record.features:
                 if feature.type == 'CDS':
+                    my_seq_length = len(feature.location)
                     cds_count += 1
-                    cds_length += len(feature.location)
+                    cds_length += my_seq_length
                     cur_prot_dict = get_prot_data(feature)
                     if isMGE(cur_prot_dict['product']):
                         mge_count += 1
-                        mge_length += len(cur_prot_dict["seq"])
+                        mge_length += my_seq_length
                     elif isARG(cur_prot_dict['product']):
                         arg_count += 1
-                        arg_length += len(cur_prot_dict["seq"])
+                        arg_length += my_seq_length
             
             ## Calculate the fraction of sequence covered by CDS
             CDS_fraction = cds_length / total_sequence_length
