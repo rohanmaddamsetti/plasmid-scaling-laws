@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-make-GhostKOALA-input-files.py by Rohan Maddamsetti.
+make-plasmid-GhostKOALA-input-files.py by Rohan Maddamsetti.
 
 This script splits ../results/plasmid-protein-db.faa into pieces that are <300MB with <500,000 sequences per file,
 so that each piece can be submitted to the GhostKOALA webserver at: https://www.kegg.jp/ghostkoala/
@@ -17,8 +17,8 @@ MAX_LINES = 2 * MAX_SEQUENCES
 
 
 def makeGhostKOALA_input_filename(cur_num):
-    GhostKOALA_inputfile_dir = "../results/GhostKOALA-input-files/"
-    return os.path.join(GhostKOALA_inputfile_dir, "GhostKOALA_input_" + str(cur_num) + ".fasta")
+    GhostKOALA_inputfile_dir = "../results/plasmid-GhostKOALA-input-files/"
+    return os.path.join(GhostKOALA_inputfile_dir, "plasmid_GhostKOALA_input_" + str(cur_num) + ".fasta")
 
 
 def split_file_into_chunks_by_max_lines(input_file_path, max_lines=MAX_LINES):

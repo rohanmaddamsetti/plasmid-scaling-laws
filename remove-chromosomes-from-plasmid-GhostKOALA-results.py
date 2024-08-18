@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-""" remove-chromosomes-from-Ghost_KOALA-results.py by Rohan Maddamsetti.
+""" remove-chromosomes-from-plasmid-Ghost-KOALA-results.py by Rohan Maddamsetti.
 
 This script is a temporary downstream hack to remove proteins found on the sequences in bad-replicons.txt
-from successful_GhostKOALA_concatenated_ko_results.tsv.
+from successful_plasmid_GhostKOALA_concatenated_ko_results.tsv.
 
-Usage: python remove-chromosomes-from-Ghost_KOALA-results.py > ../results/filtered_successful_GhostKOALA_concatenated_ko_results.tsv
+Usage: python remove-chromosomes-from-plasmid-Ghost-KOALA-results.py > ../results/filtered_successful_plasmid_GhostKOALA_concatenated_ko_results.tsv
 
 """
 
@@ -18,7 +18,7 @@ with open("../results/bad-replicons.txt", "r") as bad_replicon_fh:
         bad_replicon_list.append(bad_replicon)
 
 
-with open("../results/successful_GhostKOALA_concatenated_ko_results.tsv", "r") as data_fh:
+with open("../results/successful_plasmid_GhostKOALA_concatenated_ko_results.tsv", "r") as data_fh:
     for line in data_fh:
         line = line.strip()
         SeqID = line.split('|')[0].split('=')[-1]
