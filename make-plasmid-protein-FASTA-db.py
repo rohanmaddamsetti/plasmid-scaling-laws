@@ -33,12 +33,11 @@ def find_genomes_with_chromosomes_smaller_than_a_plasmid(replicon_length_file):
     return bad_genomes_list
 
 
-def generate_plasmid_protein_fasta_db(refgenomes_dir, bad_genomes_list):
+def generate_plasmid_protein_fasta_db(refgenomes_dir, fasta_outfile, bad_genomes_list):
     """
     IMPORTANT: This function only writes out proteins that are found on plasmids.
     """
     
-    fasta_outfile = "../results/plasmid-protein-db.faa"
     with open(fasta_outfile, "w") as outfh:
         gbk_filelist = [x for x in os.listdir(refgenomes_dir) if x.endswith("gbff")]
         good_gbk_filelist = [x for x in gbk_filelist if x not in bad_genomes_list]
@@ -71,7 +70,7 @@ def generate_plasmid_protein_fasta_db(refgenomes_dir, bad_genomes_list):
                         ## skip over CDS that don't have an annotated translation.
                         if "translation" not in feature.qualifiers: continue
                         protein_seq = feature.qualifiers["translation"][0]
-                        header = ">" + "|".join(["SeqID="+SeqID,"SeqType="+SeqType,"locus_tag="+locus_tag,"product="+product])
+                        header = ">" + "|".join(["AnnotationAccession="+AnnotationAccession,"SeqID="+SeqID,"SeqType="+SeqType,"locus_tag="+locus_tag,"product="+product])
                         outfh.write(header + "\n")
                         outfh.write(str(protein_seq) + "\n")
     return
@@ -92,7 +91,8 @@ def main():
     print("*******")
     
     """ make a database of proteins found on plasmids as input to GhostKOALA to get KEGG IDs.  """
-    generate_plasmid_protein_fasta_db(refgenomes_dir, bad_genomes_list)
+    fasta_outfile = "../results/plasmid-protein-db.faa"
+    generate_plasmid_protein_fasta_db(refgenomes_dir, fasta_outfile, bad_genomes_list)
     return
 
 

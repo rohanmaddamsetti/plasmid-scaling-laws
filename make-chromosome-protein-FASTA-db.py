@@ -6,11 +6,53 @@ make-chromosome-protein-FASTA-db.py by Rohan Maddamsetti.
 This script goes through all the gbk annotation files in ../results/gbk-annotation,
 and makes a FASTA database of all proteins found on plasmids.
 
+IMPORTANT TODO: pick a better, more representative set of genomes spanning 
+
 """
 
 import os
 from tqdm import tqdm
 from Bio import SeqIO
+import polars as pl
+
+
+CHROMOSOME_MIN_LENGTH = 500000 ## a small endosymbiont has a 515,000 bp major chromosome
+
+def select_genomes_for_chromosome_control(replicon_length_file, ecological_annotation_file,NUM_GENOMES=100):
+    """ choose a set of 100 genomes, distributed equally over the rank
+    distribution of chromosome lengths, over the set of genomes
+    with ecological annotation.
+
+    NOTE: This is approximate, since we don't focus on the major chromosome in each genome
+    (each row is one chromosome in a genome, including secondary chromosomes), but should be good enough.
+    """
+
+    replicon_length_df = pl.read_csv(replicon_length_file)
+    ecological_annotation_df = pl.read_csv(ecological_annotation_file)
+
+    annotated_replicon_df = replicon_length_df.join(
+        ecological_annotation_df,
+        on="AnnotationAccession", how="left", coalesce=True).filter(
+            ## filter out genomes with NA or blank Annotation
+            ## then filger for chromosomes
+            ~pl.col("Annotation").is_in(["NA", "blank"])).filter(
+                pl.col("SeqType") == "chromosome").filter(
+                    ## focus on large major chromosomes
+                    pl.col("replicon_length") > CHROMOSOME_MIN_LENGTH).sort(
+                    ## sort by replicon_length
+                    "replicon_length")
+
+    annotation_accession_list = annotated_replicon_df["AnnotationAccession"].to_list()
+    annotation_accession_list_length = len(annotation_accession_list)
+    my_modulus = int(annotation_accession_list_length/NUM_GENOMES)
+
+    selected_genomes_list = list()
+    ## select NUM_GENOMES that are roughly equally apart in terms of size range.
+    for i, annotation_accession in enumerate(annotation_accession_list):
+        if i % my_modulus == 0:
+            selected_genomes_list.append(annotation_accession)
+
+    return selected_genomes_list
 
 
 def find_genomes_with_chromosomes_smaller_than_a_plasmid(replicon_length_file):
@@ -33,12 +75,11 @@ def find_genomes_with_chromosomes_smaller_than_a_plasmid(replicon_length_file):
     return bad_genomes_list
 
 
-def generate_chromosome_protein_fasta_db(refgenomes_dir, selected_genomes_list, bad_genomes_list):
+def generate_chromosome_protein_fasta_db(refgenomes_dir, fasta_outfile, selected_genomes_list, bad_genomes_list):
     """
     IMPORTANT: This function only writes out proteins that are found on plasmids.
     """
     
-    fasta_outfile = "../results/chromosome-protein-db.faa"
     with open(fasta_outfile, "w") as outfh:
         gbk_filelist = [x for x in os.listdir(refgenomes_dir) if x.endswith("gbff")]
         good_gbk_filelist = [x for x in gbk_filelist if x not in bad_genomes_list]
@@ -73,7 +114,7 @@ def generate_chromosome_protein_fasta_db(refgenomes_dir, selected_genomes_list, 
                         ## skip over CDS that don't have an annotated translation.
                         if "translation" not in feature.qualifiers: continue
                         protein_seq = feature.qualifiers["translation"][0]
-                        header = ">" + "|".join(["SeqID="+SeqID,"SeqType="+SeqType,"locus_tag="+locus_tag,"product="+product])
+                        header = ">" + "|".join(["AnnotationAccession="+AnnotationAccession,"SeqID="+SeqID,"SeqType="+SeqType,"locus_tag="+locus_tag,"product="+product])
                         outfh.write(header + "\n")
                         outfh.write(str(protein_seq) + "\n")
     return
@@ -93,11 +134,13 @@ def main():
         print(x)
     print("*******")
 
-    selected_genomes_list = select_100_genomes(replicon_length_file)
+    ecological_annotation_file = "../results/computationally-annotated-gbk-annotation-table.csv"
+    selected_genomes_list = select_genomes_for_chromosome_control(replicon_length_file, ecological_annotation_file)
     
     """ make a database of proteins found on chromosomes in the selected genomes
     as input to GhostKOALA to get KEGG IDs.  """
-    generate_chromosome_protein_fasta_db(refgenomes_dir, selected_genomes_list, bad_genomes_list)
+    fasta_outfile = "../results/chromosome_GhostKOALA_input.fasta"
+    generate_chromosome_protein_fasta_db(refgenomes_dir, fasta_outfile, selected_genomes_list, bad_genomes_list)
     return
 
 
