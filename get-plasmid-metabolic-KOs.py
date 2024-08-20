@@ -60,7 +60,7 @@ def main():
             metabolic_KEGG_IDs.add(metabolic_KEGG_ID)
 
     line_buffer = [] ## This is to save the lines to write to file.
-    with open("../results/successful_GhostKOALA_concatenated_ko_results.tsv") as all_plasmid_GhostKOALA_fh:
+    with open("../results/successful_plasmid_GhostKOALA_concatenated_ko_results.tsv") as all_plasmid_GhostKOALA_fh:
         for line in all_plasmid_GhostKOALA_fh:
             line = line.strip()
             plasmid_gene_string, KO_ID = line.split("\t")

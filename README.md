@@ -49,6 +49,12 @@ chromosome-plasmid-table.csv
 replicon-lengths-and-protein-counts.csv
 ../results/gbk-annotation
 
+## POTENTIALLY IMPORTANT TODO FOR GhostKOALA plasmid and chromosome RESULTS:
+## Annotate the LENGTH of each gene in the fasta headers, and parse
+## and keep these data downstream, so that I can analyze the fraction of
+## protein-coding sequence dedicated to metabolic pathways.
+
+
 ## Running GhostKOALA on plasmids.
 
 We use the GhostKOALA algorithm associated with the KEGG database to annotate KEGG numbers:  
