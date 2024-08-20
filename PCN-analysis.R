@@ -243,7 +243,15 @@ plasmid.length.data <- read.csv("../results/replicon-lengths-and-protein-counts.
 ## IMPORTANT: This is a tsv file, because "," is a meaningful character in chemical names!   
 plasmid.proteins.in.KEGG.metabolism <- read.table("../results/plasmid-proteins-in-KEGG-metabolism.tsv", header = TRUE)
 
-metabolic.genes.per.plasmid <- plasmid.proteins.in.KEGG.metabolism %>%
+metabolic.genes.in.plasmids <- plasmid.proteins.in.KEGG.metabolism %>%
+    group_by(SeqID, SeqType) %>%
+    summarize(metabolic_protein_count = n()) %>%
+    mutate(metabolic_protein_count = replace_na(metabolic_protein_count, 0))
+
+## IMPORTANT: This is a tsv file, because "," is a meaningful character in chemical names!   
+chromosome.proteins.in.KEGG.metabolism <- read.table("../results/chromosome-proteins-in-KEGG-metabolism.tsv", header = TRUE)
+
+metabolic.genes.in.chromosomes <- chromosome.proteins.in.KEGG.metabolism %>%
     group_by(SeqID, SeqType) %>%
     summarize(metabolic_protein_count = n()) %>%
     mutate(metabolic_protein_count = replace_na(metabolic_protein_count, 0))
@@ -1088,7 +1096,7 @@ METABOLIC_GENE_THRESHOLD <- 50
 MEGAPLASMID_SIZE_THRESHOLD <- 100000
 
 metabolic.gene.plasmid.data <- plasmid.length.data %>%
-    left_join(metabolic.genes.per.plasmid) %>%
+    left_join(metabolic.genes.in.plasmids) %>%
     ## make the dataframe compatible with plasmid.annotation.data
     mutate(NCBI_Nucleotide_Accession = str_remove(SeqID, "N(C|Z)_")) %>%
     ## and join with plasmid.annotation.data.
