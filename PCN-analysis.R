@@ -1021,60 +1021,6 @@ S17Fig <- Fig3B + facet_wrap(. ~ Annotation)
 ggsave("../results/S17Fig.pdf", S17Fig)
 
 
-## examine the same thing for plasmids, but normalized by chromosome length.
-S18Fig <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = log10(normalized_replicon_length),
-            y = CDS_fraction,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    theme_classic() +
-    guides(color = "none")
-
-## save the plot.
-ggsave("../results/S18Fig.pdf", S18Fig)
-
-
-########################################################################
-## examine MGE-associated genes.
-
-S19Fig <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = replicon_length,
-            y = MGE_count,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.2) +
-     xlab("replicon length") +
-    ylab("MGE count") +
-    theme_classic() +
-    guides(color = "none") +
-    ggtitle("MGE-associated genes")
-## save the plot.
-ggsave("../results/S19Fig.pdf", S19Fig)
-
-
-########################################################################
-## examine the proportion of ARG-associated genes
-## found on these plasmids across different ecological categories.
-
-S20Fig <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = SeqLength,
-            y = ARG_count,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("replicon length") +
-    ylab("ARG count") +
-    theme_classic() +
-    guides(color = "none") +
-    ggtitle("Antibiotic resistance genes")
-## save the plot.
-ggsave("../results/S20Fig.pdf", S20Fig)
-
-
 ########################################################################
 ## Figure 4: plasmid size scales with metabolic capacity.
 ## These data suggest that metabolic capacity constrains plasmid size.
@@ -1342,6 +1288,50 @@ ggsave("../results/Fig4G.pdf", Fig4G)
 
 
 ###################################################################################
+
+########################################################################
+## examine MGE-associated genes.
+
+S19Fig <- CDS.MGE.ARG.fraction.data %>%
+    ggplot(
+        aes(
+            x = replicon_length,
+            y = MGE_count,
+            color = SeqType)) +
+    geom_point(size=0.05,alpha=0.2) +
+     xlab("replicon length") +
+    ylab("MGE count") +
+    theme_classic() +
+    guides(color = "none") +
+    ggtitle("MGE-associated genes")
+## save the plot.
+ggsave("../results/S19Fig.pdf", S19Fig)
+
+
+########################################################################
+## examine the proportion of ARG-associated genes
+## found on these plasmids across different ecological categories.
+
+S20Fig <- CDS.MGE.ARG.fraction.data %>%
+    ggplot(
+        aes(
+            x = SeqLength,
+            y = ARG_count,
+            color = SeqType)) +
+    geom_point(size=0.05,alpha=0.5) +
+    xlab("replicon length") +
+    ylab("ARG count") +
+    theme_classic() +
+    guides(color = "none") +
+    ggtitle("Antibiotic resistance genes")
+## save the plot.
+ggsave("../results/S20Fig.pdf", S20Fig)
+
+
+
+
+
+
 ###################################################################################
 ## The following are analyses which are not in the paper, but that I want to keep for now,
 ## in case they make it in later, or for future follow-up papers.
