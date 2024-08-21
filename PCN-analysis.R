@@ -279,7 +279,10 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     ## and join.
     left_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
-    normalize.plasmid.lengths()
+    normalize.plasmid.lengths() %>%
+    ## set nice units for linear-scale graphs.
+    mutate(CDS_length_in_Mbp = CDS_length / 1000000) %>%
+    mutate(SeqLength_in_Mbp = SeqLength / 1000000)
 
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
@@ -862,7 +865,8 @@ S14Fig <- PIRA.PCN.estimates %>%
 ggsave("../results/S14Fig.pdf", S14Fig, height = 6, width = 6)
 
 ################################################################################
-## Supplementary Figure S15. Examine the tails of the PCN distribution.
+## Supplementary Figure S15.
+## Examine the tails of the PCN distribution.
 ## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
 ## there is an enrichment of high PCN plasmids in human-impacted environments.
 
@@ -875,7 +879,7 @@ order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotatio
 
 low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates)
 ## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
-low.PCN.fraction.plot <- make.confint.figure.panel(low.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN < 1")
+S15FigA <- make.confint.figure.panel(low.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN < 1")
 
 ## calculate the fraction of high PCN plasmids in each category.
 ## there is an enrichment of  PCN > 50 plasmids in human-impacted environments.
@@ -884,9 +888,9 @@ low.PCN.fraction.plot <- make.confint.figure.panel(low.PCN.plasmids.table, order
 
 high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates)
 ## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
-high.PCN.fraction.plot <- make.confint.figure.panel(high.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN > 50")
+S15FigB <- make.confint.figure.panel(high.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN > 50")
 
-S15Fig <- plot_grid(low.PCN.fraction.plot, high.PCN.fraction.plot, labels=c('A','B'), ncol=1)
+S15Fig <- plot_grid(S15FigA, S15FigB, labels=c('A','B'), ncol=1)
 ggsave("../results/S15Fig.pdf", S15Fig, height = 8, width = 6)
 
 ## calculate the total number of plasmids,
@@ -986,12 +990,12 @@ median(no.ARG.plasmid.data$PIRACopyNumber)
 Fig3A <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
-            x = SeqLength,
-            y = CDS_length,
+            x = SeqLength_in_Mbp,
+            y = CDS_length_in_Mbp,
             color = SeqType)) +
     geom_point(size=0.05,alpha=0.5) +
-    xlab("replicon length") +
-    ylab("coding sequence length") +
+    xlab("replicon length (Mbp)") +
+    ylab("coding sequence length (Mbp)") +
     theme_classic() + guides(color = "none")
 
 
@@ -1006,33 +1010,10 @@ Fig3B <- CDS.MGE.ARG.fraction.data %>%
     ylab("log10(coding sequence length)") +
     theme_classic() + guides(color = "none")
 
-Fig3C <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(    
-        aes(
-            x = log10(SeqLength),
-            y = CDS_fraction,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("log10(replicon length)") +
-    ylab("log10(coding sequence fraction)") +
-    theme_classic() +
-    guides(color = "none")
-
-Fig3D <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = CDS_fraction,
-            fill = SeqType)) +
-    geom_histogram(position = 'identity', bins=100,alpha=0.5) +
-    coord_flip() +
-    xlab("log10(coding sequence fraction)") +
-    theme_classic() +
-    guides(fill = "none")
-
-Fig3 <- plot_grid(Fig3A, Fig3B, Fig3C, Fig3D, labels = c("A", "B", "C", "D"), nrow=2)
+Fig3 <- plot_grid(Fig3A, Fig3B, labels = c("A", "B"), nrow=1)
 
 ## save the plot.
-ggsave("../results/Fig3.pdf", Fig3)
+ggsave("../results/Fig3.pdf", Fig3, height=3.5, width=9)
 
 
 S17Fig <- Fig3B + facet_wrap(. ~ Annotation)
@@ -1140,11 +1121,11 @@ metabolic.gene.plasmid.and.chromosome.data <- full_join(
 Fig4A <- metabolic.gene.plasmid.and.chromosome.data %>%
     ggplot(
         aes(
-            x = SeqLength,
+            x = SeqLength_in_Mbp,
             y = metabolic_protein_count,
             color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("replicon_length") +
+    geom_point(size=0.5,alpha=0.5) +
+    xlab("replicon_length (Mbp)") +
     ylab("metabolic genes") +
     theme_classic() + guides(color = "none")
 
@@ -1154,41 +1135,15 @@ Fig4B <- metabolic.gene.plasmid.and.chromosome.data %>%
             x = log10(SeqLength),
             y = log10(metabolic_protein_count),
             color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.5) +
     xlab("log10(replicon length)") +
     ylab("log10(metabolic genes)") +
     theme_classic() + guides(color = "none")
 
-Fig4C <- metabolic.gene.plasmid.and.chromosome.data %>%
-    ggplot(    
-        aes(
-            x = log10(SeqLength),
-            y = metabolic_protein_fraction,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("log10(replicon length)") +
-    ylab("log10(metabolic fraction of proteins)") +
-    theme_classic() +
-    guides(color = "none")
 
-Fig4D <- metabolic.gene.plasmid.and.chromosome.data %>%
-    ggplot(
-        aes(
-            x = metabolic_protein_fraction,
-            after_stat(density),
-            color = SeqType)) +
-    ## IMPORTANT: normalize the histogram since only 100 chromosomes here.
-    geom_freqpoly(, position = 'identity', bins=100,alpha=0.5) +
-    coord_flip() +
-    xlab("log10(metabolic fraction of proteins)") +
-    ylab("density") +
-    theme_classic() +
-    guides(fill = "none")
-
-Fig4 <- plot_grid(Fig4A, Fig4B, Fig4C, Fig4D, labels = c("A", "B", "C", "D"), nrow=2)
-
+Fig4 <- plot_grid(Fig4A, Fig4B, labels = c("A", "B"), nrow=1)
 ## save the plot.
-ggsave("../results/Fig4.pdf", Fig4)
+ggsave("../results/Fig4.pdf", Fig4, height=3.5, width=9)
 
 
 S21Fig <- Fig4B + facet_wrap(. ~ Annotation)
@@ -1204,7 +1159,7 @@ ggsave("../results/S21Fig.pdf", S21Fig)
 
     
 
-## annotate big.plasmids as plasmids > METAPLASMID_SIZE_THRESHOLD, and write to file.
+## annotate big.plasmids as plasmids > MEGAPLASMID_SIZE_THRESHOLD, and write to file.
 big.plasmid.data <- metabolic.gene.plasmid.data %>%
     filter(replicon_length > MEGAPLASMID_SIZE_THRESHOLD)
 write.csv(x=big.plasmid.data, file="../results/big-plasmids.csv", row.names=FALSE, quote=FALSE)
