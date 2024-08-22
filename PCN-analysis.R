@@ -2,6 +2,8 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
+## CRITICAL TODO: DOUBLE-CHECK DISCREPANCY BETWEEN CODING AND NON-CODING GRAPHS.
+
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
 
 library(tidyverse)
@@ -272,9 +274,13 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     left_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths() %>%
+    ## calculate non-coding regions.
+    mutate(non_CDS_length = SeqLength - CDS_length) %>%
     ## set nice units for linear-scale graphs.
     mutate(CDS_length_in_Mbp = CDS_length / 1000000) %>%
+    mutate(non_CDS_length_in_Mbp = non_CDS_length / 1000000) %>%
     mutate(SeqLength_in_Mbp = SeqLength / 1000000)
+
 
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
@@ -743,7 +749,7 @@ S7FigB <- PIRA.PCN.estimates %>%
     ylab("log2(Copy number)") +
     facet_grid(PredictedMobility ~ .)
 
-## make Supplementary Figure S8.
+## make Supplementary Figure S7.
 S7Fig <- plot_grid(S7FigA, S7FigB, labels=c('A', 'B'),ncol=1, rel_heights = c(1, 2.5))
 ggsave("../results/S7Fig.pdf", S7Fig, height=8, width=4)
 
@@ -989,29 +995,81 @@ Fig3 <- plot_grid(Fig3A, Fig3B, labels = c("A", "B"), nrow=1)
 ggsave("../results/Fig3.pdf", Fig3, height=3.5, width=9)
 
 
-S17Fig <- Fig3B + facet_wrap(. ~ Annotation)
+################################################################################
+## Supplementary Figures S17 through S20. Break down the result in Figure 3 by taxonomy
+## and ecological category to show universality of the CDS scaling relationship.
+
+## Supplementary Figure S17.
+## Break down by taxonomic group.
+S17Fig <- Fig3B + facet_wrap(. ~ TaxonomicGroup)
 ## save the plot.
-ggsave("../results/S17Fig.pdf", S17Fig)
+ggsave("../results/S17Fig.pdf", S17Fig, height=8,width=8)
 
 
+## Supplementary Figure S18
+## Break down by taxonomic subgroup
+S18Fig <- Fig3B + facet_wrap(. ~ TaxonomicSubgroup)
+## save the plot.
+ggsave("../results/S18Fig.pdf", S18Fig, height=9, width=8)
+
+
+## Supplementary FIgure S19
+## Break down by genus.
+S19Fig <- Fig3B + facet_wrap(. ~ Genus, ncol=50)
+## save the plot.
+ggsave("../results/S19Fig.pdf", S19Fig, height=50, width=50, limitsize = FALSE)
+
+
+## Supplementary Figure S20:
+## show generality over ecology.
+S20Fig <- Fig3B + facet_wrap(.~Annotation)
+## save the plot.
+ggsave("../results/S20Fig.pdf", S20Fig, height=8, width=8)
+
+
+####################################
+## look at non-coding fractions.
+## CRITICAL TODO: WHY is this so much messier than
+## the coding fraction??
+## Is this real, or does this represent a bug or artifact??
+
+CDS.fraction.data <- CDS.MGE.ARG.fraction.data <- 
+
+
+S21FigA <- CDS.MGE.ARG.fraction.data %>%
+    ggplot(
+        aes(
+            x = SeqLength_in_Mbp,
+            y = non_CDS_length_in_Mbp,
+            color = SeqType)) +
+    geom_point(size=0.05,alpha=0.5) +
+    xlab("log10(replicon length)") +
+    ylab("log10(noncoding sequence length)") +
+    theme_classic() + guides(color = "none")
+
+
+S21FigB <- CDS.MGE.ARG.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(SeqLength),
+            y = log10(non_CDS_length),
+            color = SeqType)) +
+    geom_point(size=0.05,alpha=0.5) +
+    xlab("log10(replicon length)") +
+    ylab("log10(noncoding sequence length)") +
+    theme_classic() + guides(color = "none")
+
+S21Fig <- plot_grid(S21FigA, S21FigB, labels=c("A", "B"))
+## save the plot.
+ggsave("../results/S21Fig.pdf", S21Fig, height=3.5)
 
 
 ########################################################################
 ## Figure 4: plasmid size scales with metabolic capacity.
 ## These data suggest that metabolic capacity constrains plasmid size.
 
-## open question: does a scaling law emerge once plasmids reach a certain size?
-
-## One idea:
-## set megaplasmids to plasmids > 350 kB, following:
-## "What makes a megaplasmid" by James Hall et al.
-## https://royalsocietypublishing.org/doi/full/10.1098/rstb.2020.0472
-
 ## CRITICAL TODO: we will need to carefully distinguish between true zeros and NA
 ## values created by a plasmid/chromosome not being included in these data.
-
-METABOLIC_GENE_THRESHOLD <- 50
-MEGAPLASMID_SIZE_THRESHOLD <- 100000
 
 metabolic.gene.plasmid.data <- plasmid.length.data %>%
     left_join(metabolic.genes.in.plasmids) %>%
@@ -1034,10 +1092,9 @@ metabolic.gene.chromosome.data <- metabolic.genes.in.chromosomes %>%
     left_join(CDS.MGE.ARG.fraction.data) %>%
     mutate(metabolic_protein_fraction = metabolic_protein_count / protein_count)
 
-
+## combine plasmid and chromosome metabolic gene data for Figure 4.
 metabolic.gene.plasmid.and.chromosome.data <- full_join(
     metabolic.gene.plasmid.data, metabolic.gene.chromosome.data)
-
 
 Fig4A <- metabolic.gene.plasmid.and.chromosome.data %>%
     ggplot(
@@ -1066,10 +1123,36 @@ Fig4 <- plot_grid(Fig4A, Fig4B, labels = c("A", "B"), nrow=1)
 ## save the plot.
 ggsave("../results/Fig4.pdf", Fig4, height=3.5, width=9)
 
+################################################################################
+## Supplementary Figures S22 through S25. Break down the result in Figure 4 by taxonomy
+## and ecological category to show universality of the CDS scaling relationship.
 
-S21Fig <- Fig4B + facet_wrap(. ~ Annotation)
+## Supplementary Figure S22
+## Break down by taxonomic group.
+S22Fig <- Fig4B + facet_wrap(. ~ TaxonomicGroup)
 ## save the plot.
-ggsave("../results/S21Fig.pdf", S21Fig)
+ggsave("../results/S22Fig.pdf", S22Fig, height=8,width=8)
+
+
+## Supplementary Figure S23
+## Break down by taxonomic subgroup
+S23Fig <- Fig4B + facet_wrap(. ~ TaxonomicSubgroup)
+## save the plot.
+ggsave("../results/S23Fig.pdf", S23Fig, height=9, width=8)
+
+
+## Supplementary FIgure S19
+## Break down by genus.
+S24Fig <- Fig4B + facet_wrap(. ~ Genus, ncol=50)
+## save the plot.
+ggsave("../results/S24Fig.pdf", S24Fig, height=50, width=50, limitsize = FALSE)
+
+
+## Supplementary Figure S25:
+## show generality over ecology.
+S25Fig <- Fig4B + facet_wrap(.~Annotation)
+## save the plot.
+ggsave("../results/S25Fig.pdf", S25Fig)
 
 
 
@@ -1077,6 +1160,9 @@ ggsave("../results/S21Fig.pdf", S21Fig)
 
 
 
+
+METABOLIC_GENE_THRESHOLD <- 50
+MEGAPLASMID_SIZE_THRESHOLD <- 100000
 
     
 
