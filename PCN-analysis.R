@@ -1,16 +1,8 @@
-## NCBI-PCN-analysis.R by Rohan Maddamsetti.
+## PCN-analysis.R by Rohan Maddamsetti.
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
-
-## CRITICAL TODO: repeat the metabolic gene analysis with MGE-associated genes.
-## examine the proportion of MGE-associated genes
-## found on these plasmids across different ecological categories,
-## as replicon length varies.
-
-## POTENTIAL TODO: make a figure comparing the fit between PIRA and Naive Themisto to the alignment methods
-## (minimap2 and breseq).
 
 library(tidyverse)
 library(cowplot)
@@ -312,6 +304,8 @@ kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.
 ## IMPORTANT: do NOT filter this for just plasmids just yet--
 ## we need to include chromosomes for proper comparison with breseq results.
 
+## CRITICAL TODO: fix upstream annotation so that we don't have any
+## "NA" or "blank" Annotation genomes in PIRA.estimates.
 PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
     rename(
         PIRACopyNumber = PIRA_CopyNumberEstimate,
@@ -692,14 +686,10 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
 unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
 
-
-
-
 ## plot the PIRA PCN estimates.
-Fig1A <- PIRA.PCN.estimates %>%
-    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
-    filter(Annotation != "NA") %>%
-    filter(Annotation != "blank") %>%
+## Break down this result by predicted plasmid mobility.
+Fig1B <- PIRA.PCN.estimates %>%
+    filter(!is.na(PredictedMobility)) %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -707,10 +697,8 @@ Fig1A <- PIRA.PCN.estimates %>%
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     theme_classic() +
     xlab("log10(Length)")  +
-    ylab("log10(Copy Number)")
-
-## Break down this result by predicted plasmid mobility.
-Fig1B <- Fig1A + facet_grid(PredictedMobility ~ .)
+    ylab("log10(Copy Number)") +
+    facet_grid(PredictedMobility ~ .)
 
 ## make Figure 1.
 Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
@@ -729,9 +717,6 @@ ggsave("../results/Fig1.pdf", Fig1, height=8, width=4)
 
 ## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
 S7FigA <- PIRA.PCN.estimates %>%
-    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
-    filter(Annotation != "NA") %>%
-    filter(Annotation != "blank") %>%
     ggplot(aes(
         x = log2(normalized_replicon_length),
         y = log2(PIRACopyNumber))) +
@@ -744,7 +729,19 @@ S7FigA <- PIRA.PCN.estimates %>%
     ylab("log2(Copy number)") 
 
 ## Break down this result by predicted plasmid mobility.
-S7FigB <- S7FigA + facet_grid(PredictedMobility ~ .)
+S7FigB <- PIRA.PCN.estimates %>%
+    filter(!is.na(PredictedMobility)) %>%
+    ggplot(aes(
+        x = log2(normalized_replicon_length),
+        y = log2(PIRACopyNumber))) +
+    geom_point(size=0.2, alpha=0.5) +
+    scale_x_continuous(breaks = c(-1, -2, -5, -10, -12)) +
+    theme_classic() +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    geom_vline(xintercept=0,linetype="dashed",color="gray") +
+    xlab("log2(Normalized length)") +
+    ylab("log2(Copy number)") +
+    facet_grid(PredictedMobility ~ .)
 
 ## make Supplementary Figure S8.
 S7Fig <- plot_grid(S7FigA, S7FigB, labels=c('A', 'B'),ncol=1, rel_heights = c(1, 2.5))
@@ -1019,6 +1016,8 @@ ggsave("../results/Fig3.pdf", Fig3, height=3.5, width=9)
 S17Fig <- Fig3B + facet_wrap(. ~ Annotation)
 ## save the plot.
 ggsave("../results/S17Fig.pdf", S17Fig)
+
+
 
 
 ########################################################################
