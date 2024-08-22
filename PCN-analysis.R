@@ -954,30 +954,6 @@ ggsave("../results/S16Fig.pdf", S16Fig)
 
 
 
-################################################################################
-## Analysis of ARGs and plasmid copy number.
-
-## TODO: make a supplementary figure.
-
-## CRITICAL TODO: specifically test whether plasmids with duplicated ARGs
-## tend to have higher PCN than plasmids with singleton ARGs.
-
-## Plasmids with ARGs actually have lower copy numbers than
-## plasmids without ARGs.
-
-ARG.plasmid.data <- PIRA.PCN.estimates %>%
-    filter(has.ARG==TRUE)
-
-no.ARG.plasmid.data <- PIRA.PCN.estimates %>%
-    filter(has.ARG == FALSE)
-
-## plasmids with ARGs have lower PCN than those without ARGs.
-mean(ARG.plasmid.data$PIRACopyNumber)
-mean(no.ARG.plasmid.data$PIRACopyNumber)
-
-median(ARG.plasmid.data$PIRACopyNumber)
-median(no.ARG.plasmid.data$PIRACopyNumber)
-
 ###################################################################################
 ## Figure 3. Coding Sequences (CDS) on plasmids follow an empirical scaling law.
 
