@@ -274,6 +274,8 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     left_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths() %>%
+    ## add a column for non_MGE_count.
+    mutate(non_MGE_protein_count = CDS_count - MGE_count) %>%
     ## calculate non-coding regions.
     mutate(non_CDS_length = SeqLength - CDS_length) %>%
     ## set nice units for linear-scale graphs.
@@ -1155,242 +1157,70 @@ S25Fig <- Fig4B + facet_wrap(.~Annotation)
 ggsave("../results/S25Fig.pdf", S25Fig)
 
 
-
-
-
-
-
-
-METABOLIC_GENE_THRESHOLD <- 50
-MEGAPLASMID_SIZE_THRESHOLD <- 100000
-
-    
-
-## annotate big.plasmids as plasmids > MEGAPLASMID_SIZE_THRESHOLD, and write to file.
-big.plasmid.data <- metabolic.gene.plasmid.data %>%
-    filter(replicon_length > MEGAPLASMID_SIZE_THRESHOLD)
-write.csv(x=big.plasmid.data, file="../results/big-plasmids.csv", row.names=FALSE, quote=FALSE)
-
-## annotate big plasmids in these data.
-metabolic.gene.plasmid.data <- metabolic.gene.plasmid.data %>%
-    mutate(big_plasmids = ifelse(SeqID %in% big.plasmid.data$SeqID, TRUE, FALSE))
-
-## annotate the plasmids that have lots of metabolic genes, and write to file.
-big.metabolic.plasmid.data <- metabolic.gene.plasmid.data %>%
-    filter(metabolic_protein_count > METABOLIC_GENE_THRESHOLD)
-write.csv(x=big.metabolic.plasmid.data, file="../results/big-metabolic-plasmids.csv", row.names=FALSE, quote=FALSE)
-
-## annotate big plasmids that have lots of metabolic genes, and write to file.
-top.metabolic.gene.plasmid.data <- metabolic.gene.plasmid.data %>%
-    filter(replicon_length > MEGAPLASMID_SIZE_THRESHOLD) %>%
-    filter(metabolic_protein_count > METABOLIC_GENE_THRESHOLD)
-## Super interesting. the big metabolic plasmids are often found in nitrogen-fixing bacteria and plant pathogens!
-write.csv(x=top.metabolic.gene.plasmid.data, file="../results/top-metabolic-plasmids.csv", row.names=FALSE, quote=FALSE)
-
-## Rank genera by the total number of plasmid genes in KEGG metabolism.
-genera.ranked.by.metabolic.genes.df <- metabolic.gene.plasmid.data %>%
-    filter(!is.na(Genus)) %>%
-    group_by(Genus) %>%
-    summarize(
-        total_metabolic_genes = sum(metabolic_protein_count),
-        percentage_metabolic_genes = sum(metabolic_protein_count)/sum(CDS_count)) %>%
-    arrange(desc(total_metabolic_genes)) %>%
-    mutate(rank = row_number()) %>%
-    ungroup()
-
-
-## filter for the data for the top ranked genera.
-top.genera.ranked.by.metabolic.genes.df <- genera.ranked.by.metabolic.genes.df %>%
-    filter(rank <= 20) 
-
-## Plot the top genera.
-Fig4A <- top.genera.ranked.by.metabolic.genes.df %>%
-    ggplot(aes(
-        x=rank,
-        y=log10(total_metabolic_genes),
-        label=Genus)) +
-    geom_col(colour = "light gray", alpha = 0.2) +
-    geom_point() +
-    geom_text_repel() +
-    theme_classic()  +
-    theme(legend.position="bottom", legend.title=element_blank(),
-          legend.text = element_text(size = 8)) +
-    theme(axis.text.x  = element_text(angle=45,vjust=0.5)) +
-    coord_flip()
-
-Fig4B <- full.genera.ranked.by.metabolic.genes.plot <- genera.ranked.by.metabolic.genes.df %>%
-    ggplot(aes(
-        x=rank,
-        y=log10(total_metabolic_genes),
-        label=Genus)) +
-    geom_col(colour = "light gray", alpha = 0.2) +
-    geom_point() +
-    geom_text_repel() +
-    theme_classic()  +
-    theme(legend.position="bottom", legend.title=element_blank(),
-          legend.text = element_text(size = 8)) +
-    theme(axis.text.x  = element_text(angle=45,vjust=0.5))
-
-
-## get the top genera as a vector.
-top.genera <- unique(top.genera.ranked.by.metabolic.genes.df$Genus)
-
-## Figure 4C: plot the top genera in the linear scale scatterplot.
-Fig4C.data <- metabolic.gene.plasmid.data %>%
-    mutate(GenusAnnotation = ifelse(Genus %in% top.genera, Genus, "Other")) %>%
-    filter(Annotation != "blank") %>%
-    filter(Annotation != "NA")
-
-Fig4C <- Fig4C.data %>%
-    ggplot(aes(
-        x = replicon_length,
-        y = metabolic_protein_count,
-        color = GenusAnnotation)) +
-    geom_point(size=0.2, alpha=0.5) +
-    geom_smooth(method="lm", se = FALSE, data=filter(Fig4E.data, metabolic_protein_count > METABOLIC_GENE_THRESHOLD)) +
-    geom_vline(xintercept=MEGAPLASMID_SIZE_THRESHOLD,linetype="dashed",color="gray") +
-    geom_hline(yintercept=METABOLIC_GENE_THRESHOLD,linetype="dashed",color="gray") +
-    theme_classic() +
-#    scale_color_manual(
-#        values = c(
-#            "Agrobacterium" = "red",
-#            "Aminobacter" = "red",
-#            "Azospirillum" = "red",
-#            "Bradyrhizobium" = "red",
-#            "Caballeronia" = "red",
-#            "Cupriavidus" = "red",
-#            "Ensifer" = "red",
-#            "Haladaptatus" = "red",
-#            "Mesorhizobium" = "red",
-#            "Novosphingobium" = "red",
-#            "Other" = "light gray",
-#            "Pantoea" = "red",
-#            "Paraburkholderia" = "red",
-#            "Paracoccus" = "red",
-#            "Phyllobacterium" = "red",
-#            "Pseudoalteromonas" = "red",
-#            "Ralstonia" = "red",
-#            "Rhizobium" = "red",
-#            "Rhodococcus" = "red",
-#            "Sinorhizobium" = "red",
-#            "Streptomyces" = "red"
-#            )) +
-    facet_wrap(.~Annotation) +
-    theme(legend.position="bottom")
-
-
-Fig4D <- Fig4C.data %>%
-    ggplot(aes(
-        x = replicon_length,
-        y = metabolic_protein_count)) +
-    geom_point(size=0.2, alpha=0.5) +
-    geom_smooth(method="lm", se = FALSE, data=filter(Fig4C.data, metabolic_protein_count > METABOLIC_GENE_THRESHOLD)) +
-    geom_vline(xintercept=MEGAPLASMID_SIZE_THRESHOLD,linetype="dashed",color="gray") +
-    geom_hline(yintercept=METABOLIC_GENE_THRESHOLD,linetype="dashed",color="gray") +
-    theme_classic() +
-    facet_wrap(.~GenusAnnotation) +
-    theme(legend.position="bottom")
-
-## check out pattern excluding these genera
-Fig4E.data <- Fig4C.data %>%
-    filter(GenusAnnotation == "Other")
-
-Fig4E <- Fig4E.data %>%
-    ggplot(aes(
-        x = replicon_length,
-        y = metabolic_protein_count,
-        color = GenusAnnotation,
-        label = GenusAnnotation)) +
-    geom_point(size=0.2, alpha=0.5) +
-    geom_smooth(method="lm", se = FALSE, data=filter(Fig4E.data, metabolic_protein_count > METABOLIC_GENE_THRESHOLD)) +
-    geom_vline(xintercept=MEGAPLASMID_SIZE_THRESHOLD,linetype="dashed",color="gray") +
-    geom_hline(yintercept=METABOLIC_GENE_THRESHOLD,linetype="dashed",color="gray") +
-    theme_classic() +
-    facet_wrap(.~Annotation)
-
-## work on the log-scale:
-
-Fig4F <- Fig4C.data %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(metabolic_protein_count),
-        color = GenusAnnotation)) +
-    geom_point(size=0.2, alpha=0.5) +
-    geom_smooth(method="lm", se = FALSE, data=filter(Fig4C.data, metabolic_protein_count > METABOLIC_GENE_THRESHOLD)) +
-    geom_vline(xintercept=log10(MEGAPLASMID_SIZE_THRESHOLD),linetype="dashed",color="gray") +
-    geom_hline(yintercept=log10(METABOLIC_GENE_THRESHOLD),linetype="dashed",color="gray") +
-    theme_classic() +
-    facet_wrap(.~Annotation) +
-    theme(legend.position="bottom")
-
-Fig4G <- Fig4C.data %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(metabolic_protein_count))) +
-    geom_point(size=0.2, alpha=0.5) +
-    geom_smooth(method="lm", se = FALSE, data=filter(Fig4C.data, metabolic_protein_count > METABOLIC_GENE_THRESHOLD)) +
-    geom_vline(xintercept=log10(MEGAPLASMID_SIZE_THRESHOLD),linetype="dashed",color="gray") +
-    geom_hline(yintercept=log10(METABOLIC_GENE_THRESHOLD),linetype="dashed",color="gray") +
-    theme_classic() +
-    #facet_wrap(.~GenusAnnotation) +
-    theme(legend.position="bottom")
-
-
-## save the plots.
-ggsave("../results/Fig4A.pdf", Fig4A)
-
-ggsave("../results/Fig4B.pdf", Fig4B)
-ggsave("../results/Fig4C.pdf", Fig4C)
-ggsave("../results/Fig4D.pdf", Fig4D)
-ggsave("../results/Fig4E.pdf", Fig4E)
-ggsave("../results/Fig4F.pdf", Fig4F)
-
-ggsave("../results/Fig4G.pdf", Fig4G)
-
-
-###################################################################################
-
-########################################################################
-## examine MGE-associated genes.
-
-S19Fig <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = replicon_length,
-            y = MGE_count,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.2) +
-     xlab("replicon length") +
-    ylab("MGE count") +
-    theme_classic() +
-    guides(color = "none") +
-    ggtitle("MGE-associated genes")
-## save the plot.
-ggsave("../results/S19Fig.pdf", S19Fig)
-
-
 ########################################################################
 ## examine the proportion of ARG-associated genes
 ## found on these plasmids across different ecological categories.
 
-S20Fig <- CDS.MGE.ARG.fraction.data %>%
+S26FigA <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
         aes(
-            x = SeqLength,
+            x = SeqLength_in_Mbp,
             y = ARG_count,
             color = SeqType)) +
     geom_point(size=0.05,alpha=0.5) +
-    xlab("replicon length") +
+    xlab("replicon length (Mbp)") +
     ylab("ARG count") +
     theme_classic() +
     guides(color = "none") +
     ggtitle("Antibiotic resistance genes")
+
+S26FigB <- CDS.MGE.ARG.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(SeqLength),
+            y = log10(ARG_count),
+            color = SeqType)) +
+    geom_point(size=0.05,alpha=0.5) +
+    xlab("log10(replicon length") +
+    ylab("log10(ARG count)") +
+    theme_classic() +
+    guides(color = "none")
+
+S26Fig <- plot_grid(S26FigA, S26FigB, labels=c('A','B'))
 ## save the plot.
-ggsave("../results/S20Fig.pdf", S20Fig)
+ggsave("../results/S26Fig.pdf", S26Fig, height=3.5)
 
+########################################################################
+## examine MGE-associated genes.
 
+S27FigA <- CDS.MGE.ARG.fraction.data %>%
+    ggplot(
+        aes(
+            x = SeqLength_in_Mbp,
+            y = MGE_count,
+            color = SeqType)) +
+    geom_point(size=0.05,alpha=0.2) +
+     xlab("replicon length (Mbp)") +
+    ylab("MGE count") +
+    theme_classic() +
+    guides(color = "none") +
+    ggtitle("MGE-associated genes")
 
+S27FigB <- CDS.MGE.ARG.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(SeqLength),
+            y = log10(MGE_count),
+            color = SeqType)) +
+    geom_point(size=0.05,alpha=0.2) +
+     xlab("log10(replicon length") +
+    ylab("log10(MGE count)") +
+    theme_classic() +
+    guides(color = "none")
 
+S27Fig <- plot_grid(S27FigA, S27FigB, labels=c('A','B'))
+## save the plot.
+ggsave("../results/S27Fig.pdf", S27Fig, height=3.5)
 
 
 ###################################################################################
