@@ -966,13 +966,17 @@ ggsave("../results/S16Fig.pdf", S16Fig)
 
 
 ################################################################################
+
+
+## WORKING HERE ON FIGURE 2 and associated analyses.
+
+
+################################################################################
 ## Figure 2: examine PCN distribution over all the potential correlates in the MOB-typer results.
 ## let's plot PCN estimates across different correlates, as long as there are more than 10 data points in that group.
 
 MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
     left_join(MOBTyper.results)
-
-names(MOB.typed.PIRA.plasmid.estimates)
 
 
 ## plot over rep_type groups.
@@ -1157,6 +1161,9 @@ SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     facet_wrap(observed_host_range_ncbi_name ~ .)
 ## save the plot
 ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
+
+
+
 
 
 
