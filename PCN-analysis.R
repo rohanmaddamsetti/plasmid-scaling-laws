@@ -4,6 +4,9 @@
 
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
 
+## TODO: use https://github.com/tidymodels/tidyclust to do 2-means clustering on plasmid size and copy number
+## to see if we can recover two clusters corresponding to large and small plasmids.
+
 library(tidyverse)
 library(cowplot)
 library(ggrepel)
@@ -930,6 +933,12 @@ high.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 50) %>% nrow()
 high.PCN.count
 high.PCN.count/PCN.count
 
+## There are 2166 plasmids with PCN > 10 in these data
+## This is 21% of plasmids.
+multicopy10.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 10) %>% nrow()
+multicopy10.PCN.count
+multicopy10.PCN.count/PCN.count
+
 
 ################################################################################
 ## Supplementary Figure S16. Chromosome DNA content does not constrain Plasmid DNA content.
@@ -967,17 +976,151 @@ ggsave("../results/S16Fig.pdf", S16Fig)
 
 ################################################################################
 
-
 ## WORKING HERE ON FIGURE 2 and associated analyses.
 
 
+
+
+#######################################################################
+## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
+## have similar sizes and copy numbers.
+
+## Importantly, In part, the clique structure is determined by plasmid size, since large plasmids
+## and small plasmids will have a lot of sequence that is not shared, by definition.
+
+## Get the plasmid data with nice taxonomy and clique annotations from Acman et al. (2020).
+Acman.metadata <- read.csv("../data/Acman2020-SupplementaryData.csv") %>%
+    ## rename columns as need to merge with PIRA.PCN.estimates,
+    ## and to resolve naming conflicts.
+    rename(SeqID = Version) %>%
+    rename(Acman_Accession = Accession) %>%
+    rename(Acman_Plasmid = Plasmid) %>%
+    rename(Acman_Organism = Organism) %>%
+    rename(Acman_Species = Species) %>%
+    rename(Acman_Genus = Genus) %>%
+    rename(Acman_Family = Family) %>%
+    rename(Acman_Order = Order) %>%
+    rename(Acman_Class = Class) %>%
+    rename(Acman_Phylum = Phylum) %>%
+    rename(Acman_Domain = Domain) %>%
+    rename(Acman_Length = Length)
+
+
+## inner_join the Acman et al. (2020) metadata to the PIRA PCN estimates.
+## we have 1,505 plasmids in this dataset.
+Acman.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
+    inner_join(Acman.metadata)
+
+Acman.cliques.with.PIRA.plasmid.estimates <- Acman.typed.PIRA.plasmid.estimates %>%
+    ## remove NA Cliques.
+    filter(!is.na(Clique))
+
+## sort plasmid cliques by replicon size.
+Acman.mean.clique.sizes <- Acman.cliques.with.PIRA.plasmid.estimates %>%
+    group_by(Clique) %>%
+    summarize(mean_replicon_length = mean(replicon_length)) %>%
+    mutate(Clique_replicon_length_rank = row_number(mean_replicon_length))
+
+## now merge the ranks back to the original data.
+Acman.cliques.with.PIRA.plasmid.estimates <- Acman.cliques.with.PIRA.plasmid.estimates %>%
+    left_join(Acman.mean.clique.sizes) %>%
+    ## set nice units for linear-scale graphs.
+    mutate(replicon_length_in_Mbp = replicon_length / 1000000)
+
+
+## Acman cliques show a very limited size distribution.
+Acman.clique.size.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
+    ggplot(aes(
+        x = Clique_replicon_length_rank,
+        y = log10(replicon_length))) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic()
+
+Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
+    ggplot(aes(
+        x = Clique_replicon_length_rank,
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic()
+
+Acman.plot <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=2)
+
+
+#######################################################################
+## The same result holds for the PTUs in the Redondo-Salvo et al. (2020) paper.
+
+## That is, PTUs  in the plasmid similarity network
+## have similar sizes and copy numbers.
+
+## Importantly, PTU structure is in part determined by plasmid size, since large plasmids
+## and small plasmids will not have a lot of shared sequence, by definition.
+
+
+## when I reformatted these data as CSV, I renamed the AccessionVersion column
+## as "SeqID" to merge with my PIRA estimates.
+RedondoSalvo.data <- read.csv("../data/RedondoSalvo2020-SupplementaryData/reformatted-SupplementaryData2.csv")
+
+## 415 plasmids have copy numbers and host ranges.
+RedondoSalvo.host.range.PIRA.estimates <- PIRA.PCN.estimates %>%
+    inner_join(RedondoSalvo.data) %>%
+    filter(Host_range != "-") %>%
+    filter(!is.na(Host_range))
+
+## This figure shows that copy number / plasmid size does not predict host range.
+## there are narrow and broad host range plasmids both large and small.
+## compare with the MOB-Typer result in this vein.
+RedondoSalvo.host.range.plot <- RedondoSalvo.host.range.PIRA.estimates %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber),
+        color = Host_range)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    facet_wrap(.~Host_range)
+
+## 453 plasmids have copy numbers and assigned PTUs.
+PTU.PIRA.estimates <- PIRA.PCN.estimates %>%
+    inner_join(RedondoSalvo.data) %>%
+    filter(PTU != "-") %>%
+    filter(!is.na(PTU))
+
+## sort PTUs by replicon size.
+PTU.mean.sizes <- PTU.PIRA.estimates %>%
+    group_by(PTU) %>%
+    summarize(mean_replicon_length = mean(replicon_length)) %>%
+    mutate(PTU_replicon_length_rank = row_number(mean_replicon_length))
+
+## now merge the ranks back to the original data.
+PTU.PIRA.estimates <- PTU.PIRA.estimates %>%
+    left_join(PTU.mean.sizes) %>%
+    ## set nice units for linear-scale graphs.
+    mutate(replicon_length_in_Mbp = replicon_length / 1000000)
+
+
+## Acman cliques show a very limited size distribution.
+Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
+    ggplot(aes(
+        x = PTU_replicon_length_rank,
+        y = log10(replicon_length))) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic()
+
+Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
+    ggplot(aes(
+        x = PTU_replicon_length_rank,
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic()
+
+Redondo.Salvo.plot <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('A','B'), nrow=2)
+
 ################################################################################
-## Figure 2: examine PCN distribution over all the potential correlates in the MOB-typer results.
+## examine PCN distribution over all the potential correlates in the MOB-typer results.
 ## let's plot PCN estimates across different correlates, as long as there are more than 10 data points in that group.
 
+## This has 10,261 annotated plasmids with PCN data.
 MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
     left_join(MOBTyper.results)
-
 
 ## plot over rep_type groups.
 rep_type_groups <- MOB.typed.PIRA.plasmid.estimates %>%
@@ -1162,8 +1305,9 @@ SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
 ## save the plot
 ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
 
-
-
+################################################################################
+## IMPORTANT TODO: validate these MOB-Typer results using the Plasmid Finder results
+## reported in Supplementary Table S5 of the Redondo-Salvo paper.
 
 
 
@@ -1252,8 +1396,8 @@ S21FigA <- CDS.MGE.ARG.fraction.data %>%
             y = non_CDS_length_in_Mbp,
             color = SeqType)) +
     geom_point(size=0.05,alpha=0.5) +
-    xlab("log10(replicon length)") +
-    ylab("log10(noncoding sequence length)") +
+    xlab("replicon length") +
+    ylab("noncoding sequence length") +
     theme_classic() + guides(color = "none")
 
 
