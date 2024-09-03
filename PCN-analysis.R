@@ -9,6 +9,8 @@
 
 library(tidyverse)
 library(cowplot)
+library(tidyclust)
+library(ggExtra)
 library(ggrepel)
 
 
@@ -175,6 +177,10 @@ antibiotic.keywords <- paste(chloramphenicol.keywords, tetracycline.keywords, ML
 
 ## require that PCN estimates are supported by a minimum of MIN_READ_COUNT reads per replicon.
 MIN_READ_COUNT <- 10000
+
+## K-means clustering (2 clusters) for large and small plasmids.
+kmeans_spec <- k_means(num_clusters = 2) %>%
+  set_engine("stats")
 
 
 ################################################################################
@@ -698,15 +704,33 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
     ## annotate by presence of ARGs
     mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE))
 
-Fig1A <- PIRA.PCN.estimates %>%
+## Run K-means clustering with K = 2 on the PIRA.PCN.estimates, based solely on replicon_length.
+kmeans_fit <- kmeans_spec %>%
+    fit(~ log10(replicon_length), data=PIRA.PCN.estimates)
+
+cluster_assignment = extract_cluster_assignment(kmeans_fit)
+
+## add the cluster assignments to PIRA.PCN.estimates.
+PIRA.PCN.estimates$Cluster <- cluster_assignment$.cluster
+
+
+## Make the basic plot for Fig1A, then add the marginal histograms.
+Fig1A_base <- PIRA.PCN.estimates %>%
     ggplot(aes(
         x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
+        y = log10(PIRACopyNumber),
+        color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
     xlab("log10(Length)")  +
-    ylab("log10(Copy Number)")
+    ylab("log10(Copy Number)") +
+    guides(color="none") +
+    geom_smooth(method = "lm", se = FALSE)
+
+## Add the marginal histograms
+Fig1A <- ggExtra::ggMarginal(Fig1A_base, margins="x")
 
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
 unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
@@ -718,12 +742,15 @@ Fig1B <- PIRA.PCN.estimates %>%
     filter(!is.na(PredictedMobility)) %>%
     ggplot(aes(
         x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
+        y = log10(PIRACopyNumber),
+        color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
     xlab("log10(Length)")  +
     ylab("log10(Copy Number)") +
+    guides(color="none") +
     facet_grid(PredictedMobility ~ .)
 
 ## make Figure 1.
@@ -752,7 +779,7 @@ S7FigA <- PIRA.PCN.estimates %>%
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
     xlab("log2(Normalized length)") +
-    ylab("log2(Copy number)") 
+    ylab("log2(Copy number)")
 
 ## Break down this result by predicted plasmid mobility.
 S7FigB <- PIRA.PCN.estimates %>%
