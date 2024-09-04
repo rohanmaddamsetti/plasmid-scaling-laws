@@ -7,6 +7,7 @@
 ## TODO: use https://github.com/tidymodels/tidyclust to do 2-means clustering on plasmid size and copy number
 ## to see if we can recover two clusters corresponding to large and small plasmids.
 
+library(segmented) ## put this first so that dplyr::select is not masked.
 library(tidyverse)
 library(cowplot)
 library(tidyclust)
@@ -702,7 +703,10 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
     mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
     left_join(plasmid.mobility.data) %>%
     ## annotate by presence of ARGs
-    mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE))
+    mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
+    ## The next two lines are to get segmented regression working, using library(segmented).
+    mutate(log10_replicon_length = log10(replicon_length)) %>%
+    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber))
 
 ## Run K-means clustering with K = 2 on the PIRA.PCN.estimates, based solely on replicon_length.
 kmeans_fit <- kmeans_spec %>%
@@ -751,47 +755,145 @@ Fig1B <- PIRA.PCN.estimates %>%
     xlab("log10(Length)")  +
     ylab("log10(Copy Number)") +
     guides(color="none") +
+##    geom_smooth(method = "lm", se = FALSE) +
     facet_grid(PredictedMobility ~ .)
 
 ## make Figure 1.
 Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
 ggsave("../results/Fig1.pdf", Fig1, height=8, width=4)
 
+################################################################################
+## let's try segmented regression instead of K-means clustering, using library(segmented).
+
+## first make a linear fit model.
+PCN.lm.model <- lm(log10_PIRACopyNumber ~ log10_replicon_length, data=PIRA.PCN.estimates)
+## look at the linear regression.
+summary(PCN.lm.model)
+
+#fit piecewise regression model to original model, estimating a breakpoint between
+segmented.PCN.model <- segmented(
+    PCN.lm.model,
+    seg.Z = ~log10_replicon_length,
+    psi = 6)
+
+## save the segmented regression fit as a dataframe.
+segmented.fit.df = data.frame(
+    log10_replicon_length = PIRA.PCN.estimates$log10_replicon_length,
+    log10_PIRACopyNumber = broken.line(segmented.PCN.model)$fit)
+
+## let's plot the segmented regression.
+## this result is qualitatively similar to the K-means clustering regression result.
+SXX1Fig <- PIRA.PCN.estimates %>%
+    ggplot(aes(
+        x = log10_replicon_length,
+        y = log10_PIRACopyNumber,
+        color = Cluster)) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    guides(color="none") +
+    geom_line(data = segmented.fit.df, color = 'blue')
+
+###################################################################################
+## Compare the segmented PCN model fit (two lines, with a breakpoint as an extra parameter),
+## to a second-order polynomial fit. This analysis shows that the segmented PCN model is a better fit
+## than the second-order polynomial.
+
+## second-order polynomial fit.
+second.order.plasmid.lm.model <- lm(
+    formula=log10_PIRACopyNumber ~ poly(log10_replicon_length,2,raw=TRUE),
+    data=PIRA.PCN.estimates)
+## look at the second order regression.
+summary(second.order.plasmid.lm.model)
+
+## plot the second order model again the segmented model.
+SXX3Fig <- PIRA.PCN.estimates %>%
+    ggplot(aes(
+        x = log10_replicon_length,
+        y = log10_PIRACopyNumber,
+        color = Cluster)) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    guides(color="none") +
+    ## plot the second order model.
+    stat_smooth(
+        method=lm,
+        formula = log10_PIRACopyNumber~poly(log10_replicon_length,2,raw=TRUE)) +
+## plot the breakpoint model.
+    geom_line(data = segmented.fit.df, color = 'blue')
+
+
+## let's compare these models. The model with lower AIC is better.
+## The segmented model has the best fit.
+AIC(PCN.lm.model)
+AIC(second.order.plasmid.lm.model)
+AIC(segmented.PCN.model)
+
+summary(PCN.lm.model)
+summary(second.order.plasmid.lm.model)
+summary(segmented.PCN.model)
+
 
 ################################################################################
 ## Make a Supplementary Figure S7 that is the same as Figure 1,
 ## but plotting normalized plasmid length relative to the length of the longest
 ## chromosome.
+## This figure show that the scaling law holds well, until plasmids reach ~2.5% of the main chromosome in length.
+## then, copy number is roughly flat.
 
 ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
 
 ## CRITICAL TODO: there are still a point or two at normalized plasmid length == 1
 ## that look like bugs! Investigate and fix or verify!
+potential.buggy.normalized.plasmids <- PIRA.PCN.estimates %>%
+    filter(normalized_replicon_length == 1 )
+
 
 ## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
-S7FigA <- PIRA.PCN.estimates %>%
+S7FigA_base <- PIRA.PCN.estimates %>%
     ggplot(aes(
         x = log2(normalized_replicon_length),
-        y = log2(PIRACopyNumber))) +
+        y = log2(PIRACopyNumber),
+        color = Cluster)) +
     geom_point(size=0.2, alpha=0.5) +
     scale_x_continuous(breaks = c(-1, -2, -5, -10, -12)) +
     theme_classic() +
+    guides(color="none") +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
+    ## draw a line at 2.5% of chromosome length.
+    geom_vline(xintercept=log2(0.025),linetype="dashed",color="gray") +
     xlab("log2(Normalized length)") +
-    ylab("log2(Copy number)")
+    ylab("log2(Copy number)") +
+    geom_smooth(method = "lm", se = FALSE)
+
+## Add the marginal histograms
+S7FigA <- ggExtra::ggMarginal(S7FigA_base, margins="x")
 
 ## Break down this result by predicted plasmid mobility.
 S7FigB <- PIRA.PCN.estimates %>%
     filter(!is.na(PredictedMobility)) %>%
     ggplot(aes(
         x = log2(normalized_replicon_length),
-        y = log2(PIRACopyNumber))) +
+        y = log2(PIRACopyNumber),
+        color = Cluster)) +
     geom_point(size=0.2, alpha=0.5) +
     scale_x_continuous(breaks = c(-1, -2, -5, -10, -12)) +
     theme_classic() +
+    guides(color="none") +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
+    ## draw a line at 2.5% of chromosome length.
+    geom_vline(xintercept=log2(0.025),linetype="dashed",color="gray") +
     xlab("log2(Normalized length)") +
     ylab("log2(Copy number)") +
     facet_grid(PredictedMobility ~ .)
@@ -1142,6 +1244,17 @@ Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
 Redondo.Salvo.plot <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('A','B'), nrow=2)
 
 ################################################################################
+## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
+
+
+
+
+################################################################################
+## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
+
+
+
+################################################################################
 ## examine PCN distribution over all the potential correlates in the MOB-typer results.
 ## let's plot PCN estimates across different correlates, as long as there are more than 10 data points in that group.
 
@@ -1476,6 +1589,7 @@ metabolic.gene.chromosome.data <- metabolic.genes.in.chromosomes %>%
 metabolic.gene.plasmid.and.chromosome.data <- full_join(
     metabolic.gene.plasmid.data, metabolic.gene.chromosome.data)
 
+################ CRITICAL TODO: PUT THE LINEAR PLOT IN SUPPLEMENT
 Fig4A <- metabolic.gene.plasmid.and.chromosome.data %>%
     ggplot(
         aes(
@@ -1487,7 +1601,7 @@ Fig4A <- metabolic.gene.plasmid.and.chromosome.data %>%
     ylab("metabolic genes") +
     theme_classic() + guides(color = "none")
 
-Fig4B <- metabolic.gene.plasmid.and.chromosome.data %>%
+Fig4 <- metabolic.gene.plasmid.and.chromosome.data %>%
     ggplot(
         aes(
             x = log10(SeqLength),
@@ -1498,10 +1612,31 @@ Fig4B <- metabolic.gene.plasmid.and.chromosome.data %>%
     ylab("log10(metabolic genes)") +
     theme_classic() + guides(color = "none")
 
-
-Fig4 <- plot_grid(Fig4A, Fig4B, labels = c("A", "B"), nrow=1)
 ## save the plot.
-ggsave("../results/Fig4.pdf", Fig4, height=3.5, width=9)
+ggsave("../results/Fig4.pdf", Fig4, height=3.5, width=3.5)
+
+
+## let's normalize plasmid lengths here, just as for Supplementary Figure S7.
+## Hmm... looks like the metabolic scaling law emerges when plasmids reach 20% of chromosome length.
+SXXFig2 <- metabolic.gene.plasmid.and.chromosome.data %>%
+    ggplot(
+        aes(
+            x = log2(normalized_replicon_length),
+            y = log2(metabolic_protein_count),
+            color = SeqType)) +
+    geom_point(size=0.5,alpha=0.5) +
+    xlab("log2(replicon length)") +
+    ylab("log2(metabolic genes)") +
+    theme_classic() + guides(color = "none") +
+    ## draw a line at 2.5% of chromosome length.
+    geom_vline(xintercept=log2(0.025),linetype="dashed",color="gray") +
+    ## and at 15% of chromosome length
+    geom_vline(xintercept=log2(0.20),linetype="dashed",color="red")
+
+## save the plot.
+ggsave("../results/SXXFig2.pdf", SXXFig2, height=3.5, width=3.5)
+
+
 
 ################################################################################
 ## Supplementary Figures S22 through S25. Break down the result in Figure 4 by taxonomy
@@ -1650,30 +1785,4 @@ ggsave(
     "../results/long-read-alignment-versus-short-read-pseudoalignment-high-PCN-estimates.pdf",
     high.PCN.estimate.comparison.plot, height=5, width=5)
 
-
-###################################################################################
-## POTENTIAL TODO: compare a mixture model fit (two lines, with a breakpoint as an extra parameter),
-## to a second-order polynomial fit.
-
-## make a linear regression model:
-## log10(Plasmid copy number) vs. log10(Plasmid length).
-plasmid.lm.model <- lm(
-    formula=log10(PIRACopyNumber)~log10(replicon_length),
-    data=PIRA.PCN.estimates)
-## look at the linear regression.
-summary(plasmid.lm.model)
-
-second.order.plasmid.lm.model <- lm(
-    formula=log10(PIRACopyNumber)~poly(log10(replicon_length),2,raw=TRUE),
-    data=PIRA.PCN.estimates)
-## look at the second order regression.
-summary(second.order.plasmid.lm.model)
-
-## let's compare these models. The model with lower AIC is better.
-AIC(plasmid.lm.model)
-AIC(second.order.plasmid.lm.model)
-## also compare the models using an ANOVA.
-print(anova(
-    plasmid.lm.model,
-    second.order.plasmid.lm.model))
 
