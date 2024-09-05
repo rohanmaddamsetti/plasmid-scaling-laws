@@ -4,8 +4,14 @@
 
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
 
-## TODO: use https://github.com/tidymodels/tidyclust to do 2-means clustering on plasmid size and copy number
-## to see if we can recover two clusters corresponding to large and small plasmids.
+## CRITICAL POINT: keeping potential chromids makes a difference in the metabolic scaling law.
+## From Coluzzi et al. (2022): To avoid the misidentification of ICEs as
+## conjugative plasmids in chromids or secondary chromosomes,
+## we excluded from further study the 419 plasmids larger than 500 kb.
+
+## See: https://en.wikipedia.org/wiki/Secondary_chromosome
+## IMPORTANT: the metabolism scaling is driven by chromids!!! the 500kB threshold removes the scaling law.
+
 
 library(segmented) ## put this first so that dplyr::select is not masked.
 library(tidyverse)
@@ -179,6 +185,10 @@ antibiotic.keywords <- paste(chloramphenicol.keywords, tetracycline.keywords, ML
 ## require that PCN estimates are supported by a minimum of MIN_READ_COUNT reads per replicon.
 MIN_READ_COUNT <- 10000
 
+## To avoid the misidentification of ICEs as conjugative plasmids in chromids or secondary chromosomes,
+## we excluded plasmids larger than 500 kb (Cite Coluzzi et al. 2022 for this practice).
+MAX_PLASMID_LENGTH <- 500000
+
 ## K-means clustering (2 clusters) for large and small plasmids.
 kmeans_spec <- k_means(num_clusters = 2) %>%
   set_engine("stats")
@@ -298,8 +308,12 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     ## set nice units for linear-scale graphs.
     mutate(CDS_length_in_Mbp = CDS_length / 1000000) %>%
     mutate(non_CDS_length_in_Mbp = non_CDS_length / 1000000) %>%
-    mutate(SeqLength_in_Mbp = SeqLength / 1000000)
-
+    mutate(SeqLength_in_Mbp = SeqLength / 1000000) %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > MAX_PLASMID_LENGTH,
+               "chromid", SeqType))
+    
 
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
@@ -341,7 +355,12 @@ PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
     mutate(RepliconDNAContent = replicon_length * PIRACopyNumber) %>%
     ## add taxonomic and ecological annotation.
     left_join(replicon.annotation.data) %>%
-    normalize.plasmid.lengths()
+    normalize.plasmid.lengths() %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > MAX_PLASMID_LENGTH,
+               "chromid", SeqType))
+
 ## write the normalized data to disk.
 write.csv(PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
 
@@ -696,8 +715,10 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 
 ## take the PIRA estimates, filter for plasmids,
 ## and annotate plasmids with ARGs, and MOB type.
+## remove plasmids larger than MAX_PLASMID_LENGTH = 500 kB.
 PIRA.PCN.estimates <- PIRA.estimates %>%
     filter(SeqType == "plasmid") %>%
+    filter(replicon_length < MAX_PLASMID_LENGTH) %>%
     ## add Plasmid column to merge plasmid.mobility.data,
     ## by splitting the SeqID string on the underscore and taking the second part.
     mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
@@ -774,7 +795,7 @@ summary(PCN.lm.model)
 segmented.PCN.model <- segmented(
     PCN.lm.model,
     seg.Z = ~log10_replicon_length,
-    psi = list(log10_replicon_length = 6))
+    psi = list(log10_replicon_length = 5))
 
 ## save the segmented regression fit as a dataframe.
 segmented.fit.df = data.frame(
@@ -966,7 +987,7 @@ SXX4Fig <- S7Fig.data %>%
     ylab("log10(Copy Number)") +
     guides(color="none") +
     geom_line(data = normalized.length.segmented.fit.df, color = 'blue')
-## The breakpoint is at -5.852 on log10 scale, so at 2^-5.852 = 1.73% of the chromosome length.
+## The breakpoint is at -1.761 on log10 scale, so at 10^-1.761 = 1.73% of the chromosome length.
 SXX4Fig
 
 
@@ -1514,8 +1535,130 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
     inner_join(PIRA.PCN.estimates)
 
 
+## plot over PTU groups.
+AresArroyo_PTU_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter(!is.na(PTU)) %>%
+    filter(PTU != '-') %>%
+    filter(PTU != "PTU-?") %>%
+    count(PTU) %>%
+    filter(n > 10)
+
+SX9Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    ## only plot groups with more than 10 data points.
+    filter(PTU %in% AresArroyo_PTU_groups$PTU) %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    facet_wrap(PTU ~ .)
+## save the plot
+ggsave("../results/SX9Fig.pdf", SX9Fig,height=8,width=8)
 
 
+## plot over Replicases
+AresArroyo_Replicase_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter(!is.na(Replicase)) %>%
+    filter(Replicase != '-') %>%
+    count(Replicase) %>%
+    filter(n > 10)
+
+SX10Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    ## only plot groups with more than 10 data points.
+    filter(Replicase %in% AresArroyo_Replicase_groups$Replicase) %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    facet_wrap(Replicase ~ .)
+## save the plot
+ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
+
+
+## plot over oriT
+AresArroyo_oriT_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter(!is.na(oriT)) %>%
+    filter(oriT != '-') %>%
+    count(oriT) %>%
+    filter(n > 10)
+
+SX11Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    ## only plot groups with more than 10 data points.
+    filter(oriT %in% AresArroyo_oriT_groups$oriT) %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    facet_wrap(oriT ~ .)
+## save the plot
+ggsave("../results/SX11Fig.pdf", SX11Fig,height=8,width=8)
+
+
+## plot over oriT_Family
+AresArroyo_oriT_Family_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter(!is.na(oriT_Family)) %>%
+    filter(oriT_Family != '-') %>%
+    count(oriT_Family) %>%
+    filter(n > 10)
+
+SX12Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    ## only plot groups with more than 10 data points.
+    filter(oriT_Family %in% AresArroyo_oriT_Family_groups$oriT_Family) %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    facet_wrap(oriT_Family ~ .)
+## save the plot
+ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
+
+
+## plot over oriT_Type
+AresArroyo_oriT_Type_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter(!is.na(oriT_Type)) %>%
+    filter(oriT_Type != '-') %>%
+    count(oriT_Type) %>%
+    filter(n > 10)
+
+SX13Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    ## only plot groups with more than 10 data points.
+    filter(oriT_Type %in% AresArroyo_oriT_Type_groups$oriT_Type) %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber))) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    xlab("log10(Length)")  +
+    ylab("log10(Copy Number)") +
+    facet_wrap(oriT_Type ~ .) +
+    geom_smooth(method="lm")
+## save the plot
+ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
+
+
+
+
+## Correlates to analyze:
+## oriT_Type, MOB_Category, MOB, MPF_Category, MPF_Type,
+## RC.Rep_Category, Phage.Plasmid, Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless",
+## "Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT",
+## "pdCONJ"
 
 
 ################################################################################
@@ -1546,6 +1689,8 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 
 ## Main figure, all the points together.
 ## supplementary figure: same figure, separated by Annotation category.
+
+## This scaling law holds, even when excluding chromids.
 
 Fig3A <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
@@ -1647,10 +1792,12 @@ ggsave("../results/S21Fig.pdf", S21Fig, height=3.5)
 
 ########################################################################
 ## Figure 4: plasmid size scales with metabolic capacity.
-## These data suggest that metabolic capacity constrains plasmid size.
 
 ## CRITICAL TODO: we will need to carefully distinguish between true zeros and NA
 ## values created by a plasmid/chromosome not being included in these data.
+
+## IMPORTANT: removing plasmids longer than 500kB removes the scaling law.
+## Therefore, the metabolic.scaling law largely holds for chromids and chromosomes.
 
 metabolic.gene.plasmid.data <- plasmid.length.data %>%
     left_join(metabolic.genes.in.plasmids) %>%
@@ -1660,6 +1807,10 @@ metabolic.gene.plasmid.data <- plasmid.length.data %>%
     left_join(plasmid.annotation.data) %>%
     ## get CDS data for each genome.
     left_join(CDS.MGE.ARG.fraction.data) %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > MAX_PLASMID_LENGTH,
+               "chromid", SeqType)) %>%
     ## set NA values of metabolic_protein_count to zeros.
     mutate(metabolic_protein_count = ifelse(is.na(metabolic_protein_count), 0, metabolic_protein_count)) %>%
     mutate(metabolic_protein_fraction = metabolic_protein_count / protein_count)
@@ -1730,28 +1881,28 @@ ggsave("../results/SXXFig2.pdf", SXXFig2, height=3.5, width=3.5)
 
 ## Supplementary Figure S22
 ## Break down by taxonomic group.
-S22Fig <- Fig4B + facet_wrap(. ~ TaxonomicGroup)
+S22Fig <- Fig4 + facet_wrap(. ~ TaxonomicGroup)
 ## save the plot.
 ggsave("../results/S22Fig.pdf", S22Fig, height=8,width=8)
 
 
 ## Supplementary Figure S23
 ## Break down by taxonomic subgroup
-S23Fig <- Fig4B + facet_wrap(. ~ TaxonomicSubgroup)
+S23Fig <- Fig4 + facet_wrap(. ~ TaxonomicSubgroup)
 ## save the plot.
 ggsave("../results/S23Fig.pdf", S23Fig, height=9, width=8)
 
 
 ## Supplementary FIgure S19
 ## Break down by genus.
-S24Fig <- Fig4B + facet_wrap(. ~ Genus, ncol=50)
+S24Fig <- Fig4 + facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
 ggsave("../results/S24Fig.pdf", S24Fig, height=50, width=50, limitsize = FALSE)
 
 
 ## Supplementary Figure S25:
 ## show generality over ecology.
-S25Fig <- Fig4B + facet_wrap(.~Annotation)
+S25Fig <- Fig4 + facet_wrap(.~Annotation)
 ## save the plot.
 ggsave("../results/S25Fig.pdf", S25Fig)
 
