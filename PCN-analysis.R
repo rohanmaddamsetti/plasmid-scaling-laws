@@ -4,13 +4,18 @@
 
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
 
-## CRITICAL POINT: keeping potential chromids makes a difference in the metabolic scaling law.
+## CRITICAL POINT: Annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
+## The metabolic scaling law emerges in chromids.
 ## From Coluzzi et al. (2022): To avoid the misidentification of ICEs as
 ## conjugative plasmids in chromids or secondary chromosomes,
 ## we excluded from further study the 419 plasmids larger than 500 kb.
 
-## See: https://en.wikipedia.org/wiki/Secondary_chromosome
-## IMPORTANT: the metabolism scaling is driven by chromids!!! the 500kB threshold removes the scaling law.
+## CRTITICAL POINT: my analysis does not distinguish between chromids and megaplasmids,
+## and the definition may be intrinsically blurry.
+## See the very nice review on megaplasmids by James Hall and David Baltrus.
+
+## The wikipedia page on chromids is very informative:
+## https://en.wikipedia.org/wiki/Secondary_chromosome
 
 
 library(segmented) ## put this first so that dplyr::select is not masked.
@@ -23,6 +28,25 @@ library(ggrepel)
 
 ################################################################################
 ## Functions and global variables.
+
+filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 10) {
+    ## this function filters data frames for groups with more than 10 data points in the column
+    ## named in the string correlate_column_name_string, using tidy evaluation.
+    ## I figured this out using ChatGPT and Chapter 20 of Advanced R by Hadley Wickham
+    ## as a reference: https://adv-r.hadley.nz/evaluation.html#tidy-evaluation
+    
+    correlate_column_name <- sym(correlate_column_name_string)
+    
+    correlate.groups <- df %>%
+        filter(!is.na(!!correlate_column_name)) %>%
+        filter(!!correlate_column_name != '-') %>%
+        count(!!correlate_column_name) %>%
+        filter(n > min_group_size)
+
+    df %>%
+        filter(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])
+}
+
 
 ggplotRegression <- function(dat, xvar, yvar){
     ## code from:
@@ -162,6 +186,24 @@ make.confint.figure.panel <- function(Table, order.by.total.plasmids, title,
 }
 
 
+make_Fig1_base_plot <- function(PIRA.PCN.estimates) {
+    ## Make the basic plot for Fig1A, before adding the marginal histograms,
+    ## or facetting by column
+    PIRA.PCN.estimates %>%
+        ggplot(aes(
+            x = log10(replicon_length),
+            y = log10(PIRACopyNumber),
+            color = Cluster)) +
+        geom_point(size=0.2,alpha=0.5) +
+        geom_hline(yintercept=0,linetype="dashed",color="gray") +
+        theme_classic() +
+        scale_color_manual(values=c("#d95f02","#7570b3")) +
+        xlab("log10(Length)")  +
+        ylab("log10(Copy Number)") +
+        guides(color="none")
+}
+
+
 ## antibiotic-specific keywords.
 chloramphenicol.keywords <- "chloramphenicol|Chloramphenicol"
 tetracycline.keywords <- "tetracycline efflux|Tetracycline efflux|TetA|Tet(A)|tetA|tetracycline-inactivating"
@@ -186,8 +228,8 @@ antibiotic.keywords <- paste(chloramphenicol.keywords, tetracycline.keywords, ML
 MIN_READ_COUNT <- 10000
 
 ## To avoid the misidentification of ICEs as conjugative plasmids in chromids or secondary chromosomes,
-## we excluded plasmids larger than 500 kb (Cite Coluzzi et al. 2022 for this practice).
-MAX_PLASMID_LENGTH <- 500000
+## specifically label megaplasmids or chromids larger than 500 kb (Cite Coluzzi et al. 2022 for this practice).
+PLASMID_LENGTH_THRESHOLD <- 500000
 
 ## K-means clustering (2 clusters) for large and small plasmids.
 kmeans_spec <- k_means(num_clusters = 2) %>%
@@ -311,10 +353,9 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     mutate(SeqLength_in_Mbp = SeqLength / 1000000) %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
     mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > MAX_PLASMID_LENGTH,
-               "chromid", SeqType))
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "megaplasmid/chromid", SeqType))
     
-
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
 ## Make sure all the genomes in ../results/gbk-annotation are consistent
@@ -358,7 +399,7 @@ PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
     normalize.plasmid.lengths() %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
     mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > MAX_PLASMID_LENGTH,
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
                "chromid", SeqType))
 
 ## write the normalized data to disk.
@@ -715,10 +756,9 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 
 ## take the PIRA estimates, filter for plasmids,
 ## and annotate plasmids with ARGs, and MOB type.
-## remove plasmids larger than MAX_PLASMID_LENGTH = 500 kB.
-PIRA.PCN.estimates <- PIRA.estimates %>%
+    PIRA.PCN.estimates <- PIRA.estimates %>%
+    ## IMPORTANT: this removes megaplasmids and chromids from this analysis!! BE AWARE!
     filter(SeqType == "plasmid") %>%
-    filter(replicon_length < MAX_PLASMID_LENGTH) %>%
     ## add Plasmid column to merge plasmid.mobility.data,
     ## by splitting the SeqID string on the underscore and taking the second part.
     mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
@@ -738,24 +778,11 @@ cluster_assignment = extract_cluster_assignment(kmeans_fit)
 ## add the cluster assignments to PIRA.PCN.estimates.
 PIRA.PCN.estimates$Cluster <- cluster_assignment$.cluster
 
-
-## Make the basic plot for Fig1A, then add the marginal histograms.
-Fig1A_base <- PIRA.PCN.estimates %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber),
-        color = Cluster)) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
-    guides(color="none") +
+Fig1A_base <- make_Fig1_base_plot(PIRA.PCN.estimates) +
     geom_smooth(method = "lm", se = FALSE)
 
 ## Add the marginal histograms
-Fig1A <- ggExtra::ggMarginal(Fig1A_base, margins="x")
+Fig1A <- ggExtra::ggMarginal(Fig1A_base, margins="x") 
 
 ## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
 unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
@@ -764,20 +791,10 @@ unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
 ## plot the PIRA PCN estimates.
 ## Break down this result by predicted plasmid mobility.
 Fig1B <- PIRA.PCN.estimates %>%
-    filter(!is.na(PredictedMobility)) %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber),
-        color = Cluster)) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
-    guides(color="none") +
-##    geom_smooth(method = "lm", se = FALSE) +
-    facet_grid(PredictedMobility ~ .)
+    filter.correlate.column("PredictedMobility") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(.~PredictedMobility, nrow=3) +
+    theme(strip.background = element_blank())
 
 ## make Figure 1.
 Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
@@ -930,7 +947,7 @@ S7FigA <- ggExtra::ggMarginal(S7FigA_base, margins="x")
 
 ## Break down this result by predicted plasmid mobility.
 S7FigB <- S7Fig.data %>%
-    filter(!is.na(PredictedMobility)) %>%
+    filter.correlate.column("PredictedMobility") %>%
     ggplot(aes(
         x = log10(normalized_replicon_length),
         y = log10(PIRACopyNumber),
@@ -997,34 +1014,45 @@ SXX4Fig
 
 ## Supplementary Figure S8. 
 ## Break down by taxonomic group.
-S8Fig <- Fig1A + facet_wrap(. ~ TaxonomicGroup) +
-    geom_smooth(method = "lm", se = FALSE)
+S8Fig <- PIRA.PCN.estimates %>%
+    filter.correlate.column("TaxonomicGroup") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(. ~ TaxonomicGroup) +
+    theme(strip.background = element_blank())
 ## save the plot.
-ggsave("../results/S8Fig.pdf", S8Fig, height=8,width=8)
+ggsave("../results/S8Fig.pdf", S8Fig, height=5,width=5)
 
 
 ## Supplementary Figure S9
 ## Break down by taxonomic subgroup
-S9Fig <- Fig1A + facet_wrap(. ~ TaxonomicSubgroup) +
-    geom_smooth(method = "lm", se = FALSE)
+S9Fig <- PIRA.PCN.estimates %>%
+    filter.correlate.column("TaxonomicSubgroup") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup) +
+    theme(strip.background = element_blank())
 ## save the plot.
-ggsave("../results/S9Fig.pdf", S9Fig, height=9, width=8)
+ggsave("../results/S9Fig.pdf", S9Fig, width=12)
 
 
 ## Supplementary FIgure S10
 ## Break down by genus.
-S10Fig <- Fig1A + facet_wrap(. ~ Genus, ncol=12) +
-    geom_smooth(method = "lm", se = FALSE)
+S10Fig <- PIRA.PCN.estimates %>%
+    filter.correlate.column("Genus") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(. ~ Genus) +
+    theme(strip.background = element_blank())
 ## save the plot.
-ggsave("../results/S10Fig.pdf", S10Fig, height=24, width=16)
+ggsave("../results/S10Fig.pdf", S10Fig, height=9, width=12)
 
 
 ## Supplementary Figure S11:
 ## show PCN distribution over ecology.
-S11Fig <- Fig1A +
-    geom_hline(yintercept=2,linetype="dashed",color="gray") +
-    facet_wrap(.~Annotation) +
-    geom_smooth(method = "lm", se = FALSE)
+S11Fig <- PIRA.PCN.estimates %>%
+    filter.correlate.column("Annotation") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(. ~ Annotation) +
+    theme(strip.background = element_blank()) +
+    geom_hline(yintercept=2,linetype="dashed",color="gray")
 ## save the plot.
 ggsave("../results/S11Fig.pdf", S11Fig, height=8, width=8)
 
@@ -1065,7 +1093,7 @@ ggsave("../results/S12Fig.pdf", S12Fig, height=4,width=5)
 
 ################################################################################
 ## Supplementary Figure S13.
-## The PCN vs. plasmid length anticorrelation largely holds within individual genomes.
+## The PCN vs. plasmid length anticorrelation holds within individual genomes.
 
 within.genome.correlation.data.df <- PIRA.PCN.estimates %>%
     group_by(AnnotationAccession) %>%
@@ -1341,15 +1369,9 @@ MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
     left_join(MOBTyper.results)
 
 ## plot over rep_type groups.
-rep_type_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(rep_type.s.)) %>%
-    filter(rep_type.s. != '-') %>%
-    count(rep_type.s.) %>%
-    filter(n > 10)
-
 SX1Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(rep_type.s. %in% rep_type_groups$rep_type.s.) %>%
+    filter.correlate.column("rep_type.s.") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1364,15 +1386,9 @@ ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
 
 
 ## plot over relaxase_type.
-relaxase_type_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(relaxase_type.s.)) %>%
-    filter(relaxase_type.s. != '-') %>%
-    count(relaxase_type.s.) %>%
-    filter(n > 10)
-
 SX2Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(relaxase_type.s. %in% relaxase_type_groups$relaxase_type.s.) %>%
+    filter.correlate.column("relaxase_type.s.") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1387,15 +1403,9 @@ ggsave("../results/SX2Fig.pdf", SX2Fig,height=12,width=12)
 
 
 ## plot over mating-pair-formation type.
-mpf_type_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(mpf_type)) %>%
-    filter(mpf_type != '-') %>%
-    count(mpf_type) %>%
-    filter(n > 10)
-
 SX3Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(mpf_type %in% mpf_type_groups$mpf_type) %>%
+    filter.correlate.column("mpf_type") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1410,15 +1420,9 @@ ggsave("../results/SX3Fig.pdf", SX3Fig)
 
 
 ## plot over oriT types.
-oriT_type_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(orit_type.s.)) %>%
-    filter(orit_type.s. != '-') %>%
-    count(orit_type.s.) %>%
-    filter(n > 10)
-
 SX4Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(orit_type.s. %in% oriT_type_groups$orit_type.s.) %>%
+    filter.correlate.column("orit_type.s.") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1433,15 +1437,9 @@ ggsave("../results/SX4Fig.pdf", SX4Fig)
 
 
 ## plot over primary cluster type.
-primary_cluster_type_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(primary_cluster_id)) %>%
-    filter(primary_cluster_id != '-') %>%
-    count(primary_cluster_id) %>%
-    filter(n > 10)
-
 SX5Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(primary_cluster_id %in% primary_cluster_type_groups$primary_cluster_id) %>%
+    filter.correlate.column("primary_cluster_id") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1456,15 +1454,9 @@ ggsave("../results/SX5Fig.pdf", SX5Fig, height=12,width=12,limitsize=FALSE)
 
 
 ## plot over secondary cluster type.
-secondary_cluster_type_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(secondary_cluster_id)) %>%
-    filter(secondary_cluster_id != '-') %>%
-    count(secondary_cluster_id) %>%
-    filter(n > 10)
-
 SX6Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(secondary_cluster_id %in% secondary_cluster_type_groups$secondary_cluster_id) %>%
+    filter.correlate.column("secondary_cluster_id") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1479,15 +1471,9 @@ ggsave("../results/SX6Fig.pdf", SX6Fig, height=12,width=12,limitsize=FALSE)
 
 
 ## plot over predicted host range.
-predicted_host_range_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(predicted_host_range_overall_name)) %>%
-    filter(predicted_host_range_overall_name != '-') %>%
-    count(predicted_host_range_overall_name) %>%
-    filter(n > 10)
-
 SX7Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(predicted_host_range_overall_name %in% predicted_host_range_groups$predicted_host_range_overall_name) %>%
+    filter.correlate.column("predicted_host_range_overall_name") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1502,15 +1488,9 @@ ggsave("../results/SX7Fig.pdf", SX7Fig, height=12,width=12,limitsize=FALSE)
 
 
 ## plot over observed host range.
-observed_host_range_groups <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter(!is.na(observed_host_range_ncbi_name)) %>%
-    filter(observed_host_range_ncbi_name != '-') %>%
-    count(observed_host_range_ncbi_name) %>%
-    filter(n > 10)
-
 SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     ## only plot groups with more than 10 data points.
-    filter(observed_host_range_ncbi_name %in% observed_host_range_groups$observed_host_range_ncbi_name) %>%
+    filter.correlate.column("observed_host_range_ncbi_name") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1536,16 +1516,9 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 
 
 ## plot over PTU groups.
-AresArroyo_PTU_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter(!is.na(PTU)) %>%
-    filter(PTU != '-') %>%
-    filter(PTU != "PTU-?") %>%
-    count(PTU) %>%
-    filter(n > 10)
-
 SX9Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
-    filter(PTU %in% AresArroyo_PTU_groups$PTU) %>%
+    filter.correlate.column("PTU") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1560,15 +1533,9 @@ ggsave("../results/SX9Fig.pdf", SX9Fig,height=8,width=8)
 
 
 ## plot over Replicases
-AresArroyo_Replicase_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter(!is.na(Replicase)) %>%
-    filter(Replicase != '-') %>%
-    count(Replicase) %>%
-    filter(n > 10)
-
 SX10Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
-    filter(Replicase %in% AresArroyo_Replicase_groups$Replicase) %>%
+    filter.correlate.column("Replicase") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1583,15 +1550,9 @@ ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
 
 
 ## plot over oriT
-AresArroyo_oriT_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter(!is.na(oriT)) %>%
-    filter(oriT != '-') %>%
-    count(oriT) %>%
-    filter(n > 10)
-
 SX11Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
-    filter(oriT %in% AresArroyo_oriT_groups$oriT) %>%
+    filter.correlate.column("oriT") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1606,15 +1567,9 @@ ggsave("../results/SX11Fig.pdf", SX11Fig,height=8,width=8)
 
 
 ## plot over oriT_Family
-AresArroyo_oriT_Family_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter(!is.na(oriT_Family)) %>%
-    filter(oriT_Family != '-') %>%
-    count(oriT_Family) %>%
-    filter(n > 10)
-
 SX12Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
-    filter(oriT_Family %in% AresArroyo_oriT_Family_groups$oriT_Family) %>%
+    filter.correlate.column("oriT_Family") %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber))) +
@@ -1629,14 +1584,9 @@ ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
 
 
 ## plot over oriT_Type
-AresArroyo_oriT_Type_groups <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter(!is.na(oriT_Type)) %>%
-    filter(oriT_Type != '-') %>%
-    count(oriT_Type) %>%
-    filter(n > 10)
-
 SX13Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
+    filter.correlate.column("oriT_Type") %>%
     filter(oriT_Type %in% AresArroyo_oriT_Type_groups$oriT_Type) %>%
     ggplot(aes(
         x = log10(replicon_length),
@@ -1646,16 +1596,16 @@ SX13Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     theme_classic() +
     xlab("log10(Length)")  +
     ylab("log10(Copy Number)") +
-    facet_wrap(oriT_Type ~ .) +
-    geom_smooth(method="lm")
+    facet_wrap(oriT_Type ~ .)
 ## save the plot
 ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
 
 
 
 
+
 ## Correlates to analyze:
-## oriT_Type, MOB_Category, MOB, MPF_Category, MPF_Type,
+## MOB_Category, MOB, MPF_Category, MPF_Type,
 ## RC.Rep_Category, Phage.Plasmid, Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless",
 ## "Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT",
 ## "pdCONJ"
@@ -1809,7 +1759,7 @@ metabolic.gene.plasmid.data <- plasmid.length.data %>%
     left_join(CDS.MGE.ARG.fraction.data) %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
     mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > MAX_PLASMID_LENGTH,
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
                "chromid", SeqType)) %>%
     ## set NA values of metabolic_protein_count to zeros.
     mutate(metabolic_protein_count = ifelse(is.na(metabolic_protein_count), 0, metabolic_protein_count)) %>%
