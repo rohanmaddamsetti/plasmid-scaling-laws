@@ -797,6 +797,8 @@ SXX1Fig <- PIRA.PCN.estimates %>%
     guides(color="none") +
     geom_line(data = segmented.fit.df, color = 'blue')
 
+ggsave("../results/SXX1Fig.pdf", SXX1Fig)
+
 
 ###################################################################################
 ## Compare the segmented PCN model fit (two lines, with a breakpoint as an extra parameter),
@@ -1310,17 +1312,6 @@ Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
 Redondo.Salvo.plot <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('A','B'), nrow=2)
 
 ################################################################################
-## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
-
-
-
-
-################################################################################
-## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
-
-
-
-################################################################################
 ## examine PCN distribution over all the potential correlates in the MOB-typer results.
 ## let's plot PCN estimates across different correlates, as long as there are more than 10 data points in that group.
 
@@ -1511,9 +1502,40 @@ SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
 ## save the plot
 ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
 
+
+################################################################################
+## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
+## "Origins of transfer establish networks of functional dependencies for plasmid transfer by conjugation"
+
+## I renamed the Plasmid column to SeqID by hand when reformatting, for the join to work.
+## I have PCN for 917 plasmids in these data.
+PIRA.PCN.for.AresArroyo2023.data <- read.csv(
+    "../data/Ares-Arroyo2023-SupplementaryData/reformatted_Table_S1.csv") %>%
+    inner_join(PIRA.PCN.estimates)
+
+
+
+
+
+
 ################################################################################
 ## IMPORTANT TODO: validate these MOB-Typer results using the Plasmid Finder results
 ## reported in Supplementary Table S5 of the Redondo-Salvo paper.
+
+
+
+
+
+
+
+
+
+
+################################################################################
+## Analyze PCN in context of the correlates in the Coluzzi et al. (2022) paper.
+
+
+
 
 
 
