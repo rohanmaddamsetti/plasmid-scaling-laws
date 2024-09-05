@@ -774,7 +774,7 @@ summary(PCN.lm.model)
 segmented.PCN.model <- segmented(
     PCN.lm.model,
     seg.Z = ~log10_replicon_length,
-    psi = 6)
+    psi = list(log10_replicon_length = 6))
 
 ## save the segmented regression fit as a dataframe.
 segmented.fit.df = data.frame(
@@ -797,6 +797,7 @@ SXX1Fig <- PIRA.PCN.estimates %>%
     guides(color="none") +
     geom_line(data = segmented.fit.df, color = 'blue')
 
+
 ###################################################################################
 ## Compare the segmented PCN model fit (two lines, with a breakpoint as an extra parameter),
 ## to a second-order polynomial fit. This analysis shows that the segmented PCN model is a better fit
@@ -810,7 +811,7 @@ second.order.plasmid.lm.model <- lm(
 summary(second.order.plasmid.lm.model)
 
 ## plot the second order model again the segmented model.
-SXX3Fig <- PIRA.PCN.estimates %>%
+ SXX3Fig <- PIRA.PCN.estimates %>%
     ggplot(aes(
         x = log10_replicon_length,
         y = log10_PIRACopyNumber,
@@ -823,12 +824,16 @@ SXX3Fig <- PIRA.PCN.estimates %>%
     ylab("log10(Copy Number)") +
     guides(color="none") +
     ## plot the second order model.
-    stat_smooth(
-        method=lm,
-        formula = log10_PIRACopyNumber~poly(log10_replicon_length,2,raw=TRUE)) +
-## plot the breakpoint model.
+    geom_smooth(
+        data=PIRA.PCN.estimates,
+        inherit.aes=FALSE,
+        method='lm',
+        se=FALSE,
+        aes(x=log10_replicon_length,y=log10_PIRACopyNumber),
+        color="light green",
+        formula=y~poly(x, 2, raw=TRUE)) +
+    ## plot the breakpoint model.
     geom_line(data = segmented.fit.df, color = 'blue')
-
 
 ## let's compare these models. The model with lower AIC is better.
 ## The segmented model has the best fit.
@@ -838,8 +843,25 @@ AIC(segmented.PCN.model)
 
 summary(PCN.lm.model)
 summary(second.order.plasmid.lm.model)
+
 summary(segmented.PCN.model)
 
+################################################################################
+## Only one plasmid with PCN data does not have any proteins.
+
+## 41,191 plasmids in the full dataset.
+CDS.plasmids <- CDS.MGE.ARG.fraction.data %>%
+    filter(SeqType == "plasmid")
+
+## There are 62 plasmids with no proteins in the full plasmid dataset.
+zero.CDS.plasmids <- CDS.plasmids %>%
+    filter(CDS_count == 0)
+
+## There is only one such plasmid with PCN estimates.
+zero.CDS.plasmid.PCN.data <- PIRA.PCN.estimates %>%
+    filter(SeqID %in% zero.CDS.plasmids$SeqID)
+
+## Therefore plasmids with no proteins are very rare (62/41191 = 0.15%).
 
 ################################################################################
 ## Make a Supplementary Figure S7 that is the same as Figure 1,
@@ -853,14 +875,19 @@ summary(segmented.PCN.model)
 ## CRITICAL TODO: there are still a point or two at normalized plasmid length == 1
 ## that look like bugs! Investigate and fix or verify!
 potential.buggy.normalized.plasmids <- PIRA.PCN.estimates %>%
-    filter(normalized_replicon_length == 1 )
+    filter(normalized_replicon_length == 1)
 
+## add a couple columns so that we can check out the segmented regression
+## with the normalized replicon lengths.
+S7Fig.data <- PIRA.PCN.estimates %>%
+    mutate(log10_normalized_replicon_length = log10(normalized_replicon_length)) %>%
+    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber))
 
 ## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
-S7FigA_base <- PIRA.PCN.estimates %>%
+S7FigA_base <- S7Fig.data %>%
     ggplot(aes(
-        x = log2(normalized_replicon_length),
-        y = log2(PIRACopyNumber),
+        x = log10(normalized_replicon_length),
+        y = log10(PIRACopyNumber),
         color = Cluster)) +
     geom_point(size=0.2, alpha=0.5) +
     scale_x_continuous(breaks = c(-1, -2, -5, -10, -12)) +
@@ -870,20 +897,20 @@ S7FigA_base <- PIRA.PCN.estimates %>%
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
     ## draw a line at 2.5% of chromosome length.
-    geom_vline(xintercept=log2(0.025),linetype="dashed",color="gray") +
-    xlab("log2(Normalized length)") +
-    ylab("log2(Copy number)") +
+    geom_vline(xintercept=log10(0.025),linetype="dashed",color="gray") +
+    xlab("log10(Normalized length)") +
+    ylab("log10(Copy number)") +
     geom_smooth(method = "lm", se = FALSE)
 
 ## Add the marginal histograms
 S7FigA <- ggExtra::ggMarginal(S7FigA_base, margins="x")
 
 ## Break down this result by predicted plasmid mobility.
-S7FigB <- PIRA.PCN.estimates %>%
+S7FigB <- S7Fig.data %>%
     filter(!is.na(PredictedMobility)) %>%
     ggplot(aes(
-        x = log2(normalized_replicon_length),
-        y = log2(PIRACopyNumber),
+        x = log10(normalized_replicon_length),
+        y = log10(PIRACopyNumber),
         color = Cluster)) +
     geom_point(size=0.2, alpha=0.5) +
     scale_x_continuous(breaks = c(-1, -2, -5, -10, -12)) +
@@ -893,14 +920,53 @@ S7FigB <- PIRA.PCN.estimates %>%
     geom_hline(yintercept=0,linetype="dashed",color="gray") +
     geom_vline(xintercept=0,linetype="dashed",color="gray") +
     ## draw a line at 2.5% of chromosome length.
-    geom_vline(xintercept=log2(0.025),linetype="dashed",color="gray") +
-    xlab("log2(Normalized length)") +
-    ylab("log2(Copy number)") +
+    geom_vline(xintercept=log10(0.025),linetype="dashed",color="gray") +
+    xlab("log10(Normalized length)") +
+    ylab("log10(Copy number)") +
     facet_grid(PredictedMobility ~ .)
 
 ## make Supplementary Figure S7.
 S7Fig <- plot_grid(S7FigA, S7FigB, labels=c('A', 'B'),ncol=1, rel_heights = c(1, 2.5))
 ggsave("../results/S7Fig.pdf", S7Fig, height=8, width=4)
+
+## let's try segmented regression instead of K-means clustering, using library(segmented).
+
+## first make a linear fit model.
+normalized.length.PCN.model <- lm(log10_PIRACopyNumber ~ log10_normalized_replicon_length, data=S7Fig.data)
+## look at the linear regression.
+summary(normalized.length.PCN.model)
+
+#fit piecewise regression model to original model, estimating a breakpoint.
+segmented.normalized.length.PCN.model <- segmented(
+    normalized.length.PCN.model,
+    seg.Z = ~log10_normalized_replicon_length,
+    psi = list(log10_normalized_replicon_length = -1.5))
+
+summary(segmented.normalized.length.PCN.model)
+
+## save the segmented regression fit as a dataframe.
+normalized.length.segmented.fit.df = data.frame(
+    log10_normalized_replicon_length = S7Fig.data$log10_normalized_replicon_length,
+    log10_PIRACopyNumber = broken.line(segmented.normalized.length.PCN.model)$fit)
+
+## let's plot the segmented regression.
+## this result is qualitatively similar to the K-means clustering regression result.
+SXX4Fig <- S7Fig.data %>%
+    ggplot(aes(
+        x = log10_normalized_replicon_length,
+        y = log10_PIRACopyNumber,
+        color = Cluster)) +
+    geom_point(size=0.2,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("log10(Normalized length)")  +
+    ylab("log10(Copy Number)") +
+    guides(color="none") +
+    geom_line(data = normalized.length.segmented.fit.df, color = 'blue')
+## The breakpoint is at -5.852 on log10 scale, so at 2^-5.852 = 1.73% of the chromosome length.
+SXX4Fig
+
 
 ################################################################################
 ## Supplementary Figures S8 through S11. Break down the result in Figure 1 by taxonomy
@@ -1636,8 +1702,6 @@ SXXFig2 <- metabolic.gene.plasmid.and.chromosome.data %>%
 ## save the plot.
 ggsave("../results/SXXFig2.pdf", SXXFig2, height=3.5, width=3.5)
 
-
-
 ################################################################################
 ## Supplementary Figures S22 through S25. Break down the result in Figure 4 by taxonomy
 ## and ecological category to show universality of the CDS scaling relationship.
@@ -1669,6 +1733,22 @@ S25Fig <- Fig4B + facet_wrap(.~Annotation)
 ## save the plot.
 ggsave("../results/S25Fig.pdf", S25Fig)
 
+########################################################################
+## let's compare the fraction of metabolic genes on plasmids to chromosomes,
+## as a control to see whether this result could be caused by recombination of chromosomes onto plasmids
+## (internal control, not in paper)
+
+metabolic.fraction.fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+        ggplot(
+        aes(
+            x = log10(replicon_length),
+            y = metabolic_protein_fraction,
+            color = SeqType)) +
+    geom_point(size=0.5,alpha=0.5) +
+    xlab("log2(replicon length)") +
+    ylab("log2(fraction of metabolic genes on replicon)") +
+    theme_classic() + guides(color = "none")
+ggsave("../results/metabolic-fraction-fig.pdf", metabolic.fraction.fig)
 
 ########################################################################
 ## examine the proportion of ARG-associated genes
