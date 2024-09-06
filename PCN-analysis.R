@@ -48,6 +48,22 @@ filter.correlate.column <- function(df, correlate_column_name_string, min_group_
 }
 
 
+cluster_PIRA.PCN.estimates_by_plasmid_length <- function(PIRA.PCN.estimates) {
+    ## Run K-means clustering with K = 2 on the PIRA.PCN.estimates, based solely on replicon_length.
+    kmeans_fit <- kmeans_spec %>%
+        fit(~ log10(replicon_length), data=PIRA.PCN.estimates)
+    
+    cluster_assignment = extract_cluster_assignment(kmeans_fit)
+
+    ## make a copy of the input dataframe
+    clustered.PIRA.PCN.estimates <- PIRA.PCN.estimates
+    ## add a column for the plasmid clusters
+    clustered.PIRA.PCN.estimates$Cluster <- cluster_assignment$.cluster
+    ## return the clustered dataframe.
+    return(clustered.PIRA.PCN.estimates)
+}
+
+
 ggplotRegression <- function(dat, xvar, yvar){
     ## code from:
     ## https://community.rstudio.com/t/annotate-ggplot2-with-regression-equation-and-r-squared/6112/7  
@@ -750,7 +766,7 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 
 ## take the PIRA estimates, filter for plasmids,
 ## and annotate plasmids with ARGs, and MOB type.
-    PIRA.PCN.estimates <- PIRA.estimates %>%
+PIRA.PCN.estimates <- PIRA.estimates %>%
     ## IMPORTANT: this removes megaplasmids and chromids from this analysis!! BE AWARE!
     filter(SeqType == "plasmid") %>%
     ## add Plasmid column to merge plasmid.mobility.data,
@@ -761,16 +777,10 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
     mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
     ## The next two lines are to get segmented regression working, using library(segmented).
     mutate(log10_replicon_length = log10(replicon_length)) %>%
-    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber))
+    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber)) %>%
+    ## create a column indicating how plasmids cluster by length.
+    cluster_PIRA.PCN.estimates_by_plasmid_length()
 
-## Run K-means clustering with K = 2 on the PIRA.PCN.estimates, based solely on replicon_length.
-kmeans_fit <- kmeans_spec %>%
-    fit(~ log10(replicon_length), data=PIRA.PCN.estimates)
-
-cluster_assignment = extract_cluster_assignment(kmeans_fit)
-
-## add the cluster assignments to PIRA.PCN.estimates.
-PIRA.PCN.estimates$Cluster <- cluster_assignment$.cluster
 
 Fig1A_base <- make_Fig1_base_plot(PIRA.PCN.estimates) +
     geom_smooth(method = "lm", se = FALSE)
