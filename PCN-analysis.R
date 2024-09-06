@@ -891,23 +891,6 @@ summary(second.order.plasmid.lm.model)
 summary(segmented.PCN.model)
 
 ################################################################################
-## Only one plasmid with PCN data does not have any proteins.
-
-## 41,191 plasmids in the full dataset.
-CDS.plasmids <- CDS.MGE.ARG.fraction.data %>%
-    filter(SeqType == "plasmid")
-
-## There are 62 plasmids with no proteins in the full plasmid dataset.
-zero.CDS.plasmids <- CDS.plasmids %>%
-    filter(CDS_count == 0)
-
-## There is only one such plasmid with PCN estimates.
-zero.CDS.plasmid.PCN.data <- PIRA.PCN.estimates %>%
-    filter(SeqID %in% zero.CDS.plasmids$SeqID)
-
-## Therefore plasmids with no proteins are very rare (62/41191 = 0.15%).
-
-################################################################################
 ## Make a Supplementary Figure S7 that is the same as Figure 1,
 ## but plotting normalized plasmid length relative to the length of the longest
 ## chromosome.
