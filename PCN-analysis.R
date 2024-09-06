@@ -186,10 +186,10 @@ make.confint.figure.panel <- function(Table, order.by.total.plasmids, title,
 }
 
 
-make_Fig1_base_plot <- function(PIRA.PCN.estimates) {
+make_Fig1_base_plot <- function(my.PCN.data) {
     ## Make the basic plot for Fig1A, before adding the marginal histograms,
     ## or facetting by column
-    PIRA.PCN.estimates %>%
+    my.PCN.data %>%
         ggplot(aes(
             x = log10(replicon_length),
             y = log10(PIRACopyNumber),
@@ -200,7 +200,8 @@ make_Fig1_base_plot <- function(PIRA.PCN.estimates) {
         scale_color_manual(values=c("#d95f02","#7570b3")) +
         xlab("log10(Length)")  +
         ylab("log10(Copy Number)") +
-        guides(color="none")
+        guides(color="none") +
+        theme(strip.background = element_blank())
 }
 
 
@@ -350,12 +351,7 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     ## set nice units for linear-scale graphs.
     mutate(CDS_length_in_Mbp = CDS_length / 1000000) %>%
     mutate(non_CDS_length_in_Mbp = non_CDS_length / 1000000) %>%
-    mutate(SeqLength_in_Mbp = SeqLength / 1000000) %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
-    mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "megaplasmid/chromid", SeqType))
-    
+    mutate(SeqLength_in_Mbp = SeqLength / 1000000)    
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
 ## Make sure all the genomes in ../results/gbk-annotation are consistent
@@ -396,11 +392,7 @@ PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
     mutate(RepliconDNAContent = replicon_length * PIRACopyNumber) %>%
     ## add taxonomic and ecological annotation.
     left_join(replicon.annotation.data) %>%
-    normalize.plasmid.lengths() %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
-    mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType))
+    normalize.plasmid.lengths()
 
 ## write the normalized data to disk.
 write.csv(PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
@@ -699,7 +691,7 @@ S5Fig <- plot_grid(S5FigA, S5FigB, labels=c("A", "B"))
 ggsave("../results/S5Fig.pdf", S5Fig, height=4, width=8)
 
 
-## make a linear model and examine it.
+## make a linear model comparing breseq to PIRA estimates and examine it.
 breseq.PIRA.PCN.lm.model <- lm(
     formula = log10(PIRACopyNumber) ~ log10(BreseqCopyNumberEstimate),
     data = PIRA.vs.breseq.df)
@@ -745,6 +737,8 @@ S6Fig <- naive.themisto.vs.naive.kallisto.df %>%
         formula=y~x)
 ## save Supplementary Figure S6.
 S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
+
+
 
 ################################################################################
 ## PLASMID BIOLOGY ANALYSIS
@@ -1221,7 +1215,6 @@ ggsave("../results/S16Fig.pdf", S16Fig)
 
 
 ################################################################################
-
 ## WORKING HERE ON FIGURE 2 and associated analyses.
 
 
@@ -1278,16 +1271,27 @@ Acman.cliques.with.PIRA.plasmid.estimates <- Acman.cliques.with.PIRA.plasmid.est
 Acman.clique.size.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
     ggplot(aes(
         x = Clique_replicon_length_rank,
-        y = log10(replicon_length))) +
+        y = log10(replicon_length),
+        color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
-    theme_classic()
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("Plasmid cliques ranked by length")  +
+    ylab("log10(Length)") +
+    guides(color = "none")
+
 
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
     ggplot(aes(
         x = Clique_replicon_length_rank,
-        y = log10(PIRACopyNumber))) +
+        y = log10(PIRACopyNumber),
+        color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
-    theme_classic()
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("Plasmid cliques ranked by length")  +
+    ylab("log10(Copy Number)") +
+    guides(color = "none")
 
 Acman.plot <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=2)
 
@@ -1347,16 +1351,28 @@ PTU.PIRA.estimates <- PTU.PIRA.estimates %>%
 Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
     ggplot(aes(
         x = PTU_replicon_length_rank,
-        y = log10(replicon_length))) +
+        y = log10(replicon_length),
+        color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
-    theme_classic()
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("PTUs ranked by length")  +
+    ylab("log10(Length)") +
+    guides(color = "none") +
+    
 
 Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
     ggplot(aes(
         x = PTU_replicon_length_rank,
-        y = log10(PIRACopyNumber))) +
+        y = log10(PIRACopyNumber),
+    color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
-    theme_classic()
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("PTUs ranked by length")  +
+    ylab("log10(Copy Number)") +
+    guides(color = "none")
+
 
 Redondo.Salvo.plot <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('A','B'), nrow=2)
 
@@ -1370,16 +1386,8 @@ MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
 
 ## plot over rep_type groups.
 SX1Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("rep_type.s.") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(rep_type.s. ~ .)
 ## save the plot
 ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
@@ -1387,16 +1395,8 @@ ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
 
 ## plot over relaxase_type.
 SX2Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("relaxase_type.s.") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(relaxase_type.s. ~ .)
 ## save the plot
 ggsave("../results/SX2Fig.pdf", SX2Fig,height=12,width=12)
@@ -1404,16 +1404,8 @@ ggsave("../results/SX2Fig.pdf", SX2Fig,height=12,width=12)
 
 ## plot over mating-pair-formation type.
 SX3Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("mpf_type") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(mpf_type ~ .)
 ## save the plot
 ggsave("../results/SX3Fig.pdf", SX3Fig)
@@ -1421,16 +1413,8 @@ ggsave("../results/SX3Fig.pdf", SX3Fig)
 
 ## plot over oriT types.
 SX4Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("orit_type.s.") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(orit_type.s. ~ .)
 ## save the plot
 ggsave("../results/SX4Fig.pdf", SX4Fig)
@@ -1438,16 +1422,8 @@ ggsave("../results/SX4Fig.pdf", SX4Fig)
 
 ## plot over primary cluster type.
 SX5Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("primary_cluster_id") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(primary_cluster_id ~ .)
 ## save the plot
 ggsave("../results/SX5Fig.pdf", SX5Fig, height=12,width=12,limitsize=FALSE)
@@ -1455,16 +1431,8 @@ ggsave("../results/SX5Fig.pdf", SX5Fig, height=12,width=12,limitsize=FALSE)
 
 ## plot over secondary cluster type.
 SX6Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("secondary_cluster_id") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(secondary_cluster_id ~ .)
 ## save the plot
 ggsave("../results/SX6Fig.pdf", SX6Fig, height=12,width=12,limitsize=FALSE)
@@ -1472,16 +1440,8 @@ ggsave("../results/SX6Fig.pdf", SX6Fig, height=12,width=12,limitsize=FALSE)
 
 ## plot over predicted host range.
 SX7Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("predicted_host_range_overall_name") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(predicted_host_range_overall_name ~ .)
 ## save the plot
 ggsave("../results/SX7Fig.pdf", SX7Fig, height=12,width=12,limitsize=FALSE)
@@ -1489,16 +1449,8 @@ ggsave("../results/SX7Fig.pdf", SX7Fig, height=12,width=12,limitsize=FALSE)
 
 ## plot over observed host range.
 SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("observed_host_range_ncbi_name") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(observed_host_range_ncbi_name ~ .)
 ## save the plot
 ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
@@ -1519,14 +1471,7 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 SX9Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("PTU") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(PTU ~ .)
 ## save the plot
 ggsave("../results/SX9Fig.pdf", SX9Fig,height=8,width=8)
@@ -1536,14 +1481,7 @@ ggsave("../results/SX9Fig.pdf", SX9Fig,height=8,width=8)
 SX10Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("Replicase") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(Replicase ~ .)
 ## save the plot
 ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
@@ -1553,14 +1491,7 @@ ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
 SX11Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(oriT ~ .)
 ## save the plot
 ggsave("../results/SX11Fig.pdf", SX11Fig,height=8,width=8)
@@ -1570,14 +1501,7 @@ ggsave("../results/SX11Fig.pdf", SX11Fig,height=8,width=8)
 SX12Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT_Family") %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(oriT_Family ~ .)
 ## save the plot
 ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
@@ -1585,53 +1509,195 @@ ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
 
 ## plot over oriT_Type
 SX13Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT_Type") %>%
-    filter(oriT_Type %in% AresArroyo_oriT_Type_groups$oriT_Type) %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber))) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
+    make_Fig1_base_plot() +
     facet_wrap(oriT_Type ~ .)
 ## save the plot
 ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
 
 
+## plot over MOB_Category
+SX14Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MOB_Category") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(MOB_Category ~ .)
+## save the plot
+ggsave("../results/SX14Fig.pdf", SX14Fig,height=3.5,width=7)
 
 
+## plot over MOB
+SX15Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MOB") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(MOB ~ .)
+## save the plot
+ggsave("../results/SX15Fig.pdf", SX15Fig,height=3.5,width=7)
 
-## Correlates to analyze:
-## MOB_Category, MOB, MPF_Category, MPF_Type,
-## RC.Rep_Category, Phage.Plasmid, Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless",
-## "Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT",
-## "pdCONJ"
+## plot over MPF_Category
+SX16Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MPF_Category") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(MPF_Category ~ .)
+## save the plot
+ggsave("../results/SX16Fig.pdf", SX16Fig,height=3.5,width=7)
+
+
+## plot over MPF_Type
+SX17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MPF_Type") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(MPF_Type ~ .)
+## save the plot
+ggsave("../results/SX17Fig.pdf", SX17Fig,height=3.5,width=7)
+
+
+## plot over RC.Rep_Category
+SX18Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("RC.Rep_Category") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(RC.Rep_Category ~ .)
+## save the plot
+ggsave("../results/SX18Fig.pdf", SX18Fig,height=3.5,width=7)
+
+
+## plot over Phage.Plasmid
+SX19Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("Phage.Plasmid") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(Phage.Plasmid ~ .)
+## save the plot
+ggsave("../results/SX19Fig.pdf", SX19Fig,height=3.5,width=7)
+
+## plot over Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless
+SX20Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless ~ .)
+## save the plot
+ggsave("../results/SX20Fig.pdf", SX20Fig,height=3.5,width=7)
+
+## plot over Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT
+SX21Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT ~ .)
+## save the plot
+ggsave("../results/SX21Fig.pdf", SX21Fig,height=3.5,width=7)
+
+## plot over pdCONJ
+SX22Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("pdCONJ") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(pdCONJ ~ .)
+## save the plot
+ggsave("../results/SX22Fig.pdf", SX22Fig,height=3.5,width=7)
 
 
 ################################################################################
 ## IMPORTANT TODO: validate these MOB-Typer results using the Plasmid Finder results
 ## reported in Supplementary Table S5 of the Redondo-Salvo paper.
 
+## I renamed the AccessionVersion column to SeqID by hand when reformatting, for the join to work.
 
+PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata <- read.csv(
+    "../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.csv") %>%
+    select(SeqID, MOB, PFinder_80, PFinder_95) %>%
+    right_join(PIRA.PCN.estimates)
 
+## plot over MOB (Relaxase MOB family determined by MOBscan).
+## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
+SX23Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
+    filter.correlate.column("MOB") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(MOB ~ .)
+## save the plot
+ggsave("../results/SX23Fig.pdf", SX23Fig,height=3.5,width=4)
 
+## plot over PFinder_80 (Replicon typing determined by PlasmidFinder at 80% identity and 60% coverage).
+## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
+SX24Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
+    filter.correlate.column("PFinder_80") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(PFinder_80 ~ .)
+## save the plot
+ggsave("../results/SX24Fig.pdf", SX24Fig,height=3.5,width=6)
 
-
-
-
+## plot over PFinder_95 (Replicon typing determined by PlasmidFinder at 95% identity and 60% coverage).
+## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
+SX25Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
+    filter.correlate.column("PFinder_95") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(PFinder_80 ~ .)
+## save the plot
+ggsave("../results/SX25Fig.pdf", SX25Fig,height=3.5,width=6)
 
 
 ################################################################################
 ## Analyze PCN in context of the correlates in the Coluzzi et al. (2022) paper.
+## "Evolution of plasmid mobility: origin and fate of conjugative and nonconjugative plasmids"
 
+## When reformatting, I manually renamed the Acc_No_NCBI to SeqID for the join,
+## and renamed Plasmid to PlasmidType to prevent a column name collision in the join.
+PIRA.PCN.for.Coluzzi2022.plasmid.metadata <- read.csv(
+    "../data/Coluzzi2022-SupplementaryData/reformatted_SupplementaryTable.csv") %>%
+    select(SeqID, Type, MOB_Class, MPF_prots, Mobilisation_type, PlasmidType, PTU) %>%
+    right_join(PIRA.PCN.estimates)
 
+## plot over Type.
+SX26Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    filter.correlate.column("Type") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(Type ~ .)
+## save the plot
+ggsave("../results/SX26Fig.pdf", SX26Fig,height=3.5,width=4)
 
+## plot over MOB_Class.
+SX27Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove blank entries
+    filter(MPF_prots != "") %>%
+    filter.correlate.column("MOB_Class") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(MOB_Class ~ .)
+## save the plot
+ggsave("../results/SX27Fig.pdf", SX27Fig,height=3.5,width=4)
 
+## plot over MPF_prots.
+SX28Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove blank entries
+    filter(MPF_prots != "") %>%
+    filter.correlate.column("MPF_prots") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(MPF_prots ~ .)
+## save the plot
+ggsave("../results/SX28Fig.pdf", SX28Fig,height=3.5,width=12)
 
+## plot over Mobilisation_type.
+SX29Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    filter.correlate.column("Mobilisation_type") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(Mobilisation_type ~ .)
+## save the plot
+ggsave("../results/SX29Fig.pdf", SX29Fig,height=3.5,width=4)
 
+## plot over PlasmidType.
+SX30Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove blank entries
+    filter(PlasmidType != "") %>%
+    filter.correlate.column("PlasmidType") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(PlasmidType ~ .)
+## save the plot
+ggsave("../results/SX30Fig.pdf", SX30Fig,height=7,width=7)
+
+## plot over PTU.
+SX31Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove plasmids with noPTU
+    filter(PTU != "noPTU") %>%
+    filter.correlate.column("PTU") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(PTU ~ .)
+## save the plot
+ggsave("../results/SX31Fig.pdf", SX31Fig,height=7,width=7)
 
 
 ###################################################################################
@@ -1639,8 +1705,6 @@ ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
 
 ## Main figure, all the points together.
 ## supplementary figure: same figure, separated by Annotation category.
-
-## This scaling law holds, even when excluding chromids.
 
 Fig3A <- CDS.MGE.ARG.fraction.data %>%
     ggplot(
