@@ -1111,109 +1111,8 @@ S13Fig <- within.genome.correlation.data.df %>%
 
 ggsave("../results/S13Fig.pdf", S13Fig, height=8, width=8)
 
-################################################################################
-## Supplementary Figure S14. let's make a histogram of PCN in these data.
-
-S14Fig <- PIRA.PCN.estimates %>%
-    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
-    filter(Annotation != "NA") %>%
-    filter(Annotation != "blank") %>%
-    ggplot(aes(x = log10(PIRACopyNumber))) +
-    geom_histogram(bins=1000) +
-    geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
-    geom_vline(xintercept = 2, linetype = "dashed", color = "light gray") +
-    facet_wrap(. ~ Annotation) +
-    theme_classic()
-
-ggsave("../results/S14Fig.pdf", S14Fig, height = 6, width = 6)
 
 ################################################################################
-## Supplementary Figure S15.
-## Examine the tails of the PCN distribution.
-## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
-## there is an enrichment of high PCN plasmids in human-impacted environments.
-
-## This vector is used for ordering axes in this figure and the next figure.
-order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotation
-
-## calculate the fraction of low PCN plasmids in each category.
-## Make Z-distributed confidence intervals for the fraction of isolates with
-## PCN < 1.
-
-low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates)
-## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
-S15FigA <- make.confint.figure.panel(low.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN < 1")
-
-## calculate the fraction of high PCN plasmids in each category.
-## there is an enrichment of  PCN > 50 plasmids in human-impacted environments.
-## Make Z-distributed confidence intervals for the fraction of isolates with
-## PCN > 50.
-
-high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates)
-## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
-S15FigB <- make.confint.figure.panel(high.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN > 50")
-
-S15Fig <- plot_grid(S15FigA, S15FigB, labels=c('A','B'), ncol=1)
-ggsave("../results/S15Fig.pdf", S15Fig, height = 8, width = 6)
-
-## calculate the total number of plasmids,
-## and the number of plasmids with PCN < 1 and PCN > 50.
-PCN.count <- nrow(PIRA.PCN.estimates) ## 10,261 plasmids here
-PCN.count
-
-## There are 2238 plasmids with PCN < 1 in these data.
-## this is 22% of plasmids
-low.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber < 1) %>% nrow()
-low.PCN.count
-low.PCN.count/PCN.count
-
-## There are 473 plasmids with PCN > 50 in these data.
-## This is 4.6% of plasmids.
-high.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 50) %>% nrow()
-high.PCN.count
-high.PCN.count/PCN.count
-
-## There are 2166 plasmids with PCN > 10 in these data
-## This is 21% of plasmids.
-multicopy10.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 10) %>% nrow()
-multicopy10.PCN.count
-multicopy10.PCN.count/PCN.count
-
-
-################################################################################
-## Supplementary Figure S16. Chromosome DNA content does not constrain Plasmid DNA content.
-
-total.DNA.content.data <- PIRA.estimates %>%
-    group_by(AnnotationAccession) %>%
-    summarize(TotalDNAContent = sum(RepliconDNAContent))
-
-chromosome.DNA.content.data <- PIRA.estimates %>%
-    filter(SeqType == "chromosome") %>%
-    group_by(AnnotationAccession) %>%
-    summarize(ChromosomeDNAContent = sum(RepliconDNAContent))
-
-plasmid.DNA.content.data <- PIRA.estimates %>%
-    filter(SeqType == "plasmid") %>%
-    group_by(AnnotationAccession) %>%
-    summarize(PlasmidDNAContent = sum(RepliconDNAContent))
-
-DNA.content.data <- total.DNA.content.data %>%
-    left_join(chromosome.DNA.content.data) %>%
-    left_join(plasmid.DNA.content.data) %>%
-    left_join(PIRA.estimates) ## basically to get the Annotation column.
-
-
-S16Fig <- DNA.content.data %>%
-    ggplot(aes(
-        x = log10(ChromosomeDNAContent),
-        y = log10(PlasmidDNAContent))) +
-    geom_point(size=0.2) +
-    facet_wrap(. ~ Annotation) +
-    theme_classic()
-## save the plot
-ggsave("../results/S16Fig.pdf", S16Fig)
-
-
 ################################################################################
 ## WORKING HERE ON FIGURE 2 and associated analyses.
 
@@ -1698,6 +1597,111 @@ SX31Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
     facet_wrap(PTU ~ .)
 ## save the plot
 ggsave("../results/SX31Fig.pdf", SX31Fig,height=7,width=7)
+
+
+################################################################################
+################################################################################
+################################################################################
+## Supplementary Figure S14. let's make a histogram of PCN in these data.
+
+S14Fig <- PIRA.PCN.estimates %>%
+    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    filter(Annotation != "NA") %>%
+    filter(Annotation != "blank") %>%
+    ggplot(aes(x = log10(PIRACopyNumber))) +
+    geom_histogram(bins=1000) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
+    geom_vline(xintercept = 2, linetype = "dashed", color = "light gray") +
+    facet_wrap(. ~ Annotation) +
+    theme_classic()
+
+ggsave("../results/S14Fig.pdf", S14Fig, height = 6, width = 6)
+
+################################################################################
+## Supplementary Figure S15.
+## Examine the tails of the PCN distribution.
+## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
+## there is an enrichment of high PCN plasmids in human-impacted environments.
+
+## This vector is used for ordering axes in this figure and the next figure.
+order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotation
+
+## calculate the fraction of low PCN plasmids in each category.
+## Make Z-distributed confidence intervals for the fraction of isolates with
+## PCN < 1.
+
+low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates)
+## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
+S15FigA <- make.confint.figure.panel(low.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN < 1")
+
+## calculate the fraction of high PCN plasmids in each category.
+## there is an enrichment of  PCN > 50 plasmids in human-impacted environments.
+## Make Z-distributed confidence intervals for the fraction of isolates with
+## PCN > 50.
+
+high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates)
+## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
+S15FigB <- make.confint.figure.panel(high.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN > 50")
+
+S15Fig <- plot_grid(S15FigA, S15FigB, labels=c('A','B'), ncol=1)
+ggsave("../results/S15Fig.pdf", S15Fig, height = 8, width = 6)
+
+## calculate the total number of plasmids,
+## and the number of plasmids with PCN < 1 and PCN > 50.
+PCN.count <- nrow(PIRA.PCN.estimates) ## 10,261 plasmids here
+PCN.count
+
+## There are 2238 plasmids with PCN < 1 in these data.
+## this is 22% of plasmids
+low.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber < 1) %>% nrow()
+low.PCN.count
+low.PCN.count/PCN.count
+
+## There are 473 plasmids with PCN > 50 in these data.
+## This is 4.6% of plasmids.
+high.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 50) %>% nrow()
+high.PCN.count
+high.PCN.count/PCN.count
+
+## There are 2166 plasmids with PCN > 10 in these data
+## This is 21% of plasmids.
+multicopy10.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 10) %>% nrow()
+multicopy10.PCN.count
+multicopy10.PCN.count/PCN.count
+
+
+################################################################################
+## Supplementary Figure S16. Chromosome DNA content does not constrain Plasmid DNA content.
+
+total.DNA.content.data <- PIRA.estimates %>%
+    group_by(AnnotationAccession) %>%
+    summarize(TotalDNAContent = sum(RepliconDNAContent))
+
+chromosome.DNA.content.data <- PIRA.estimates %>%
+    filter(SeqType == "chromosome") %>%
+    group_by(AnnotationAccession) %>%
+    summarize(ChromosomeDNAContent = sum(RepliconDNAContent))
+
+plasmid.DNA.content.data <- PIRA.estimates %>%
+    filter(SeqType == "plasmid") %>%
+    group_by(AnnotationAccession) %>%
+    summarize(PlasmidDNAContent = sum(RepliconDNAContent))
+
+DNA.content.data <- total.DNA.content.data %>%
+    left_join(chromosome.DNA.content.data) %>%
+    left_join(plasmid.DNA.content.data) %>%
+    left_join(PIRA.estimates) ## basically to get the Annotation column.
+
+
+S16Fig <- DNA.content.data %>%
+    ggplot(aes(
+        x = log10(ChromosomeDNAContent),
+        y = log10(PlasmidDNAContent))) +
+    geom_point(size=0.2) +
+    facet_wrap(. ~ Annotation) +
+    theme_classic()
+## save the plot
+ggsave("../results/S16Fig.pdf", S16Fig)
 
 
 ###################################################################################
