@@ -759,8 +759,6 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 ################################################################################
 ## PLASMID BIOLOGY ANALYSIS
 ################################################################################
-## Figure 1. Patterns in Plasmid copy number, and analysis of ecological and phylogenetic
-## associations with PCN.
 
 ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
 
@@ -781,31 +779,8 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
     ## create a column indicating how plasmids cluster by length.
     cluster_PIRA.PCN.estimates_by_plasmid_length()
 
-
-Fig1A_base <- make_Fig1_base_plot(PIRA.PCN.estimates) +
-    geom_smooth(method = "lm", se = FALSE)
-
-## Add the marginal histograms
-Fig1A <- ggExtra::ggMarginal(Fig1A_base, margins="x") 
-
-## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
-unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
-    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
-
-## plot the PIRA PCN estimates.
-## Break down this result by predicted plasmid mobility.
-Fig1B <- PIRA.PCN.estimates %>%
-    filter.correlate.column("PredictedMobility") %>%
-    make_Fig1_base_plot() +
-    facet_wrap(.~PredictedMobility, nrow=3) +
-    theme(strip.background = element_blank())
-
-## make Figure 1.
-Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
-ggsave("../results/Fig1.pdf", Fig1, height=8, width=4)
-
 ################################################################################
-## let's try segmented regression instead of K-means clustering, using library(segmented).
+## use segmented regression, using library(segmented).
 
 ## first make a linear fit model.
 PCN.lm.model <- lm(log10_PIRACopyNumber ~ log10_replicon_length, data=PIRA.PCN.estimates)
@@ -889,6 +864,31 @@ summary(PCN.lm.model)
 summary(second.order.plasmid.lm.model)
 
 summary(segmented.PCN.model)
+
+################################################################################
+## Figure 1. Patterns in Plasmid copy number, and analysis of ecological and phylogenetic
+## associations with PCN.
+Fig1A_base <- make_Fig1_base_plot(PIRA.PCN.estimates) +
+    geom_smooth(method = "lm", se = FALSE)
+
+## Add the marginal histograms
+Fig1A <- ggExtra::ggMarginal(Fig1A_base, margins="x") 
+
+## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
+unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
+
+## plot the PIRA PCN estimates.
+## Break down this result by predicted plasmid mobility.
+Fig1B <- PIRA.PCN.estimates %>%
+    filter.correlate.column("PredictedMobility") %>%
+    make_Fig1_base_plot() +
+    facet_wrap(.~PredictedMobility, nrow=3) +
+    theme(strip.background = element_blank())
+
+## make Figure 1.
+Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
+ggsave("../results/Fig1.pdf", Fig1, height=8, width=4)
 
 ################################################################################
 ## Make a Supplementary Figure S7 that is the same as Figure 1,
