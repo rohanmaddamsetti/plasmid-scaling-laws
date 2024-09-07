@@ -202,19 +202,38 @@ make.confint.figure.panel <- function(Table, order.by.total.plasmids, title,
 }
 
 
-make_Fig1_base_plot <- function(my.PCN.data) {
+make_PCN_base_plot <- function(my.PCN.data) {
     ## Make the basic plot for Fig1A, before adding the marginal histograms,
     ## or facetting by column
     my.PCN.data %>%
         ggplot(aes(
-            x = log10(replicon_length),
-            y = log10(PIRACopyNumber),
+            x = log10_replicon_length,
+            y = log10_PIRACopyNumber,
             color = Cluster)) +
         geom_point(size=0.2,alpha=0.5) +
         geom_hline(yintercept=0,linetype="dashed",color="gray") +
         theme_classic() +
         scale_color_manual(values=c("#d95f02","#7570b3")) +
         xlab("log10(Length)")  +
+        ylab("log10(Copy Number)") +
+        guides(color="none") +
+        theme(strip.background = element_blank())
+}
+
+
+make_normalized_PCN_base_plot <- function(my.PCN.data) {
+    ## Make the basic plot for S7FigA, before adding the marginal histograms,
+    ## or facetting by column
+    my.PCN.data %>%
+        ggplot(aes(
+            x = log10_normalized_replicon_length,
+            y = log10_PIRACopyNumber,
+            color = Cluster)) +
+        geom_point(size=0.2,alpha=0.5) +
+        geom_hline(yintercept=0,linetype="dashed",color="gray") +
+        theme_classic() +
+        scale_color_manual(values=c("#d95f02","#7570b3")) +
+        xlab("log10(Normalized length)")  +
         ylab("log10(Copy Number)") +
         guides(color="none") +
         theme(strip.background = element_blank())
@@ -759,9 +778,6 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 ################################################################################
 ## PLASMID BIOLOGY ANALYSIS
 ################################################################################
-
-## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
-
 ## take the PIRA estimates, filter for plasmids,
 ## and annotate plasmids with ARGs, and MOB type.
 PIRA.PCN.estimates <- PIRA.estimates %>%
@@ -776,48 +792,49 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
     ## The next two lines are to get segmented regression working, using library(segmented).
     mutate(log10_replicon_length = log10(replicon_length)) %>%
     mutate(log10_PIRACopyNumber = log10(PIRACopyNumber)) %>%
+    ## this next line is to check out the segmented regression
+    ## with the normalized replicon lengths.
+    mutate(log10_normalized_replicon_length = log10(normalized_replicon_length)) %>%
     ## create a column indicating how plasmids cluster by length.
     cluster_PIRA.PCN.estimates_by_plasmid_length()
 
+    
+## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
+## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
+unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
+
+## CRITICAL TODO: there are still a point or two at normalized plasmid length == 1
+## that look like bugs! Investigate and fix or verify!
+## CHECK WHAT IS GOING ON!
+potential.buggy.normalized.plasmids <- PIRA.PCN.estimates %>%
+    filter(normalized_replicon_length == 1)
+
+
 ################################################################################
-## use segmented regression, using library(segmented).
+## The data is best fit by piecewise regression, revealing a scaling law between length and copy number.
+## we use library(segmented) for the piecewise regression (segmented regression).
 
 ## first make a linear fit model.
 PCN.lm.model <- lm(log10_PIRACopyNumber ~ log10_replicon_length, data=PIRA.PCN.estimates)
 ## look at the linear regression.
 summary(PCN.lm.model)
 
-#fit piecewise regression model to original model, estimating a breakpoint between
+#fit piecewise regression model to original model, estimating a breakpoint.
 segmented.PCN.model <- segmented(
     PCN.lm.model,
     seg.Z = ~log10_replicon_length,
     psi = list(log10_replicon_length = 5))
+
+## the breakpoint is at 4.774. 10^4.774 = 59,429bp.
+## So plasmids above ~60Kbp have a flatter slope.
+summary(segmented.PCN.model)
 
 ## save the segmented regression fit as a dataframe.
 segmented.fit.df = data.frame(
     log10_replicon_length = PIRA.PCN.estimates$log10_replicon_length,
     log10_PIRACopyNumber = broken.line(segmented.PCN.model)$fit)
 
-## let's plot the segmented regression.
-## this result is qualitatively similar to the K-means clustering regression result.
-SXX1Fig <- PIRA.PCN.estimates %>%
-    ggplot(aes(
-        x = log10_replicon_length,
-        y = log10_PIRACopyNumber,
-        color = Cluster)) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
-    guides(color="none") +
-    geom_line(data = segmented.fit.df, color = 'blue')
-
-ggsave("../results/SXX1Fig.pdf", SXX1Fig)
-
-
-###################################################################################
 ## Compare the segmented PCN model fit (two lines, with a breakpoint as an extra parameter),
 ## to a second-order polynomial fit. This analysis shows that the segmented PCN model is a better fit
 ## than the second-order polynomial.
@@ -829,31 +846,6 @@ second.order.plasmid.lm.model <- lm(
 ## look at the second order regression.
 summary(second.order.plasmid.lm.model)
 
-## plot the second order model again the segmented model.
- SXX3Fig <- PIRA.PCN.estimates %>%
-    ggplot(aes(
-        x = log10_replicon_length,
-        y = log10_PIRACopyNumber,
-        color = Cluster)) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("log10(Length)")  +
-    ylab("log10(Copy Number)") +
-    guides(color="none") +
-    ## plot the second order model.
-    geom_smooth(
-        data=PIRA.PCN.estimates,
-        inherit.aes=FALSE,
-        method='lm',
-        se=FALSE,
-        aes(x=log10_replicon_length,y=log10_PIRACopyNumber),
-        color="light green",
-        formula=y~poly(x, 2, raw=TRUE)) +
-    ## plot the breakpoint model.
-    geom_line(data = segmented.fit.df, color = 'blue')
-
 ## let's compare these models. The model with lower AIC is better.
 ## The segmented model has the best fit.
 AIC(PCN.lm.model)
@@ -862,137 +854,107 @@ AIC(segmented.PCN.model)
 
 summary(PCN.lm.model)
 summary(second.order.plasmid.lm.model)
-
 summary(segmented.PCN.model)
 
 ################################################################################
-## Figure 1. Patterns in Plasmid copy number, and analysis of ecological and phylogenetic
-## associations with PCN.
-Fig1A_base <- make_Fig1_base_plot(PIRA.PCN.estimates) +
-    geom_smooth(method = "lm", se = FALSE)
+## Figure 1. Anticorrelation between plasmid length and copy number.
+
+## For panels A and B, don't draw the segmented regression.
+Fig1A_base <- make_PCN_base_plot(PIRA.PCN.estimates) 
 
 ## Add the marginal histograms
 Fig1A <- ggExtra::ggMarginal(Fig1A_base, margins="x") 
 
-## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
-unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
-    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
-
-## plot the PIRA PCN estimates.
 ## Break down this result by predicted plasmid mobility.
 Fig1B <- PIRA.PCN.estimates %>%
     filter.correlate.column("PredictedMobility") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(.~PredictedMobility, nrow=3) +
     theme(strip.background = element_blank())
 
-## make Figure 1.
-Fig1 <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
-ggsave("../results/Fig1.pdf", Fig1, height=8, width=4)
+## make Figure 1AB
+Fig1AB_base <- plot_grid(Fig1A, Fig1B, labels=c('A', 'B'), ncol=1, rel_heights = c(1, 2.5))
+Fig1AB_title <- ggdraw() + draw_label("Plasmid length", fontface='bold')
+Fig1AB <- plot_grid(Fig1AB_title, Fig1AB_base, ncol=1, rel_heights=c(0.1, 1))
 
-################################################################################
-## Make a Supplementary Figure S7 that is the same as Figure 1,
-## but plotting normalized plasmid length relative to the length of the longest
-## chromosome.
-## This figure show that the scaling law holds well, until plasmids reach ~2.5% of the main chromosome in length.
+## Figure 1CD.
+##  plot normalized plasmid length relative to the length of the longest
+## chromosome in the cell.
+## This figure show that the scaling law holds well, until plasmids reach ~1.73% of the main chromosome in length.
 ## then, copy number is roughly flat.
 
-## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
+## add a segmented regression line to S7Fig.
+## first make a linear fit model with the 
+normalized.PCN.lm.model <- lm(log10_PIRACopyNumber ~ log10_normalized_replicon_length, data=PIRA.PCN.estimates)
 
-## CRITICAL TODO: there are still a point or two at normalized plasmid length == 1
-## that look like bugs! Investigate and fix or verify!
-potential.buggy.normalized.plasmids <- PIRA.PCN.estimates %>%
-    filter(normalized_replicon_length == 1)
-
-## add a couple columns so that we can check out the segmented regression
-## with the normalized replicon lengths.
-S7Fig.data <- PIRA.PCN.estimates %>%
-    mutate(log10_normalized_replicon_length = log10(normalized_replicon_length)) %>%
-    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber))
-
-## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
-S7FigA_base <- S7Fig.data %>%
-    ggplot(aes(
-        x = log10(normalized_replicon_length),
-        y = log10(PIRACopyNumber),
-        color = Cluster)) +
-    geom_point(size=0.2, alpha=0.5) +
-    scale_x_continuous(breaks = c(-1, -2, -5, -10, -12)) +
-    theme_classic() +
-    guides(color="none") +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    geom_vline(xintercept=0,linetype="dashed",color="gray") +
-    ## draw a line at 2.5% of chromosome length.
-    geom_vline(xintercept=log10(0.025),linetype="dashed",color="gray") +
-    xlab("log10(Normalized length)") +
-    ylab("log10(Copy number)") +
-    geom_smooth(method = "lm", se = FALSE)
-
-## Add the marginal histograms
-S7FigA <- ggExtra::ggMarginal(S7FigA_base, margins="x")
-
-## Break down this result by predicted plasmid mobility.
-S7FigB <- S7Fig.data %>%
-    filter.correlate.column("PredictedMobility") %>%
-    ggplot(aes(
-        x = log10(normalized_replicon_length),
-        y = log10(PIRACopyNumber),
-        color = Cluster)) +
-    geom_point(size=0.2, alpha=0.5) +
-    scale_x_continuous(breaks = c(-1, -2, -5, -10, -12)) +
-    theme_classic() +
-    guides(color="none") +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    geom_vline(xintercept=0,linetype="dashed",color="gray") +
-    ## draw a line at 2.5% of chromosome length.
-    geom_vline(xintercept=log10(0.025),linetype="dashed",color="gray") +
-    xlab("log10(Normalized length)") +
-    ylab("log10(Copy number)") +
-    facet_grid(PredictedMobility ~ .)
-
-## make Supplementary Figure S7.
-S7Fig <- plot_grid(S7FigA, S7FigB, labels=c('A', 'B'),ncol=1, rel_heights = c(1, 2.5))
-ggsave("../results/S7Fig.pdf", S7Fig, height=8, width=4)
-
-## let's try segmented regression instead of K-means clustering, using library(segmented).
-
-## first make a linear fit model.
-normalized.length.PCN.model <- lm(log10_PIRACopyNumber ~ log10_normalized_replicon_length, data=S7Fig.data)
-## look at the linear regression.
-summary(normalized.length.PCN.model)
-
-#fit piecewise regression model to original model, estimating a breakpoint.
-segmented.normalized.length.PCN.model <- segmented(
-    normalized.length.PCN.model,
+#fit piecewise regression model based on the normalized.PCN.lm.model.
+segmented.normalized.PCN.model <- segmented(
+    normalized.PCN.lm.model,
     seg.Z = ~log10_normalized_replicon_length,
     psi = list(log10_normalized_replicon_length = -1.5))
 
-summary(segmented.normalized.length.PCN.model)
+## the breakpoint is at -1.762. 10^-1.762 = 1.73% of the length of the chromosome.
+summary(segmented.normalized.PCN.model)
 
 ## save the segmented regression fit as a dataframe.
-normalized.length.segmented.fit.df = data.frame(
-    log10_normalized_replicon_length = S7Fig.data$log10_normalized_replicon_length,
-    log10_PIRACopyNumber = broken.line(segmented.normalized.length.PCN.model)$fit)
+normalized.segmented.fit.df = data.frame(
+    log10_normalized_replicon_length = PIRA.PCN.estimates$log10_normalized_replicon_length,
+    log10_PIRACopyNumber = broken.line(segmented.normalized.PCN.model)$fit)
 
-## let's plot the segmented regression.
-## this result is qualitatively similar to the K-means clustering regression result.
-SXX4Fig <- S7Fig.data %>%
-    ggplot(aes(
-        x = log10_normalized_replicon_length,
-        y = log10_PIRACopyNumber,
-        color = Cluster)) +
-    geom_point(size=0.2,alpha=0.5) +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("log10(Normalized length)")  +
-    ylab("log10(Copy Number)") +
-    guides(color="none") +
-    geom_line(data = normalized.length.segmented.fit.df, color = 'blue')
-## The breakpoint is at -1.761 on log10 scale, so at 10^-1.761 = 1.73% of the chromosome length.
-SXX4Fig
+## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
+Fig1C_base <- PIRA.PCN.estimates %>%
+    make_normalized_PCN_base_plot() +
+    ## draw the segmented regression.
+    geom_line(data = segmented.fit.df.for.S7Fig, color = 'blue')
+
+## Add the marginal histogram
+Fig1C <- ggExtra::ggMarginal(Fig1C_base, margins="x")
+
+## Break down this result by predicted plasmid mobility.
+Fig1D <- PIRA.PCN.estimates %>%
+    filter.correlate.column("PredictedMobility") %>%
+    make_normalized_PCN_base_plot() +
+    ## draw the segmented regression.
+    geom_line(data = normalized.segmented.fit.df, color = 'blue') +
+    facet_wrap(.~PredictedMobility, nrow=3)
+
+## make Fig1CD
+Fig1CD_base <- plot_grid(Fig1C, Fig1D, labels=c('C', 'D'),ncol=1, rel_heights = c(1, 2.5))
+Fig1CD_title <- ggdraw() + draw_label("Plasmid length normalized by chromosome", fontface='bold')
+Fig1CD <- plot_grid(Fig1CD_title, Fig1CD_base, ncol=1, rel_heights=c(0.1, 1))
+
+## make Figure 1.
+Fig1 <- plot_grid(Fig1AB, Fig1CD, ncol=2)
+ggsave("../results/Fig1.pdf", Fig1, height=9, width=8)
+
+## calculate basic statistics about the clusters of small and large plasmids.
+
+small.plasmids <- PIRA.PCN.estimates %>%
+    filter(Cluster == "Cluster_2")
+## mean length of small plasmids is 6212 bp.
+mean(small.plasmids$replicon_length)
+## mean PCN of small plasmids is 28.9.
+mean(small.plasmids$PIRACopyNumber)
+
+
+large.plasmids <- PIRA.PCN.estimates %>%
+    filter(Cluster == "Cluster_1")
+## mean length of large plasmids is 144070 bp.
+mean(large.plasmids$replicon_length)
+## mean PCN of large plasmids is 4.02.
+mean(large.plasmids$PIRACopyNumber)
+
+## examine the tail of very large plasmids that are longer than 500Kbp.
+very.large.plasmids <- large.plasmids %>%
+    filter(replicon_length > 500000)
+
+very.large.plasmids.by.mobility <- very.large.plasmids %>%
+    count(PredictedMobility)
+## Very large plasmids: these are chromids.
+##       conjugative  29
+##       mobilizable  29
+##   non-mobilizable 101
+##              <NA>  32
 
 
 ################################################################################
