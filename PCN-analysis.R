@@ -1726,43 +1726,6 @@ S20Fig <- Fig3B + facet_wrap(.~Annotation)
 ggsave("../results/S20Fig.pdf", S20Fig, height=8, width=8)
 
 
-####################################
-## look at non-coding fractions.
-## CRITICAL TODO: WHY is this so much messier than
-## the coding fraction??
-## Is this real, or does this represent a bug or artifact??
-
-CDS.fraction.data <- CDS.MGE.ARG.fraction.data <- 
-
-
-S21FigA <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = SeqLength_in_Mbp,
-            y = non_CDS_length_in_Mbp,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("replicon length") +
-    ylab("noncoding sequence length") +
-    theme_classic() + guides(color = "none")
-
-
-S21FigB <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = log10(SeqLength),
-            y = log10(non_CDS_length),
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("log10(replicon length)") +
-    ylab("log10(noncoding sequence length)") +
-    theme_classic() + guides(color = "none")
-
-S21Fig <- plot_grid(S21FigA, S21FigB, labels=c("A", "B"))
-## save the plot.
-ggsave("../results/S21Fig.pdf", S21Fig, height=3.5)
-
-
 ########################################################################
 ## Figure 4: plasmid size scales with metabolic capacity.
 
