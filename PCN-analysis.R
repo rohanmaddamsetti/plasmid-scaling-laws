@@ -1843,23 +1843,6 @@ S25Fig <- Fig4 + facet_wrap(.~Annotation)
 ggsave("../results/S25Fig.pdf", S25Fig)
 
 ########################################################################
-## let's compare the fraction of metabolic genes on plasmids to chromosomes,
-## as a control to see whether this result could be caused by recombination of chromosomes onto plasmids
-## (internal control, not in paper)
-
-metabolic.fraction.fig <- metabolic.gene.plasmid.and.chromosome.data %>%
-        ggplot(
-        aes(
-            x = log10(replicon_length),
-            y = metabolic_protein_fraction,
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.5) +
-    xlab("log2(replicon length)") +
-    ylab("log2(fraction of metabolic genes on replicon)") +
-    theme_classic() + guides(color = "none")
-ggsave("../results/metabolic-fraction-fig.pdf", metabolic.fraction.fig)
-
-########################################################################
 ## examine the proportion of ARG-associated genes
 ## found on these plasmids across different ecological categories.
 
