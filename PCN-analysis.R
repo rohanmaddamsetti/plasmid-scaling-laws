@@ -840,21 +840,46 @@ segmented.fit.df = data.frame(
 ## than the second-order polynomial.
 
 ## second-order polynomial fit.
-second.order.plasmid.lm.model <- lm(
+second.order.PCN.lm.model <- lm(
     formula=log10_PIRACopyNumber ~ poly(log10_replicon_length,2,raw=TRUE),
     data=PIRA.PCN.estimates)
-## look at the second order regression.
-summary(second.order.plasmid.lm.model)
 
 ## let's compare these models. The model with lower AIC is better.
 ## The segmented model has the best fit.
 AIC(PCN.lm.model)
-AIC(second.order.plasmid.lm.model)
+AIC(second.order.PCN.lm.model)
 AIC(segmented.PCN.model)
 
-summary(PCN.lm.model)
-summary(second.order.plasmid.lm.model)
-summary(segmented.PCN.model)
+## We will add a segmented regression line to Fig1CD.
+## first make a linear fit model with the normalized replicon length.
+normalized.PCN.lm.model <- lm(log10_PIRACopyNumber ~ log10_normalized_replicon_length, data=PIRA.PCN.estimates)
+
+#fit piecewise regression model based on the normalized.PCN.lm.model.
+segmented.normalized.PCN.model <- segmented(
+    normalized.PCN.lm.model,
+    seg.Z = ~log10_normalized_replicon_length,
+    psi = list(log10_normalized_replicon_length = -1.5))
+
+## the breakpoint is at -1.762. 10^-1.762 = 1.73% of the length of the chromosome.
+summary(segmented.normalized.PCN.model)
+
+## save the segmented regression fit as a dataframe.
+normalized.segmented.fit.df = data.frame(
+    log10_normalized_replicon_length = PIRA.PCN.estimates$log10_normalized_replicon_length,
+    log10_PIRACopyNumber = broken.line(segmented.normalized.PCN.model)$fit)
+
+## compare to a second-order polynomial fit.
+second.order.normalized.PCN.lm.model <- lm(
+    formula=log10_PIRACopyNumber ~ poly(log10_normalized_replicon_length,2,raw=TRUE),
+    data=PIRA.PCN.estimates)
+
+
+## let's compare these models. The model with lower AIC is better.
+## Again, the normalized segmented model has the best fit.
+AIC(normalized.PCN.lm.model)
+AIC(second.order.normalized.PCN.lm.model)
+AIC(segmented.normalized.PCN.model)
+
 
 ################################################################################
 ## Figure 1. Anticorrelation between plasmid length and copy number.
@@ -883,29 +908,11 @@ Fig1AB <- plot_grid(Fig1AB_title, Fig1AB_base, ncol=1, rel_heights=c(0.1, 1))
 ## This figure show that the scaling law holds well, until plasmids reach ~1.73% of the main chromosome in length.
 ## then, copy number is roughly flat.
 
-## add a segmented regression line to S7Fig.
-## first make a linear fit model with the 
-normalized.PCN.lm.model <- lm(log10_PIRACopyNumber ~ log10_normalized_replicon_length, data=PIRA.PCN.estimates)
-
-#fit piecewise regression model based on the normalized.PCN.lm.model.
-segmented.normalized.PCN.model <- segmented(
-    normalized.PCN.lm.model,
-    seg.Z = ~log10_normalized_replicon_length,
-    psi = list(log10_normalized_replicon_length = -1.5))
-
-## the breakpoint is at -1.762. 10^-1.762 = 1.73% of the length of the chromosome.
-summary(segmented.normalized.PCN.model)
-
-## save the segmented regression fit as a dataframe.
-normalized.segmented.fit.df = data.frame(
-    log10_normalized_replicon_length = PIRA.PCN.estimates$log10_normalized_replicon_length,
-    log10_PIRACopyNumber = broken.line(segmented.normalized.PCN.model)$fit)
-
 ## scatterplot of log10(Normalized plasmid copy number) vs. log10(plasmid length).
 Fig1C_base <- PIRA.PCN.estimates %>%
     make_normalized_PCN_base_plot() +
     ## draw the segmented regression.
-    geom_line(data = segmented.fit.df.for.S7Fig, color = 'blue')
+    geom_line(data = normalized.segmented.fit.df, color = 'blue')
 
 ## Add the marginal histogram
 Fig1C <- ggExtra::ggMarginal(Fig1C_base, margins="x")
