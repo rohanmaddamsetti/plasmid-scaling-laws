@@ -1001,7 +1001,7 @@ very.large.plasmids.by.mobility <- very.large.plasmids %>%
 ## Break down by taxonomic group.
 S8Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("TaxonomicGroup") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(. ~ TaxonomicGroup) +
     theme(strip.background = element_blank())
 ## save the plot.
@@ -1012,7 +1012,7 @@ ggsave("../results/S8Fig.pdf", S8Fig, height=5,width=5)
 ## Break down by taxonomic subgroup
 S9Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup) +
     theme(strip.background = element_blank())
 ## save the plot.
@@ -1023,7 +1023,7 @@ ggsave("../results/S9Fig.pdf", S9Fig, width=12)
 ## Break down by genus.
 S10Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("Genus") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(. ~ Genus) +
     theme(strip.background = element_blank())
 ## save the plot.
@@ -1034,7 +1034,7 @@ ggsave("../results/S10Fig.pdf", S10Fig, height=9, width=12)
 ## show PCN distribution over ecology.
 S11Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("Annotation") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(. ~ Annotation) +
     theme(strip.background = element_blank()) +
     geom_hline(yintercept=2,linetype="dashed",color="gray")
@@ -1277,7 +1277,7 @@ MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
 ## plot over rep_type groups.
 SX1Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("rep_type.s.") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(rep_type.s. ~ .)
 ## save the plot
 ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
@@ -1286,7 +1286,7 @@ ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
 ## plot over relaxase_type.
 SX2Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("relaxase_type.s.") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(relaxase_type.s. ~ .)
 ## save the plot
 ggsave("../results/SX2Fig.pdf", SX2Fig,height=12,width=12)
@@ -1295,7 +1295,7 @@ ggsave("../results/SX2Fig.pdf", SX2Fig,height=12,width=12)
 ## plot over mating-pair-formation type.
 SX3Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("mpf_type") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(mpf_type ~ .)
 ## save the plot
 ggsave("../results/SX3Fig.pdf", SX3Fig)
@@ -1304,7 +1304,7 @@ ggsave("../results/SX3Fig.pdf", SX3Fig)
 ## plot over oriT types.
 SX4Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("orit_type.s.") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(orit_type.s. ~ .)
 ## save the plot
 ggsave("../results/SX4Fig.pdf", SX4Fig)
@@ -1313,7 +1313,7 @@ ggsave("../results/SX4Fig.pdf", SX4Fig)
 ## plot over primary cluster type.
 SX5Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("primary_cluster_id") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(primary_cluster_id ~ .)
 ## save the plot
 ggsave("../results/SX5Fig.pdf", SX5Fig, height=12,width=12,limitsize=FALSE)
@@ -1322,7 +1322,7 @@ ggsave("../results/SX5Fig.pdf", SX5Fig, height=12,width=12,limitsize=FALSE)
 ## plot over secondary cluster type.
 SX6Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("secondary_cluster_id") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(secondary_cluster_id ~ .)
 ## save the plot
 ggsave("../results/SX6Fig.pdf", SX6Fig, height=12,width=12,limitsize=FALSE)
@@ -1331,7 +1331,7 @@ ggsave("../results/SX6Fig.pdf", SX6Fig, height=12,width=12,limitsize=FALSE)
 ## plot over predicted host range.
 SX7Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("predicted_host_range_overall_name") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(predicted_host_range_overall_name ~ .)
 ## save the plot
 ggsave("../results/SX7Fig.pdf", SX7Fig, height=12,width=12,limitsize=FALSE)
@@ -1340,7 +1340,7 @@ ggsave("../results/SX7Fig.pdf", SX7Fig, height=12,width=12,limitsize=FALSE)
 ## plot over observed host range.
 SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
     filter.correlate.column("observed_host_range_ncbi_name") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(observed_host_range_ncbi_name ~ .)
 ## save the plot
 ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
@@ -1361,7 +1361,7 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 SX9Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("PTU") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(PTU ~ .)
 ## save the plot
 ggsave("../results/SX9Fig.pdf", SX9Fig,height=8,width=8)
@@ -1371,7 +1371,7 @@ ggsave("../results/SX9Fig.pdf", SX9Fig,height=8,width=8)
 SX10Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("Replicase") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(Replicase ~ .)
 ## save the plot
 ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
@@ -1381,7 +1381,7 @@ ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
 SX11Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(oriT ~ .)
 ## save the plot
 ggsave("../results/SX11Fig.pdf", SX11Fig,height=8,width=8)
@@ -1391,7 +1391,7 @@ ggsave("../results/SX11Fig.pdf", SX11Fig,height=8,width=8)
 SX12Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT_Family") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(oriT_Family ~ .)
 ## save the plot
 ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
@@ -1400,7 +1400,7 @@ ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
 ## plot over oriT_Type
 SX13Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("oriT_Type") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(oriT_Type ~ .)
 ## save the plot
 ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
@@ -1409,7 +1409,7 @@ ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
 ## plot over MOB_Category
 SX14Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("MOB_Category") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(MOB_Category ~ .)
 ## save the plot
 ggsave("../results/SX14Fig.pdf", SX14Fig,height=3.5,width=7)
@@ -1418,7 +1418,7 @@ ggsave("../results/SX14Fig.pdf", SX14Fig,height=3.5,width=7)
 ## plot over MOB
 SX15Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("MOB") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(MOB ~ .)
 ## save the plot
 ggsave("../results/SX15Fig.pdf", SX15Fig,height=3.5,width=7)
@@ -1426,7 +1426,7 @@ ggsave("../results/SX15Fig.pdf", SX15Fig,height=3.5,width=7)
 ## plot over MPF_Category
 SX16Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("MPF_Category") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(MPF_Category ~ .)
 ## save the plot
 ggsave("../results/SX16Fig.pdf", SX16Fig,height=3.5,width=7)
@@ -1435,7 +1435,7 @@ ggsave("../results/SX16Fig.pdf", SX16Fig,height=3.5,width=7)
 ## plot over MPF_Type
 SX17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("MPF_Type") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(MPF_Type ~ .)
 ## save the plot
 ggsave("../results/SX17Fig.pdf", SX17Fig,height=3.5,width=7)
@@ -1444,7 +1444,7 @@ ggsave("../results/SX17Fig.pdf", SX17Fig,height=3.5,width=7)
 ## plot over RC.Rep_Category
 SX18Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("RC.Rep_Category") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(RC.Rep_Category ~ .)
 ## save the plot
 ggsave("../results/SX18Fig.pdf", SX18Fig,height=3.5,width=7)
@@ -1453,7 +1453,7 @@ ggsave("../results/SX18Fig.pdf", SX18Fig,height=3.5,width=7)
 ## plot over Phage.Plasmid
 SX19Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("Phage.Plasmid") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(Phage.Plasmid ~ .)
 ## save the plot
 ggsave("../results/SX19Fig.pdf", SX19Fig,height=3.5,width=7)
@@ -1461,7 +1461,7 @@ ggsave("../results/SX19Fig.pdf", SX19Fig,height=3.5,width=7)
 ## plot over Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless
 SX20Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless ~ .)
 ## save the plot
 ggsave("../results/SX20Fig.pdf", SX20Fig,height=3.5,width=7)
@@ -1469,7 +1469,7 @@ ggsave("../results/SX20Fig.pdf", SX20Fig,height=3.5,width=7)
 ## plot over Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT
 SX21Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT ~ .)
 ## save the plot
 ggsave("../results/SX21Fig.pdf", SX21Fig,height=3.5,width=7)
@@ -1477,7 +1477,7 @@ ggsave("../results/SX21Fig.pdf", SX21Fig,height=3.5,width=7)
 ## plot over pdCONJ
 SX22Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     filter.correlate.column("pdCONJ") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(pdCONJ ~ .)
 ## save the plot
 ggsave("../results/SX22Fig.pdf", SX22Fig,height=3.5,width=7)
@@ -1498,7 +1498,7 @@ PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata <- read.csv(
 ## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
 SX23Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
     filter.correlate.column("MOB") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(MOB ~ .)
 ## save the plot
 ggsave("../results/SX23Fig.pdf", SX23Fig,height=3.5,width=4)
@@ -1507,7 +1507,7 @@ ggsave("../results/SX23Fig.pdf", SX23Fig,height=3.5,width=4)
 ## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
 SX24Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
     filter.correlate.column("PFinder_80") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(PFinder_80 ~ .)
 ## save the plot
 ggsave("../results/SX24Fig.pdf", SX24Fig,height=3.5,width=6)
@@ -1516,7 +1516,7 @@ ggsave("../results/SX24Fig.pdf", SX24Fig,height=3.5,width=6)
 ## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
 SX25Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
     filter.correlate.column("PFinder_95") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(PFinder_80 ~ .)
 ## save the plot
 ggsave("../results/SX25Fig.pdf", SX25Fig,height=3.5,width=6)
@@ -1536,7 +1536,7 @@ PIRA.PCN.for.Coluzzi2022.plasmid.metadata <- read.csv(
 ## plot over Type.
 SX26Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
     filter.correlate.column("Type") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(Type ~ .)
 ## save the plot
 ggsave("../results/SX26Fig.pdf", SX26Fig,height=3.5,width=4)
@@ -1546,7 +1546,7 @@ SX27Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
     ## remove blank entries
     filter(MPF_prots != "") %>%
     filter.correlate.column("MOB_Class") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(MOB_Class ~ .)
 ## save the plot
 ggsave("../results/SX27Fig.pdf", SX27Fig,height=3.5,width=4)
@@ -1556,7 +1556,7 @@ SX28Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
     ## remove blank entries
     filter(MPF_prots != "") %>%
     filter.correlate.column("MPF_prots") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(MPF_prots ~ .)
 ## save the plot
 ggsave("../results/SX28Fig.pdf", SX28Fig,height=3.5,width=12)
@@ -1564,7 +1564,7 @@ ggsave("../results/SX28Fig.pdf", SX28Fig,height=3.5,width=12)
 ## plot over Mobilisation_type.
 SX29Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
     filter.correlate.column("Mobilisation_type") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(Mobilisation_type ~ .)
 ## save the plot
 ggsave("../results/SX29Fig.pdf", SX29Fig,height=3.5,width=4)
@@ -1574,7 +1574,7 @@ SX30Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
     ## remove blank entries
     filter(PlasmidType != "") %>%
     filter.correlate.column("PlasmidType") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(PlasmidType ~ .)
 ## save the plot
 ggsave("../results/SX30Fig.pdf", SX30Fig,height=7,width=7)
@@ -1584,7 +1584,7 @@ SX31Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
     ## remove plasmids with noPTU
     filter(PTU != "noPTU") %>%
     filter.correlate.column("PTU") %>%
-    make_Fig1_base_plot() +
+    make_PCN_base_plot() +
     facet_wrap(PTU ~ .)
 ## save the plot
 ggsave("../results/SX31Fig.pdf", SX31Fig,height=7,width=7)
