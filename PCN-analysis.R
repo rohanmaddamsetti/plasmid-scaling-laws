@@ -1104,21 +1104,20 @@ ggsave("../results/S13Fig.pdf", S13Fig, height=8, width=8)
 
 
 ################################################################################
-################################################################################
-## WORKING HERE ON FIGURE 2 and associated analyses.
+## Examination of Plasmid length and copy number across genetic correlates
+## from plasmid typing metadata.
 
+## Import all the plasmid metadata.
 
+## Get the MOB-Typer results that Hye-in generated.
+## This has 10,261 annotated plasmids with PCN data.
+MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
+    left_join(MOBTyper.results)
 
-
-#######################################################################
-## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
-## have similar sizes and copy numbers.
-
-## Importantly, In part, the clique structure is determined by plasmid size, since large plasmids
-## and small plasmids will have a lot of sequence that is not shared, by definition.
+## Now import all the plasmid metadata from other papers.
 
 ## Get the plasmid data with nice taxonomy and clique annotations from Acman et al. (2020).
-Acman.metadata <- read.csv("../data/Acman2020-SupplementaryData.csv") %>%
+Acman.PTU.data <- read.csv("../data/Acman2020-SupplementaryData.csv") %>%
     ## rename columns as need to merge with PIRA.PCN.estimates,
     ## and to resolve naming conflicts.
     rename(SeqID = Version) %>%
@@ -1135,30 +1134,73 @@ Acman.metadata <- read.csv("../data/Acman2020-SupplementaryData.csv") %>%
     rename(Acman_Length = Length)
 
 
+## Get the plasmid taxonomy unit (PTU) and host range annotations from Redondo-Salvo et al. (2020).
+## when I reformatted these data as CSV, I renamed the AccessionVersion column
+## as "SeqID" to merge with my PIRA estimates.
+RedondoSalvo.PTU.data <- read.csv(
+    "../data/RedondoSalvo2020-SupplementaryData/reformatted-SupplementaryData2.csv")
+
+
+## Analyze PCN in context of the correlates in the Coluzzi et al. (2022) paper.
+## "Evolution of plasmid mobility: origin and fate of conjugative and nonconjugative plasmids"
+## When reformatting, I manually renamed the Acc_No_NCBI to SeqID for the join,
+## and renamed Plasmid to PlasmidType to prevent a column name collision in the join.
+PIRA.PCN.for.Coluzzi2022.plasmid.metadata <- read.csv(
+    "../data/Coluzzi2022-SupplementaryData/reformatted_SupplementaryTable.csv") %>%
+    select(SeqID, Type, MOB_Class, MPF_prots, Mobilisation_type, PlasmidType, PTU) %>%
+    right_join(PIRA.PCN.estimates)
+
+
+## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
+## "Origins of transfer establish networks of functional dependencies for plasmid transfer by conjugation"
+## I renamed the Plasmid column to SeqID by hand when reformatting, for the join to work.
+## I have PCN for 917 plasmids in these data.
+PIRA.PCN.for.AresArroyo2023.data <- read.csv(
+    "../data/Ares-Arroyo2023-SupplementaryData/reformatted_Table_S1.csv") %>%
+    inner_join(PIRA.PCN.estimates)
+
+
+## get the Plasmid Finder results reported in Supplementary Table S5 of Redondo-Salvo et al. (2020).
+## I renamed the AccessionVersion column to SeqID by hand when reformatting, for the join to work.
+PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata <- read.csv(
+    "../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.csv") %>%
+    select(SeqID, MOB, PFinder_80, PFinder_95) %>%
+    right_join(PIRA.PCN.estimates)
+
+
+########################################
+## PTU analysis.
+
+## Figure 2. Plasmid length and copy number are conserved within plasmid taxonomic groups.
+
+## Figure 2AB.
+## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
+## have similar sizes and copy numbers.
+
+## Importantly, In part, the clique structure is determined by plasmid size, since large plasmids
+## and small plasmids will have a lot of sequence that is not shared, by definition.
+
+
 ## inner_join the Acman et al. (2020) metadata to the PIRA PCN estimates.
 ## we have 1,505 plasmids in this dataset.
-Acman.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
-    inner_join(Acman.metadata)
-
-Acman.cliques.with.PIRA.plasmid.estimates <- Acman.typed.PIRA.plasmid.estimates %>%
+Acman.cliques.with.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    inner_join(Acman.PTU.data) %>%
     ## remove NA Cliques.
     filter(!is.na(Clique))
 
 ## sort plasmid cliques by replicon size.
-Acman.mean.clique.sizes <- Acman.cliques.with.PIRA.plasmid.estimates %>%
+Acman.mean.clique.sizes <- Acman.cliques.with.PIRA.PCN.estimates %>%
     group_by(Clique) %>%
     summarize(mean_replicon_length = mean(replicon_length)) %>%
     mutate(Clique_replicon_length_rank = row_number(mean_replicon_length))
 
 ## now merge the ranks back to the original data.
-Acman.cliques.with.PIRA.plasmid.estimates <- Acman.cliques.with.PIRA.plasmid.estimates %>%
-    left_join(Acman.mean.clique.sizes) %>%
-    ## set nice units for linear-scale graphs.
-    mutate(replicon_length_in_Mbp = replicon_length / 1000000)
+Acman.cliques.with.PIRA.PCN.estimates <- Acman.cliques.with.PIRA.PCN.estimates %>%
+    left_join(Acman.mean.clique.sizes)
 
 
 ## Acman cliques show a very limited size distribution.
-Acman.clique.size.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
+Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     ggplot(aes(
         x = Clique_replicon_length_rank,
         y = log10(replicon_length),
@@ -1166,12 +1208,13 @@ Acman.clique.size.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
     scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("Plasmid cliques ranked by length")  +
+    xlab("PTUs ranked by length")  +
     ylab("log10(Length)") +
-    guides(color = "none")
+    guides(color = "none") +
+    ggtitle("PTUs in Acman et al. (2020)")
 
 
-Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
+Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     ggplot(aes(
         x = Clique_replicon_length_rank,
         y = log10(PIRACopyNumber),
@@ -1179,14 +1222,14 @@ Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.plasmid.estimates %>%
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
     scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("Plasmid cliques ranked by length")  +
+    xlab("PTUs ranked by length")  +
     ylab("log10(Copy Number)") +
     guides(color = "none")
 
-Acman.plot <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=2)
+Fig2AB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=2)
 
 
-#######################################################################
+## Figure 2CD.
 ## The same result holds for the PTUs in the Redondo-Salvo et al. (2020) paper.
 
 ## That is, PTUs  in the plasmid similarity network
@@ -1195,32 +1238,9 @@ Acman.plot <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c(
 ## Importantly, PTU structure is in part determined by plasmid size, since large plasmids
 ## and small plasmids will not have a lot of shared sequence, by definition.
 
-
-## when I reformatted these data as CSV, I renamed the AccessionVersion column
-## as "SeqID" to merge with my PIRA estimates.
-RedondoSalvo.data <- read.csv("../data/RedondoSalvo2020-SupplementaryData/reformatted-SupplementaryData2.csv")
-
-## 415 plasmids have copy numbers and host ranges.
-RedondoSalvo.host.range.PIRA.estimates <- PIRA.PCN.estimates %>%
-    inner_join(RedondoSalvo.data) %>%
-    filter(Host_range != "-") %>%
-    filter(!is.na(Host_range))
-
-## This figure shows that copy number / plasmid size does not predict host range.
-## there are narrow and broad host range plasmids both large and small.
-## compare with the MOB-Typer result in this vein.
-RedondoSalvo.host.range.plot <- RedondoSalvo.host.range.PIRA.estimates %>%
-    ggplot(aes(
-        x = log10(replicon_length),
-        y = log10(PIRACopyNumber),
-        color = Host_range)) +
-    geom_point(size=0.2,alpha=0.5) +
-    theme_classic() +
-    facet_wrap(.~Host_range)
-
 ## 453 plasmids have copy numbers and assigned PTUs.
 PTU.PIRA.estimates <- PIRA.PCN.estimates %>%
-    inner_join(RedondoSalvo.data) %>%
+    inner_join(RedondoSalvo.PTU.data) %>%
     filter(PTU != "-") %>%
     filter(!is.na(PTU))
 
@@ -1237,7 +1257,7 @@ PTU.PIRA.estimates <- PTU.PIRA.estimates %>%
     mutate(replicon_length_in_Mbp = replicon_length / 1000000)
 
 
-## Acman cliques show a very limited size distribution.
+## Redondo-Salvo cliques show a very limited size distribution.
 Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
     ggplot(aes(
         x = PTU_replicon_length_rank,
@@ -1264,51 +1284,10 @@ Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
     guides(color = "none")
 
 
-Redondo.Salvo.plot <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('A','B'), nrow=2)
-
-################################################################################
-## examine PCN distribution over all the potential correlates in the MOB-typer results.
-## let's plot PCN estimates across different correlates, as long as there are more than 10 data points in that group.
-
-## This has 10,261 annotated plasmids with PCN data.
-MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
-    left_join(MOBTyper.results)
-
-## plot over rep_type groups.
-SX1Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("rep_type.s.") %>%
-    make_PCN_base_plot() +
-    facet_wrap(rep_type.s. ~ .)
-## save the plot
-ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
+Fig2CD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=2)
 
 
-## plot over relaxase_type.
-SX2Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("relaxase_type.s.") %>%
-    make_PCN_base_plot() +
-    facet_wrap(relaxase_type.s. ~ .)
-## save the plot
-ggsave("../results/SX2Fig.pdf", SX2Fig,height=12,width=12)
-
-
-## plot over mating-pair-formation type.
-SX3Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("mpf_type") %>%
-    make_PCN_base_plot() +
-    facet_wrap(mpf_type ~ .)
-## save the plot
-ggsave("../results/SX3Fig.pdf", SX3Fig)
-
-
-## plot over oriT types.
-SX4Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("orit_type.s.") %>%
-    make_PCN_base_plot() +
-    facet_wrap(orit_type.s. ~ .)
-## save the plot
-ggsave("../results/SX4Fig.pdf", SX4Fig)
-
+## MOB-Typer PTU analysis.
 
 ## plot over primary cluster type.
 SX5Fig <- MOB.typed.PIRA.plasmid.estimates %>%
@@ -1328,35 +1307,6 @@ SX6Fig <- MOB.typed.PIRA.plasmid.estimates %>%
 ggsave("../results/SX6Fig.pdf", SX6Fig, height=12,width=12,limitsize=FALSE)
 
 
-## plot over predicted host range.
-SX7Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("predicted_host_range_overall_name") %>%
-    make_PCN_base_plot() +
-    facet_wrap(predicted_host_range_overall_name ~ .)
-## save the plot
-ggsave("../results/SX7Fig.pdf", SX7Fig, height=12,width=12,limitsize=FALSE)
-
-
-## plot over observed host range.
-SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("observed_host_range_ncbi_name") %>%
-    make_PCN_base_plot() +
-    facet_wrap(observed_host_range_ncbi_name ~ .)
-## save the plot
-ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
-
-
-################################################################################
-## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
-## "Origins of transfer establish networks of functional dependencies for plasmid transfer by conjugation"
-
-## I renamed the Plasmid column to SeqID by hand when reformatting, for the join to work.
-## I have PCN for 917 plasmids in these data.
-PIRA.PCN.for.AresArroyo2023.data <- read.csv(
-    "../data/Ares-Arroyo2023-SupplementaryData/reformatted_Table_S1.csv") %>%
-    inner_join(PIRA.PCN.estimates)
-
-
 ## plot over PTU groups.
 SX9Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     ## only plot groups with more than 10 data points.
@@ -1365,6 +1315,67 @@ SX9Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
     facet_wrap(PTU ~ .)
 ## save the plot
 ggsave("../results/SX9Fig.pdf", SX9Fig,height=8,width=8)
+
+## plot over PTU.
+SX31Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove plasmids with noPTU
+    filter(PTU != "noPTU") %>%
+    filter.correlate.column("PTU") %>%
+    make_PCN_base_plot() +
+    facet_wrap(PTU ~ .)
+## save the plot
+ggsave("../results/SX31Fig.pdf", SX31Fig,height=7,width=7)
+
+
+## plot over PFinder_80 (Replicon typing determined by PlasmidFinder at 80% identity and 60% coverage).
+## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
+SX24Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
+    filter.correlate.column("PFinder_80") %>%
+    make_PCN_base_plot() +
+    facet_wrap(PFinder_80 ~ .)
+## save the plot
+ggsave("../results/SX24Fig.pdf", SX24Fig,height=3.5,width=6)
+
+## plot over PFinder_95 (Replicon typing determined by PlasmidFinder at 95% identity and 60% coverage).
+## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
+SX25Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
+    filter.correlate.column("PFinder_95") %>%
+    make_PCN_base_plot() +
+    facet_wrap(PFinder_80 ~ .)
+## save the plot
+ggsave("../results/SX25Fig.pdf", SX25Fig,height=3.5,width=6)
+
+## plot over Type.
+SX26Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    filter.correlate.column("Type") %>%
+    make_PCN_base_plot() +
+    facet_wrap(Type ~ .)
+## save the plot
+ggsave("../results/SX26Fig.pdf", SX26Fig,height=3.5,width=4)
+
+
+## plot over PlasmidType.
+SX30Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove blank entries
+    filter(PlasmidType != "") %>%
+    filter.correlate.column("PlasmidType") %>%
+    make_PCN_base_plot() +
+    facet_wrap(PlasmidType ~ .)
+## save the plot
+ggsave("../results/SX30Fig.pdf", SX30Fig,height=7,width=7)
+
+
+
+########################################
+## replicase type analysis.
+
+## MOB-typer
+SX1Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+    filter.correlate.column("rep_type.s.") %>%
+    make_PCN_base_plot() +
+    facet_wrap(rep_type.s. ~ .)
+## save the plot
+ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
 
 
 ## plot over Replicases
@@ -1376,6 +1387,148 @@ SX10Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
 ## save the plot
 ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
 
+
+## plot over RC.Rep_Category
+SX18Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("RC.Rep_Category") %>%
+    make_PCN_base_plot() +
+    facet_wrap(RC.Rep_Category ~ .)
+## save the plot
+ggsave("../results/SX18Fig.pdf", SX18Fig,height=3.5,width=7)
+
+
+########################################
+## mobility group (relaxase) type analysis.
+
+## plot over relaxase_type.
+SX2Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+    filter.correlate.column("relaxase_type.s.") %>%
+    make_PCN_base_plot() +
+    facet_wrap(relaxase_type.s. ~ .)
+## save the plot
+ggsave("../results/SX2Fig.pdf", SX2Fig,height=12,width=12)
+
+## plot over MOB (Relaxase MOB family determined by MOBscan).
+## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
+SX23Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
+    filter.correlate.column("MOB") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MOB ~ .)
+## save the plot
+ggsave("../results/SX23Fig.pdf", SX23Fig,height=3.5,width=4)
+
+
+## plot over MOB_Category
+SX14Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MOB_Category") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MOB_Category ~ .)
+## save the plot
+ggsave("../results/SX14Fig.pdf", SX14Fig,height=3.5,width=7)
+
+
+## plot over MOB
+SX15Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MOB") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MOB ~ .)
+## save the plot
+ggsave("../results/SX15Fig.pdf", SX15Fig,height=3.5,width=7)
+
+## plot over Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless
+SX20Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless") %>%
+    make_PCN_base_plot() +
+    facet_wrap(Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless ~ .)
+## save the plot
+ggsave("../results/SX20Fig.pdf", SX20Fig,height=3.5,width=7)
+
+## plot over Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT
+SX21Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT") %>%
+    make_PCN_base_plot() +
+    facet_wrap(Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT ~ .)
+## save the plot
+ggsave("../results/SX21Fig.pdf", SX21Fig,height=3.5,width=7)
+
+## plot over pdCONJ
+SX22Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("pdCONJ") %>%
+    make_PCN_base_plot() +
+    facet_wrap(pdCONJ ~ .)
+## save the plot
+ggsave("../results/SX22Fig.pdf", SX22Fig,height=3.5,width=7)
+
+## plot over MOB_Class.
+SX27Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove blank entries
+    filter(MPF_prots != "") %>%
+    filter.correlate.column("MOB_Class") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MOB_Class ~ .)
+## save the plot
+ggsave("../results/SX27Fig.pdf", SX27Fig,height=3.5,width=4)
+
+## plot over Mobilisation_type.
+SX29Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    filter.correlate.column("Mobilisation_type") %>%
+    make_PCN_base_plot() +
+    facet_wrap(Mobilisation_type ~ .)
+## save the plot
+ggsave("../results/SX29Fig.pdf", SX29Fig,height=3.5,width=4)
+
+
+
+########################################
+## MPF analysis.
+
+## plot over mating-pair-formation type.
+SX3Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+    filter.correlate.column("mpf_type") %>%
+    make_PCN_base_plot() +
+    facet_wrap(mpf_type ~ .)
+## save the plot
+ggsave("../results/SX3Fig.pdf", SX3Fig)
+
+## plot over MPF_Category
+SX16Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MPF_Category") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MPF_Category ~ .)
+## save the plot
+ggsave("../results/SX16Fig.pdf", SX16Fig,height=3.5,width=7)
+
+
+## plot over MPF_Type
+SX17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MPF_Type") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MPF_Type ~ .)
+## save the plot
+ggsave("../results/SX17Fig.pdf", SX17Fig,height=3.5,width=7)
+
+## plot over MPF_prots.
+SX28Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove blank entries
+    filter(MPF_prots != "") %>%
+    filter.correlate.column("MPF_prots") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MPF_prots ~ .)
+## save the plot
+ggsave("../results/SX28Fig.pdf", SX28Fig,height=3.5,width=12)
+
+
+
+########################################
+## oriT analysis.
+
+## plot over oriT types.
+SX4Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+    filter.correlate.column("orit_type.s.") %>%
+    make_PCN_base_plot() +
+    facet_wrap(orit_type.s. ~ .)
+## save the plot
+ggsave("../results/SX4Fig.pdf", SX4Fig)
 
 ## plot over oriT
 SX11Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
@@ -1406,48 +1559,10 @@ SX13Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
 ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
 
 
-## plot over MOB_Category
-SX14Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("MOB_Category") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MOB_Category ~ .)
-## save the plot
-ggsave("../results/SX14Fig.pdf", SX14Fig,height=3.5,width=7)
+
+################################################################################
 
 
-## plot over MOB
-SX15Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("MOB") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MOB ~ .)
-## save the plot
-ggsave("../results/SX15Fig.pdf", SX15Fig,height=3.5,width=7)
-
-## plot over MPF_Category
-SX16Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("MPF_Category") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MPF_Category ~ .)
-## save the plot
-ggsave("../results/SX16Fig.pdf", SX16Fig,height=3.5,width=7)
-
-
-## plot over MPF_Type
-SX17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("MPF_Type") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MPF_Type ~ .)
-## save the plot
-ggsave("../results/SX17Fig.pdf", SX17Fig,height=3.5,width=7)
-
-
-## plot over RC.Rep_Category
-SX18Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("RC.Rep_Category") %>%
-    make_PCN_base_plot() +
-    facet_wrap(RC.Rep_Category ~ .)
-## save the plot
-ggsave("../results/SX18Fig.pdf", SX18Fig,height=3.5,width=7)
 
 
 ## plot over Phage.Plasmid
@@ -1458,139 +1573,55 @@ SX19Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
 ## save the plot
 ggsave("../results/SX19Fig.pdf", SX19Fig,height=3.5,width=7)
 
-## plot over Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless
-SX20Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless") %>%
-    make_PCN_base_plot() +
-    facet_wrap(Traditional_Mobility_Classification_as_pCONJ.pMOB.pMOBless ~ .)
-## save the plot
-ggsave("../results/SX20Fig.pdf", SX20Fig,height=3.5,width=7)
-
-## plot over Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT
-SX21Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT") %>%
-    make_PCN_base_plot() +
-    facet_wrap(Updated_Mobility_Classification_as_pCONJ.pMOB.pOriT.RC.Rep.P.P.pNT ~ .)
-## save the plot
-ggsave("../results/SX21Fig.pdf", SX21Fig,height=3.5,width=7)
-
-## plot over pdCONJ
-SX22Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("pdCONJ") %>%
-    make_PCN_base_plot() +
-    facet_wrap(pdCONJ ~ .)
-## save the plot
-ggsave("../results/SX22Fig.pdf", SX22Fig,height=3.5,width=7)
-
 
 ################################################################################
-## IMPORTANT TODO: validate these MOB-Typer results using the Plasmid Finder results
-## reported in Supplementary Table S5 of the Redondo-Salvo paper.
 
-## I renamed the AccessionVersion column to SeqID by hand when reformatting, for the join to work.
 
-PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata <- read.csv(
-    "../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.csv") %>%
-    select(SeqID, MOB, PFinder_80, PFinder_95) %>%
-    right_join(PIRA.PCN.estimates)
 
-## plot over MOB (Relaxase MOB family determined by MOBscan).
-## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
-SX23Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
-    filter.correlate.column("MOB") %>%
+
+
+
+##########
+## Host range analysis.
+## 415 plasmids have copy numbers and host ranges.
+RedondoSalvo.host.range.PIRA.estimates <- PIRA.PCN.estimates %>%
+    inner_join(RedondoSalvo.data) %>%
+    filter(Host_range != "-") %>%
+    filter(!is.na(Host_range))
+
+## This figure shows that copy number / plasmid size does not predict host range.
+## there are narrow and broad host range plasmids both large and small.
+## compare with the MOB-Typer result in this vein.
+RedondoSalvo.host.range.plot <- RedondoSalvo.host.range.PIRA.estimates %>%
+    ggplot(aes(
+        x = log10(replicon_length),
+        y = log10(PIRACopyNumber),
+        color = Host_range)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    facet_wrap(.~Host_range)
+
+
+## plot over predicted host range.
+SX7Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+    filter.correlate.column("predicted_host_range_overall_name") %>%
     make_PCN_base_plot() +
-    facet_wrap(MOB ~ .)
+    facet_wrap(predicted_host_range_overall_name ~ .)
 ## save the plot
-ggsave("../results/SX23Fig.pdf", SX23Fig,height=3.5,width=4)
+ggsave("../results/SX7Fig.pdf", SX7Fig, height=12,width=12,limitsize=FALSE)
 
-## plot over PFinder_80 (Replicon typing determined by PlasmidFinder at 80% identity and 60% coverage).
-## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
-SX24Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
-    filter.correlate.column("PFinder_80") %>%
+
+## plot over observed host range.
+SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+    filter.correlate.column("observed_host_range_ncbi_name") %>%
     make_PCN_base_plot() +
-    facet_wrap(PFinder_80 ~ .)
+    facet_wrap(observed_host_range_ncbi_name ~ .)
 ## save the plot
-ggsave("../results/SX24Fig.pdf", SX24Fig,height=3.5,width=6)
-
-## plot over PFinder_95 (Replicon typing determined by PlasmidFinder at 95% identity and 60% coverage).
-## See: ../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.xlsx
-SX25Fig <- PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata %>%
-    filter.correlate.column("PFinder_95") %>%
-    make_PCN_base_plot() +
-    facet_wrap(PFinder_80 ~ .)
-## save the plot
-ggsave("../results/SX25Fig.pdf", SX25Fig,height=3.5,width=6)
+ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
 
 
-################################################################################
-## Analyze PCN in context of the correlates in the Coluzzi et al. (2022) paper.
-## "Evolution of plasmid mobility: origin and fate of conjugative and nonconjugative plasmids"
-
-## When reformatting, I manually renamed the Acc_No_NCBI to SeqID for the join,
-## and renamed Plasmid to PlasmidType to prevent a column name collision in the join.
-PIRA.PCN.for.Coluzzi2022.plasmid.metadata <- read.csv(
-    "../data/Coluzzi2022-SupplementaryData/reformatted_SupplementaryTable.csv") %>%
-    select(SeqID, Type, MOB_Class, MPF_prots, Mobilisation_type, PlasmidType, PTU) %>%
-    right_join(PIRA.PCN.estimates)
-
-## plot over Type.
-SX26Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
-    filter.correlate.column("Type") %>%
-    make_PCN_base_plot() +
-    facet_wrap(Type ~ .)
-## save the plot
-ggsave("../results/SX26Fig.pdf", SX26Fig,height=3.5,width=4)
-
-## plot over MOB_Class.
-SX27Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
-    ## remove blank entries
-    filter(MPF_prots != "") %>%
-    filter.correlate.column("MOB_Class") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MOB_Class ~ .)
-## save the plot
-ggsave("../results/SX27Fig.pdf", SX27Fig,height=3.5,width=4)
-
-## plot over MPF_prots.
-SX28Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
-    ## remove blank entries
-    filter(MPF_prots != "") %>%
-    filter.correlate.column("MPF_prots") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MPF_prots ~ .)
-## save the plot
-ggsave("../results/SX28Fig.pdf", SX28Fig,height=3.5,width=12)
-
-## plot over Mobilisation_type.
-SX29Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
-    filter.correlate.column("Mobilisation_type") %>%
-    make_PCN_base_plot() +
-    facet_wrap(Mobilisation_type ~ .)
-## save the plot
-ggsave("../results/SX29Fig.pdf", SX29Fig,height=3.5,width=4)
-
-## plot over PlasmidType.
-SX30Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
-    ## remove blank entries
-    filter(PlasmidType != "") %>%
-    filter.correlate.column("PlasmidType") %>%
-    make_PCN_base_plot() +
-    facet_wrap(PlasmidType ~ .)
-## save the plot
-ggsave("../results/SX30Fig.pdf", SX30Fig,height=7,width=7)
-
-## plot over PTU.
-SX31Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
-    ## remove plasmids with noPTU
-    filter(PTU != "noPTU") %>%
-    filter.correlate.column("PTU") %>%
-    make_PCN_base_plot() +
-    facet_wrap(PTU ~ .)
-## save the plot
-ggsave("../results/SX31Fig.pdf", SX31Fig,height=7,width=7)
 
 
-################################################################################
 ################################################################################
 ################################################################################
 ## Supplementary Figure S14. let's make a histogram of PCN in these data.
