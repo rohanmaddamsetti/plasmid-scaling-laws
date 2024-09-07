@@ -240,6 +240,36 @@ make_normalized_PCN_base_plot <- function(my.PCN.data) {
 }
 
 
+make_CDS_scaling_base_plot <- function(CDS.MGE.ARG.fraction.data) {
+    CDS.MGE.ARG.fraction.data %>%
+        ggplot(
+            aes(
+                x = log10(SeqLength),
+                y = log10(CDS_length),
+                color = SeqType)) +
+        geom_point(size=0.05,alpha=0.5) +
+        xlab("log10(replicon length)") +
+        ylab("log10(coding sequence length)") +
+        theme_classic() +
+        guides(color = "none") +
+        theme(strip.background = element_blank())
+}
+
+
+make_metabolic_scaling_base_plot <- function(metabolic.gene.and.chromosome.data) {
+    metabolic.gene.plasmid.and.chromosome.data %>%
+    ggplot(
+        aes(
+            x = log10(SeqLength),
+            y = log10(metabolic_protein_count),
+            color = SeqType)) +
+    geom_point(size=0.5,alpha=0.5) +
+    xlab("log10(replicon length)") +
+    ylab("log10(metabolic genes)") +
+    theme_classic() + guides(color = "none") +
+        theme(strip.background = element_blank())
+}
+
 ## antibiotic-specific keywords.
 chloramphenicol.keywords <- "chloramphenicol|Chloramphenicol"
 tetracycline.keywords <- "tetracycline efflux|Tetracycline efflux|TetA|Tet(A)|tetA|tetracycline-inactivating"
@@ -381,12 +411,11 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     normalize.plasmid.lengths() %>%
     ## add a column for non_MGE_count.
     mutate(non_MGE_protein_count = CDS_count - MGE_count) %>%
-    ## calculate non-coding regions.
-    mutate(non_CDS_length = SeqLength - CDS_length) %>%
-    ## set nice units for linear-scale graphs.
-    mutate(CDS_length_in_Mbp = CDS_length / 1000000) %>%
-    mutate(non_CDS_length_in_Mbp = non_CDS_length / 1000000) %>%
-    mutate(SeqLength_in_Mbp = SeqLength / 1000000)    
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType))
+
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
 ## Make sure all the genomes in ../results/gbk-annotation are consistent
@@ -1672,33 +1701,19 @@ ggsave("../results/S16Fig.pdf", S16Fig)
 ## Main figure, all the points together.
 ## supplementary figure: same figure, separated by Annotation category.
 
+## Fig 3A: show the combined plot
 Fig3A <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = SeqLength_in_Mbp,
-            y = CDS_length_in_Mbp,
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("replicon length (Mbp)") +
-    ylab("coding sequence length (Mbp)") +
-    theme_classic() + guides(color = "none")
+    make_CDS_scaling_base_plot()
 
 
-Fig3B <- CDS.MGE.ARG.fraction.data %>%
-    ggplot(
-        aes(
-            x = log10(SeqLength),
-            y = log10(CDS_length),
-            color = SeqType)) +
-    geom_point(size=0.05,alpha=0.5) +
-    xlab("log10(replicon length)") +
-    ylab("log10(coding sequence length)") +
-    theme_classic() + guides(color = "none")
+## Fig 3B: show generality over ecology.
+Fig3B <- CDS.MGE.ARG.fraction.data %>%    
+    make_CDS_scaling_base_plot() +
+    facet_wrap(.~Annotation)
 
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c("A", "B"), nrow=1)
-
 ## save the plot.
-ggsave("../results/Fig3.pdf", Fig3, height=3.5, width=9)
+ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
 
 ################################################################################
@@ -1724,13 +1739,6 @@ ggsave("../results/S18Fig.pdf", S18Fig, height=9, width=8)
 S19Fig <- Fig3B + facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
 ggsave("../results/S19Fig.pdf", S19Fig, height=50, width=50, limitsize = FALSE)
-
-
-## Supplementary Figure S20:
-## show generality over ecology.
-S20Fig <- Fig3B + facet_wrap(.~Annotation)
-## save the plot.
-ggsave("../results/S20Fig.pdf", S20Fig, height=8, width=8)
 
 
 ########################################################################
@@ -1769,54 +1777,23 @@ metabolic.gene.chromosome.data <- metabolic.genes.in.chromosomes %>%
 
 ## combine plasmid and chromosome metabolic gene data for Figure 4.
 metabolic.gene.plasmid.and.chromosome.data <- full_join(
-    metabolic.gene.plasmid.data, metabolic.gene.chromosome.data)
+    metabolic.gene.plasmid.data, metabolic.gene.chromosome.data) %>%
+    ## IMPORTANT TODO: filter upstream Annotation so I don't need to do this ad hoc filtering here.
+    filter(!is.na(Annotation))
 
-################ CRITICAL TODO: PUT THE LINEAR PLOT IN SUPPLEMENT
+## Fig4A: show the combined plot
 Fig4A <- metabolic.gene.plasmid.and.chromosome.data %>%
-    ggplot(
-        aes(
-            x = SeqLength_in_Mbp,
-            y = metabolic_protein_count,
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.5) +
-    xlab("replicon_length (Mbp)") +
-    ylab("metabolic genes") +
-    theme_classic() + guides(color = "none")
+    make_metabolic_scaling_base_plot()
 
-Fig4 <- metabolic.gene.plasmid.and.chromosome.data %>%
-    ggplot(
-        aes(
-            x = log10(SeqLength),
-            y = log10(metabolic_protein_count),
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.5) +
-    xlab("log10(replicon length)") +
-    ylab("log10(metabolic genes)") +
-    theme_classic() + guides(color = "none")
+## Fig4B: show generality over ecology.
+Fig4B <- metabolic.gene.plasmid.and.chromosome.data %>%    
+    make_metabolic_scaling_base_plot() +
+    facet_wrap(.~Annotation, nrow=3)
 
+Fig4 <- plot_grid(Fig4A, Fig4B, labels = c('A', 'B'))
 ## save the plot.
-ggsave("../results/Fig4.pdf", Fig4, height=3.5, width=3.5)
+ggsave("../results/Fig4.pdf", Fig4, height=4, width=7.5)
 
-
-## let's normalize plasmid lengths here, just as for Supplementary Figure S7.
-## Hmm... looks like the metabolic scaling law emerges when plasmids reach 20% of chromosome length.
-SXXFig2 <- metabolic.gene.plasmid.and.chromosome.data %>%
-    ggplot(
-        aes(
-            x = log2(normalized_replicon_length),
-            y = log2(metabolic_protein_count),
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.5) +
-    xlab("log2(replicon length)") +
-    ylab("log2(metabolic genes)") +
-    theme_classic() + guides(color = "none") +
-    ## draw a line at 2.5% of chromosome length.
-    geom_vline(xintercept=log2(0.025),linetype="dashed",color="gray") +
-    ## and at 15% of chromosome length
-    geom_vline(xintercept=log2(0.20),linetype="dashed",color="red")
-
-## save the plot.
-ggsave("../results/SXXFig2.pdf", SXXFig2, height=3.5, width=3.5)
 
 ################################################################################
 ## Supplementary Figures S22 through S25. Break down the result in Figure 4 by taxonomy
@@ -1824,28 +1801,30 @@ ggsave("../results/SXXFig2.pdf", SXXFig2, height=3.5, width=3.5)
 
 ## Supplementary Figure S22
 ## Break down by taxonomic group.
-S22Fig <- Fig4 + facet_wrap(. ~ TaxonomicGroup)
+S22Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter.correlate.column("TaxonomicGroup") %>%
+    make_metabolic_gene_base_plot() +
+    facet_wrap(. ~ TaxonomicGroup)
 ## save the plot.
 ggsave("../results/S22Fig.pdf", S22Fig, height=8,width=8)
 
 
 ## Supplementary Figure S23
 ## Break down by taxonomic subgroup
-S23Fig <- Fig4 + facet_wrap(. ~ TaxonomicSubgroup)
+S23Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter.correlate.column("TaxonomicSubgroup") %>%
+    make_metabolic_gene_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup)
 ## save the plot.
 ggsave("../results/S23Fig.pdf", S23Fig, height=9, width=8)
 
 
-## Supplementary FIgure S19
+## Supplementary FIgure S24
 ## Break down by genus.
-S24Fig <- Fig4 + facet_wrap(. ~ Genus, ncol=50)
+S24Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter.correlate.column("Genus") %>%
+    make_metabolic_gene_base_plot() +
+    facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
 ggsave("../results/S24Fig.pdf", S24Fig, height=50, width=50, limitsize = FALSE)
-
-
-## Supplementary Figure S25:
-## show generality over ecology.
-S25Fig <- Fig4 + facet_wrap(.~Annotation)
-## save the plot.
-ggsave("../results/S25Fig.pdf", S25Fig)
 
