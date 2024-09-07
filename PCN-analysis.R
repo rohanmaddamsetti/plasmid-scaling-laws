@@ -1107,7 +1107,6 @@ ggsave("../results/S13Fig.pdf", S13Fig, height=8, width=8)
 ## Examination of Plasmid length and copy number across genetic correlates
 ## from plasmid typing metadata.
 
-## Import all the plasmid metadata.
 
 ## Get the MOB-Typer results that Hye-in generated.
 ## This has 10,261 annotated plasmids with PCN data.
@@ -1141,6 +1140,14 @@ RedondoSalvo.PTU.data <- read.csv(
     "../data/RedondoSalvo2020-SupplementaryData/reformatted-SupplementaryData2.csv")
 
 
+## get the Plasmid Finder results reported in Supplementary Table S5 of Redondo-Salvo et al. (2020).
+## I renamed the AccessionVersion column to SeqID by hand when reformatting, for the join to work.
+PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata <- read.csv(
+    "../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.csv") %>%
+    select(SeqID, MOB, PFinder_80, PFinder_95) %>%
+    right_join(PIRA.PCN.estimates)
+
+
 ## Analyze PCN in context of the correlates in the Coluzzi et al. (2022) paper.
 ## "Evolution of plasmid mobility: origin and fate of conjugative and nonconjugative plasmids"
 ## When reformatting, I manually renamed the Acc_No_NCBI to SeqID for the join,
@@ -1158,14 +1165,6 @@ PIRA.PCN.for.Coluzzi2022.plasmid.metadata <- read.csv(
 PIRA.PCN.for.AresArroyo2023.data <- read.csv(
     "../data/Ares-Arroyo2023-SupplementaryData/reformatted_Table_S1.csv") %>%
     inner_join(PIRA.PCN.estimates)
-
-
-## get the Plasmid Finder results reported in Supplementary Table S5 of Redondo-Salvo et al. (2020).
-## I renamed the AccessionVersion column to SeqID by hand when reformatting, for the join to work.
-PIRA.PCN.for.RedondoSalvo2020.plasmid.metadata <- read.csv(
-    "../data/RedondoSalvo2020-SupplementaryData/reformatted_SupplementaryData5.csv") %>%
-    select(SeqID, MOB, PFinder_80, PFinder_95) %>%
-    right_join(PIRA.PCN.estimates)
 
 
 ########################################
@@ -1288,6 +1287,10 @@ Fig2CD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, lab
 
 
 ## MOB-Typer PTU analysis.
+## from $ mob_cluster -h:
+## the mash distance for assigning primary cluster ID is 0.06 by default
+## the mash distance for assigning secondary cluster IDs is 0.025 by default
+
 
 ## plot over primary cluster type.
 SX5Fig <- MOB.typed.PIRA.plasmid.estimates %>%
@@ -1478,47 +1481,6 @@ SX29Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
 ggsave("../results/SX29Fig.pdf", SX29Fig,height=3.5,width=4)
 
 
-
-########################################
-## MPF analysis.
-
-## plot over mating-pair-formation type.
-SX3Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("mpf_type") %>%
-    make_PCN_base_plot() +
-    facet_wrap(mpf_type ~ .)
-## save the plot
-ggsave("../results/SX3Fig.pdf", SX3Fig)
-
-## plot over MPF_Category
-SX16Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("MPF_Category") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MPF_Category ~ .)
-## save the plot
-ggsave("../results/SX16Fig.pdf", SX16Fig,height=3.5,width=7)
-
-
-## plot over MPF_Type
-SX17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("MPF_Type") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MPF_Type ~ .)
-## save the plot
-ggsave("../results/SX17Fig.pdf", SX17Fig,height=3.5,width=7)
-
-## plot over MPF_prots.
-SX28Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
-    ## remove blank entries
-    filter(MPF_prots != "") %>%
-    filter.correlate.column("MPF_prots") %>%
-    make_PCN_base_plot() +
-    facet_wrap(MPF_prots ~ .)
-## save the plot
-ggsave("../results/SX28Fig.pdf", SX28Fig,height=3.5,width=12)
-
-
-
 ########################################
 ## oriT analysis.
 
@@ -1559,33 +1521,50 @@ SX13Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
 ggsave("../results/SX13Fig.pdf", SX13Fig,height=3.5,width=7)
 
 
+########################################
+## MPF analysis.
 
-################################################################################
-
-
-
-
-## plot over Phage.Plasmid
-SX19Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    filter.correlate.column("Phage.Plasmid") %>%
+## plot over mating-pair-formation type.
+SX3Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+    filter.correlate.column("mpf_type") %>%
     make_PCN_base_plot() +
-    facet_wrap(Phage.Plasmid ~ .)
+    facet_wrap(mpf_type ~ .)
 ## save the plot
-ggsave("../results/SX19Fig.pdf", SX19Fig,height=3.5,width=7)
+ggsave("../results/SX3Fig.pdf", SX3Fig)
+
+## plot over MPF_Category
+SX16Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MPF_Category") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MPF_Category ~ .)
+## save the plot
+ggsave("../results/SX16Fig.pdf", SX16Fig,height=3.5,width=7)
 
 
-################################################################################
+## plot over MPF_Type
+SX17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    filter.correlate.column("MPF_Type") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MPF_Type ~ .)
+## save the plot
+ggsave("../results/SX17Fig.pdf", SX17Fig,height=3.5,width=7)
+
+## plot over MPF_prots.
+SX28Fig <- PIRA.PCN.for.Coluzzi2022.plasmid.metadata %>%
+    ## remove blank entries
+    filter(MPF_prots != "") %>%
+    filter.correlate.column("MPF_prots") %>%
+    make_PCN_base_plot() +
+    facet_wrap(MPF_prots ~ .)
+## save the plot
+ggsave("../results/SX28Fig.pdf", SX28Fig,height=3.5,width=12)
 
 
-
-
-
-
-##########
+##############################
 ## Host range analysis.
 ## 415 plasmids have copy numbers and host ranges.
 RedondoSalvo.host.range.PIRA.estimates <- PIRA.PCN.estimates %>%
-    inner_join(RedondoSalvo.data) %>%
+    inner_join(RedondoSalvo.PTU.data) %>%
     filter(Host_range != "-") %>%
     filter(!is.na(Host_range))
 
