@@ -51,6 +51,11 @@ filter.correlate.column <- function(df, correlate_column_name_string, min_group_
 
 cluster_PIRA.PCN.estimates_by_plasmid_length <- function(PIRA.PCN.estimates) {
     ## Run K-means clustering with K = 2 on the PIRA.PCN.estimates, based solely on replicon_length.
+
+    ## K-means clustering (2 clusters) for large and small plasmids.
+    kmeans_spec <- k_means(num_clusters = 2) %>%
+        set_engine("stats")
+    
     kmeans_fit <- kmeans_spec %>%
         fit(~ log10(replicon_length), data=PIRA.PCN.estimates)
     
@@ -271,25 +276,6 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.and.chromosome.data)
         theme(strip.background = element_blank())
 }
 
-## antibiotic-specific keywords.
-chloramphenicol.keywords <- "chloramphenicol|Chloramphenicol"
-tetracycline.keywords <- "tetracycline efflux|Tetracycline efflux|TetA|Tet(A)|tetA|tetracycline-inactivating"
-MLS.keywords <- "macrolide|lincosamide|streptogramin"
-multidrug.keywords <- "Multidrug resistance|multidrug resistance|antibiotic resistance"
-beta.lactam.keywords <- "lactamase|LACTAMASE|beta-lactam|oxacillinase|carbenicillinase|betalactam\\S*"
-glycopeptide.keywords <- "glycopeptide resistance|VanZ|vancomycin resistance|VanA|VanY|VanX|VanH|streptothricin N-acetyltransferase"
-polypeptide.keywords <- "bacitracin|polymyxin B|phosphoethanolamine transferase|phosphoethanolamine--lipid A transferase"
-diaminopyrimidine.keywords <- "trimethoprim|dihydrofolate reductase|dihydropteroate synthase"
-sulfonamide.keywords <- "sulfonamide|Sul1|sul1|sulphonamide"
-quinolone.keywords <- "quinolone|Quinolone|oxacin|qnr|Qnr"
-aminoglycoside.keywords <- "Aminoglycoside|aminoglycoside|streptomycin|Streptomycin|kanamycin|Kanamycin|tobramycin|Tobramycin|gentamicin|Gentamicin|neomycin|Neomycin|16S rRNA (guanine(1405)-N(7))-methyltransferase|23S rRNA (adenine(2058)-N(6))-methyltransferase|spectinomycin 9-O-adenylyltransferase|Spectinomycin 9-O-adenylyltransferase|Rmt"
-macrolide.keywords <- "macrolide|ketolide|Azithromycin|azithromycin|Clarithromycin|clarithromycin|Erythromycin|erythromycin|Erm|EmtA"
-antimicrobial.keywords <- "QacE|Quaternary ammonium|quaternary ammonium|Quarternary ammonium|quartenary ammonium|fosfomycin|ribosomal protection|rifampin ADP-ribosyl|azole resistance|antimicrob\\S*"
-
-
-antibiotic.keywords <- paste(chloramphenicol.keywords, tetracycline.keywords, MLS.keywords, multidrug.keywords,
-    beta.lactam.keywords, glycopeptide.keywords, polypeptide.keywords, diaminopyrimidine.keywords,
-    sulfonamide.keywords, quinolone.keywords, aminoglycoside.keywords, macrolide.keywords, antimicrobial.keywords, sep="|")
 
 ## require that PCN estimates are supported by a minimum of MIN_READ_COUNT reads per replicon.
 MIN_READ_COUNT <- 10000
@@ -297,10 +283,6 @@ MIN_READ_COUNT <- 10000
 ## To avoid the misidentification of ICEs as conjugative plasmids in chromids or secondary chromosomes,
 ## specifically label megaplasmids or chromids larger than 500 kb (Cite Coluzzi et al. 2022 for this practice).
 PLASMID_LENGTH_THRESHOLD <- 500000
-
-## K-means clustering (2 clusters) for large and small plasmids.
-kmeans_spec <- k_means(num_clusters = 2) %>%
-  set_engine("stats")
 
 
 ################################################################################
@@ -428,9 +410,6 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
 bad.annotations.vec <- unique(filter(CDS.MGE.ARG.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
 bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
 write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS--MGE-ARG-FRACTIONS.csv", row.names=F, quote=F)
-
-## get ARG copy number data-- this is only used for annotating ARGs.
-kallisto.ARG.copy.number.data <- read.csv("../results/kallisto-ARG_copy_numbers.csv")
 
 
 ################################################################################
@@ -817,8 +796,6 @@ PIRA.PCN.estimates <- PIRA.estimates %>%
     ## by splitting the SeqID string on the underscore and taking the second part.
     mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
     left_join(plasmid.mobility.data) %>%
-    ## annotate by presence of ARGs
-    mutate(has.ARG = ifelse(SeqID %in% kallisto.ARG.copy.number.data$SeqID, TRUE, FALSE)) %>%
     ## The next two lines are to get segmented regression working, using library(segmented).
     mutate(log10_replicon_length = log10(replicon_length)) %>%
     mutate(log10_PIRACopyNumber = log10(PIRACopyNumber)) %>%
