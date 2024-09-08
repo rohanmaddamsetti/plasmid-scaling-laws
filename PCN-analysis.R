@@ -1156,7 +1156,7 @@ max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
 ## This is obviously statistically significant.
 binom.test(x=33,n=1081, p = (1022/3458))
 
-Fig2 <- max.and.min.plasmid.lengths %>%
+Fig2_base <- max.and.min.plasmid.lengths %>%
     ## CRITICAL TODO: FIGURE OUT WHY THIS OUTLIER IS IN THESE DATA!
     filter(max_PCN < 1000) %>%
         ggplot(aes(
@@ -1173,8 +1173,11 @@ Fig2 <- max.and.min.plasmid.lengths %>%
     guides(color = "none") +
     ggtitle("All genomes containing plasmids")
 
+## Add the marginal histograms.
+Fig2 <- ggExtra::ggMarginal(Fig2_base, margins="both") 
+
 ## save the plot.
-ggsave("../results/Fig2.pdf", Fig2, height=3.5, width=3.5)
+ggsave("../results/Fig2.pdf", Fig2, height=4, width=4)
 
 
 ################################################################################
