@@ -1105,13 +1105,30 @@ group_by(AnnotationAccession) %>%
     summarise(max_PCN = max(PIRACopyNumber))
 
 max.and.min.plasmid.lengths <- max.plasmid.lengths %>%
-    inner_join(min_plasmid_lengths) %>%
+    inner_join(min.plasmid.lengths) %>%
     inner_join(max.PCNs)
+
+## 10261 plasmids
+PIRA.PCN.estimates %>% nrow()
+
+## these 10,261 plasmids are found in 3,458 genomes.
+PIRA.PCN.estimates %>%
+    count(AnnotationAccession) %>%
+    nrow()
+
+##3458 genomes containing plasmids
+nrow(max.and.min.plasmid.lengths)
+
+## only 1022 of these have plasmids found by themselves: 1022/3458 = 29.5%
+max.and.min.plasmid.lengths %>%
+    filter(max_replicon_length == min_replicon_length) %>%
+    nrow()
+
 
 max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids <- max.and.min.plasmid.lengths %>%
     filter(max_PCN > 10)
 
-##1081 multicopy plasmids here
+##1081 genomes containing multicopy plasmids here
 nrow(max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids)
 
 ## only 33 are found by themselves: 33/1081 = 2.2%
@@ -1119,23 +1136,26 @@ max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
     filter(max_replicon_length == min_replicon_length) %>%
     nrow()
 
+## This is obviously statistically significant.
+binom.test(x=33,n=1081, p = (1022/3458))
 
-Fig2 <- max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
+Fig2 <- max.and.min.plasmid.lengths %>%
     ## CRITICAL TODO: FIGURE OUT WHY THIS OUTLIER IS IN THESE DATA!
     filter(max_PCN < 1000) %>%
-    ggplot(aes(
+        ggplot(aes(
         x = log10(max_replicon_length),
         y = log10(min_replicon_length),
         color = log10(max_PCN))) +
     geom_point(size=0.5) +
     theme_classic() +
-    scale_color_viridis() +
+    scale_color_viridis(option="magma") +
     geom_abline(linetype="dashed", color="light gray",size=0.2) +
     xlab("log10(length of largest plasmid)") +
     ylab("log10(length of smallest plasmid)") +
     labs("log10(maximum plasmid copy number)") +
     guides(color = "none") +
-    ggtitle("Genomes containing plasmids\nwith copy number > 10")
+    ggtitle("All genomes containing plasmids")
+
 ## save the plot.
 ggsave("../results/Fig2.pdf", Fig2, height=3.5, width=3.5)
 
