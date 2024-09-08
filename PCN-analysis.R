@@ -24,6 +24,7 @@ library(cowplot)
 library(tidyclust)
 library(ggExtra)
 library(ggrepel)
+library(viridis)
 
 
 ################################################################################
@@ -994,56 +995,56 @@ very.large.plasmids.by.mobility <- very.large.plasmids %>%
 
 
 ################################################################################
-## Supplementary Figures S8 through S11. Break down the result in Figure 1 by taxonomy
+## Supplementary Figures S7 through S10. Break down the result in Figure 1 by taxonomy
 ## and ecological category to show universality of the PCN vs. length anticorrelation.
 
-## Supplementary Figure S8. 
+## Supplementary Figure S7. 
 ## Break down by taxonomic group.
-S8Fig <- PIRA.PCN.estimates %>%
+S7Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("TaxonomicGroup") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ TaxonomicGroup) +
     theme(strip.background = element_blank())
 ## save the plot.
-ggsave("../results/S8Fig.pdf", S8Fig, height=5,width=5)
+ggsave("../results/S7Fig.pdf", S7Fig, height=5,width=5)
 
 
-## Supplementary Figure S9
+## Supplementary Figure S8
 ## Break down by taxonomic subgroup
-S9Fig <- PIRA.PCN.estimates %>%
+S8Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
     make_PCN_base_plot() +
-    facet_wrap(. ~ TaxonomicSubgroup) +
+    facet_wrap(. ~ TaxonomicSubgroup, ncol=3) +
     theme(strip.background = element_blank())
 ## save the plot.
-ggsave("../results/S9Fig.pdf", S9Fig, width=12)
+ggsave("../results/S8Fig.pdf", S8Fig, width=8)
 
 
-## Supplementary FIgure S10
+## Supplementary FIgure S9
 ## Break down by genus.
-S10Fig <- PIRA.PCN.estimates %>%
+S9Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("Genus") %>%
     make_PCN_base_plot() +
-    facet_wrap(. ~ Genus) +
+    facet_wrap(. ~ Genus, ncol = 6) +
     theme(strip.background = element_blank())
 ## save the plot.
-ggsave("../results/S10Fig.pdf", S10Fig, height=9, width=12)
+ggsave("../results/S9Fig.pdf", S9Fig, height=11, width=8)
 
 
-## Supplementary Figure S11:
+## Supplementary Figure S10:
 ## show PCN distribution over ecology.
-S11Fig <- PIRA.PCN.estimates %>%
+S10Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("Annotation") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ Annotation) +
     theme(strip.background = element_blank()) +
     geom_hline(yintercept=2,linetype="dashed",color="gray")
 ## save the plot.
-ggsave("../results/S11Fig.pdf", S11Fig, height=8, width=8)
+ggsave("../results/S10Fig.pdf", S10Fig, height=8, width=8)
 
 
 ################################################################################
-## Supplementary Figure S12. Inverse relationship between plasmid size and copy number
+## Supplementary Figure S11. Inverse relationship between plasmid size and copy number
 ## in data from Yao et al. (2022) Supplementary Table S4
 ## and Bethke et al. (2023) Supplementary Table S1.
 
@@ -1061,7 +1062,7 @@ PIRA.Bethke.Yao.data <- PIRA.PCN.estimates %>%
 
 
 ## scatterplot of log10(Plasmid copy number) vs. log10(Plasmid length).
-S12Fig <- ggplot(PIRA.Bethke.Yao.data,
+S11Fig <- ggplot(PIRA.Bethke.Yao.data,
                         aes(x=log10(replicon_length),
                             y=log10(CopyNumber),
                             color=Reference)) +
@@ -1074,10 +1075,10 @@ S12Fig <- ggplot(PIRA.Bethke.Yao.data,
     theme(legend.position="top")
   
 ## save the plot.
-ggsave("../results/S12Fig.pdf", S12Fig, height=4,width=5)
+ggsave("../results/S11Fig.pdf", S11Fig, height=4,width=5)
 
 ################################################################################
-## Supplementary Figure S13.
+## Supplementary Figure S12.
 ## The PCN vs. plasmid length anticorrelation holds within individual genomes.
 
 within.genome.correlation.data.df <- PIRA.PCN.estimates %>%
@@ -1086,7 +1087,7 @@ within.genome.correlation.data.df <- PIRA.PCN.estimates %>%
         replicons_within_genome = n(),
         correlation = cor(log10(replicon_length), log10(PIRACopyNumber)))
 
-S13Fig <- within.genome.correlation.data.df %>%
+S12Fig <- within.genome.correlation.data.df %>%
     ## turn replicons_within_genome into a discrete factor for plotting.
     mutate(replicons_within_genome = as.factor(replicons_within_genome)) %>%
     ggplot(aes(x = replicons_within_genome, y = correlation)) +
@@ -1100,13 +1101,71 @@ S13Fig <- within.genome.correlation.data.df %>%
     ) +
     xlab("replicons within genome")
 
-ggsave("../results/S13Fig.pdf", S13Fig, height=8, width=8)
+ggsave("../results/S12Fig.pdf", S12Fig, height=8, width=8)
+
+
+################################################################################
+## Figure 2. Small multicopy plasmid almost always coexist with large low-copy plasmids.
+## look at the joint distribution of largest plasmid per cell and smallest plasmid per cell.
+## Does this give any insight into how small plasmids persist?
+## there is data suggesting that plasmids tend to live as "packs" in cells.
+## This is really quite an interesting result.
+## relevant recent paper: "A cryptic plasmid is among the most numerous genetic elements in the human gut"
+## in Cell.
+
+
+## Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
+max.plasmid.lengths <- PIRA.PCN.estimates %>%
+group_by(AnnotationAccession) %>%
+    summarise(max_replicon_length = max(replicon_length))
+
+min.plasmid.lengths <- PIRA.PCN.estimates %>%
+group_by(AnnotationAccession) %>%
+    summarise(min_replicon_length = min(replicon_length))
+
+max.PCNs <- PIRA.PCN.estimates %>%
+group_by(AnnotationAccession) %>%
+    summarise(max_PCN = max(PIRACopyNumber))
+
+max.and.min.plasmid.lengths <- max.plasmid.lengths %>%
+    inner_join(min_plasmid_lengths) %>%
+    inner_join(max.PCNs)
+
+max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids <- max.and.min.plasmid.lengths %>%
+    filter(max_PCN > 10)
+
+##1081 multicopy plasmids here
+nrow(max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids)
+
+## only 33 are found by themselves: 33/1081 = 2.2%
+max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
+    filter(max_replicon_length == min_replicon_length) %>%
+    nrow()
+
+
+Fig2 <- max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
+    ## CRITICAL TODO: FIGURE OUT WHY THIS OUTLIER IS IN THESE DATA!
+    filter(max_PCN < 1000) %>%
+    ggplot(aes(
+        x = log10(max_replicon_length),
+        y = log10(min_replicon_length),
+        color = log10(max_PCN))) +
+    geom_point(size=0.5) +
+    theme_classic() +
+    scale_color_viridis() +
+    geom_abline(linetype="dashed", color="light gray",size=0.2) +
+    xlab("log10(length of largest plasmid)") +
+    ylab("log10(length of smallest plasmid)") +
+    labs("log10(maximum plasmid copy number)") +
+    guides(color = "none") +
+    ggtitle("Genomes containing plasmids\nwith copy number > 10")
+## save the plot.
+ggsave("../results/Fig2.pdf", Fig2, height=3.5, width=3.5)
 
 
 ################################################################################
 ## Examination of Plasmid length and copy number across genetic correlates
 ## from plasmid typing metadata.
-
 
 ## Get the MOB-Typer results that Hye-in generated.
 ## This has 10,261 annotated plasmids with PCN data.
@@ -1168,11 +1227,9 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 
 
 ########################################
-## PTU analysis.
+## Plasmid length and copy number are conserved within plasmid taxonomic groups.
 
-## Figure 2. Plasmid length and copy number are conserved within plasmid taxonomic groups.
-
-## Figure 2AB.
+## Supplementary Figure S14AB
 ## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
 ## have similar sizes and copy numbers.
 
@@ -1394,7 +1451,6 @@ RedondoSalvo.host.range.plot <- RedondoSalvo.host.range.PIRA.estimates %>%
 
 
 
-################################################################################
 ################################################################################
 ## Supplementary Figure S14. let's make a histogram of PCN in these data.
 
@@ -1630,4 +1686,5 @@ S24Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
 ggsave("../results/S24Fig.pdf", S24Fig, height=50, width=50, limitsize = FALSE)
+
 
