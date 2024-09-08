@@ -67,7 +67,7 @@ rank.correlate.column <- function(df, correlate_column_name_string) {
     df %>%
         inner_join(correlate.column.ranks) %>%
         ## and order the column by replicon length.
-        mutate(correlate_column_name = fct_reorder(!!correlate_column_name, rank))
+        mutate(!!correlate_column_name := fct_reorder(!!correlate_column_name, rank))
 }
 
 
@@ -286,15 +286,16 @@ make_CDS_scaling_base_plot <- function(CDS.MGE.ARG.fraction.data) {
 
 make_metabolic_scaling_base_plot <- function(metabolic.gene.and.chromosome.data) {
     metabolic.gene.plasmid.and.chromosome.data %>%
-    ggplot(
-        aes(
-            x = log10(SeqLength),
-            y = log10(metabolic_protein_count),
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.5) +
-    xlab("log10(replicon length)") +
-    ylab("log10(metabolic genes)") +
-    theme_classic() + guides(color = "none") +
+        ggplot(
+            aes(
+                x = log10(SeqLength),
+                y = log10(metabolic_protein_count),
+                color = SeqType)) +
+        geom_point(size=0.5,alpha=0.5) +
+        xlab("log10(replicon length)") +
+        ylab("log10(metabolic genes)") +
+        theme_classic() +
+        guides(color = "none") +
         theme(strip.background = element_blank())
 }
 
@@ -413,13 +414,7 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
     ## and join.
     left_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
-    normalize.plasmid.lengths() %>%
-    ## add a column for non_MGE_count.
-    mutate(non_MGE_protein_count = CDS_count - MGE_count) %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
-    mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType))
+    normalize.plasmid.lengths()
 
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
@@ -1260,23 +1255,12 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 ## we have 1,505 plasmids in this dataset.
 Acman.cliques.with.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     inner_join(Acman.PTU.data) %>%
-    ## remove NA Cliques.
-    filter(!is.na(Clique))
-
-## sort plasmid cliques by replicon size.
-Acman.mean.clique.sizes <- Acman.cliques.with.PIRA.PCN.estimates %>%
-    group_by(Clique) %>%
-    summarize(mean_replicon_length = mean(replicon_length)) %>%
-    mutate(Clique_replicon_length_rank = row_number(mean_replicon_length))
-
-## now merge the ranks back to the original data.
-Acman.cliques.with.PIRA.PCN.estimates <- Acman.cliques.with.PIRA.PCN.estimates %>%
-    inner_join(Acman.mean.clique.sizes)
+    rank.correlate.column("Clique")
 
 ## Acman cliques show a very limited size distribution.
 Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     ggplot(aes(
-        x = Clique_replicon_length_rank,
+        x = rank,
         y = log10(replicon_length),
         color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1290,7 +1274,7 @@ Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
 
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     ggplot(aes(
-        x = Clique_replicon_length_rank,
+        x = rank,
         y = log10(PIRACopyNumber),
         color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1315,23 +1299,12 @@ S13FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A
 ## 453 plasmids have copy numbers and assigned PTUs.
 PTU.PIRA.estimates <- PIRA.PCN.estimates %>%
     inner_join(RedondoSalvo.PTU.data) %>%
-    filter(PTU != "-") %>%
-    filter(!is.na(PTU))
-
-## sort PTUs by replicon size.
-PTU.mean.sizes <- PTU.PIRA.estimates %>%
-    group_by(PTU) %>%
-    summarize(mean_replicon_length = mean(replicon_length)) %>%
-    mutate(PTU_replicon_length_rank = row_number(mean_replicon_length))
-
-## now merge the ranks back to the original data.
-PTU.PIRA.estimates <- PTU.PIRA.estimates %>%
-    inner_join(PTU.mean.sizes)
+    rank.correlate.column("PTU")
 
 ## Redondo-Salvo cliques show a very limited size distribution.
 Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
     ggplot(aes(
-        x = PTU_replicon_length_rank,
+        x = rank,
         y = log10(replicon_length),
         color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1345,7 +1318,7 @@ Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
 
 Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
     ggplot(aes(
-        x = PTU_replicon_length_rank,
+        x = rank,
         y = log10(PIRACopyNumber),
     color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1367,23 +1340,13 @@ ggsave("../results/S13Fig.pdf", S13Fig, height=5, width=7)
 ## from $ mob_cluster -h:
 ## the mash distance for assigning the primary cluster ID is 0.06 by default.
 
-## sort PTU by replicon size.
-MOB.Typer.PTU.mean.sizes <- MOB.typed.PIRA.PCN.estimates %>%
-    ## VERY IMPORTANT: remove unannotated primary_cluster_ids
-    filter(!is.na(primary_cluster_id)) %>%
-    filter(primary_cluster_id != '-') %>%
-    group_by(primary_cluster_id) %>%
-    summarize(mean_replicon_length = mean(replicon_length)) %>%
-    mutate(PTU_replicon_length_rank = row_number(mean_replicon_length))
-
-## make a new dataframe that merges the ranks with the original data.
 MOB.typed.PIRA.clusters <- MOB.typed.PIRA.PCN.estimates %>%
-    inner_join(MOB.Typer.PTU.mean.sizes)
-
+    rank.correlate.column("primary_cluster_id")
+    
 ## Make the plots.
 MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
     ggplot(aes(
-        x = PTU_replicon_length_rank,
+        x = rank,
         y = log10(replicon_length),
         color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1397,7 +1360,7 @@ MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
 
 MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
     ggplot(aes(
-        x = PTU_replicon_length_rank,
+        x = rank,
         y = log10(PIRACopyNumber),
     color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1410,23 +1373,13 @@ MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
 S14FigAB <- plot_grid(MOB.Typer.PTU.size.plot, MOB.Typer.PTU.PCN.plot, labels=c('A','B'), nrow=2)
 
 ## The same thing holds for rep protein typing.
-## sort rep types by replicon size.
-MOB.Typer.reptype.ranks <- MOB.typed.PIRA.PCN.estimates %>%
-    ## VERY IMPORTANT: remove unannotated rep_types.s. in the next two lines.
-    filter(!is.na(rep_type.s.)) %>%
-    filter(rep_type.s. != '-') %>%
-    group_by(rep_type.s.) %>%
-    summarize(mean_replicon_length = mean(replicon_length)) %>%
-    mutate(reptype_replicon_length_rank = row_number(mean_replicon_length))
-
-## now merge the ranks with the original data for the figure data.
 MOB.typed.PIRA.reptypes <- MOB.typed.PIRA.PCN.estimates %>%
-    inner_join(MOB.Typer.reptype.ranks)
+    rank.correlate.column("rep_type.s.")
 
 ## MOB-typer Rep protein type classes by length
 MOB.Typer.reptype.size.plot <- MOB.typed.PIRA.reptypes %>%
     ggplot(aes(
-        x = reptype_replicon_length_rank,
+        x = rank,
         y = log10(replicon_length),
     color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1441,7 +1394,7 @@ MOB.Typer.reptype.size.plot <- MOB.typed.PIRA.reptypes %>%
 ## MOB-typer Rep protein type classes by PCN
 MOB.Typer.reptype.PCN.plot <- MOB.typed.PIRA.reptypes %>%
     ggplot(aes(
-        x = reptype_replicon_length_rank,
+        x = rank,
         y = log10(PIRACopyNumber),
         color = Cluster)) +
     geom_point(size=0.2,alpha=0.5) +
@@ -1462,20 +1415,8 @@ ggsave("../results/S14Fig.pdf", S14Fig)
 ## Supplementary Figure S15.
 ## plot over Rep protein types in Ares-Arroyo et al. (2023).
 
-## sort rep types by replicon size.
-Ares.Arroyo.reptype.ranks <- PIRA.PCN.for.AresArroyo2023.data %>%
-    group_by(Replicase) %>%
-    summarize(mean_replicon_length = mean(replicon_length)) %>%
-    mutate(rank = row_number(mean_replicon_length))
-
-## now merge the ranks with the original data for the figure data.
-PIRA.PCN.for.AresArroyo2023.data <- PIRA.PCN.for.AresArroyo2023.data %>%
-    inner_join(Ares.Arroyo.reptype.ranks) %>%
-    ## rank Replicase column by the ranks.
-    mutate(Replicase = fct_reorder(Replicase, rank))
-
-
 S15Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    rank.correlate.column("Replicase") %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("Replicase") %>%
     make_PCN_base_plot() +
@@ -1483,26 +1424,12 @@ S15Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
 ## save the plot
 ggsave("../results/S15Fig.pdf", S15Fig,height=8,width=8)
 
-
 ########################################
 ## Supplementary Figure S16. mobility group (relaxase) type analysis.
 
-## sort relaxase types by replicon size.
-MOB.typer.relaxase.ranks <- MOB.typed.PIRA.PCN.estimates %>%
-    filter(!is.na(relaxase_type.s.)) %>%
-    filter(relaxase_type.s. != "-") %>%
-    group_by(relaxase_type.s.) %>%
-    summarize(mean_replicon_length = mean(replicon_length)) %>%
-    mutate(rank = row_number(mean_replicon_length))
-
-## now merge the ranks with the original data for the figure data.
-S16Fig_data <- MOB.typed.PIRA.PCN.estimates %>%
-    left_join(MOB.typer.relaxase.ranks) %>%
-    ## rank relaxase_type.s. column by the ranks.
-    mutate(relaxase_type.s. = fct_reorder(relaxase_type.s., rank))
-
 ## plot over relaxase_type.
-S16Fig <- S16Fig_data %>%
+S16Fig <- MOB.typed.PIRA.PCN.estimates %>%
+    rank.correlate.column("relaxase_type.s.") %>%
     filter.correlate.column("relaxase_type.s.") %>%
     make_PCN_base_plot() +
     facet_wrap(relaxase_type.s. ~ .) +
@@ -1514,27 +1441,28 @@ ggsave("../results/S16Fig.pdf", S16Fig)
 ########################################
 ## oriT analysis.
 
-
 ## plot over oriT
-SX11Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+S17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    rank.correlate.column("oriT") %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT") %>%
     make_PCN_base_plot() +
-    facet_wrap(oriT ~ .)
+    facet_wrap(oriT ~ .) +
+    ggtitle("oriT annotated by Ares-Arroyo et al. (2023)")
 ## save the plot
-ggsave("../results/SX11Fig.pdf", SX11Fig,height=8,width=8)
+ggsave("../results/S17Fig.pdf", S17Fig)
 
 
 ## plot over oriT_Family
-SX12Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+S18Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+    rank.correlate.column("oriT_Family") %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT_Family") %>%
     make_PCN_base_plot() +
-    facet_wrap(oriT_Family ~ .)
+    facet_wrap(oriT_Family ~ .) +
+    ggtitle("oriT family annotated by Ares-Arroyo et al. (2023)")
 ## save the plot
-ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
-
-
+ggsave("../results/S18Fig.pdf", S18Fig,height=8,width=8)
 
 ##############################
 ## Host range analysis.
@@ -1542,12 +1470,14 @@ ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
 ## plot over observed host range.
 ## This is: Taxon name of convergence of plasmids in MOB-suite plasmid DB
 ## See documentation here: https://github.com/phac-nml/mob-suite 
-SX8Fig <- MOB.typed.PIRA.PCN.estimates %>%
+S19Fig <- MOB.typed.PIRA.PCN.estimates %>%
+    rank.correlate.column("observed_host_range_ncbi_name") %>%
     filter.correlate.column("observed_host_range_ncbi_name") %>%
     make_PCN_base_plot() +
-    facet_wrap(observed_host_range_ncbi_name ~ .)
+    facet_wrap(observed_host_range_ncbi_name ~ ., ncol=3) +
+    ggtitle("Host range annotated by MOB-Typer")
 ## save the plot
-ggsave("../results/SX8Fig.pdf", SX8Fig, height=12,width=12,limitsize=FALSE)
+ggsave("../results/S19Fig.pdf", S19Fig, height=12,width=10,limitsize=FALSE)
 
 
 ## 415 plasmids have copy numbers and host ranges.
@@ -1559,16 +1489,15 @@ RedondoSalvo.host.range.PIRA.estimates <- PIRA.PCN.estimates %>%
 ## This figure shows that copy number / plasmid size does not predict host range.
 ## there are narrow and broad host range plasmids both large and small.
 ## compare with the MOB-Typer result in this vein.
-RedondoSalvo.host.range.plot <- RedondoSalvo.host.range.PIRA.estimates %>%
+S20Fig <- RedondoSalvo.host.range.PIRA.estimates %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
         color = Host_range)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=1,alpha=0.5) +
     theme_classic()
-
-
-RedondoSalvo.host.range.plot
+## save the plot
+ggsave("../results/S20Fig.pdf", S20Fig, height=3.5, width=6)
 
 
 ################################################################################
@@ -1669,9 +1598,10 @@ S23Fig <- DNA.content.data %>%
         y = log10(PlasmidDNAContent))) +
     geom_point(size=0.2) +
     facet_wrap(. ~ Annotation) +
-    theme_classic()
+    theme_classic() +
+    theme(strip.background = element_blank())
 ## save the plot
-ggsave("../results/S23Fig.pdf", S23Fig)
+ggsave("../results/S23Fig.pdf", S23Fig, height=5)
 
 
 ###################################################################################
@@ -1683,7 +1613,6 @@ ggsave("../results/S23Fig.pdf", S23Fig)
 ## Fig 3A: show the combined plot
 Fig3A <- CDS.MGE.ARG.fraction.data %>%
     make_CDS_scaling_base_plot()
-
 
 ## Fig 3B: show generality over ecology.
 Fig3B <- CDS.MGE.ARG.fraction.data %>%    
@@ -1701,23 +1630,33 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
 ## Supplementary Figure S24.
 ## Break down by taxonomic group.
-S24Fig <- Fig3B + facet_wrap(. ~ TaxonomicGroup)
+S24Fig <- CDS.MGE.ARG.fraction.data %>%
+    filter.correlate.column("TaxonomicGroup") %>%
+    make_CDS_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicGroup)
 ## save the plot.
-ggsave("../results/S24Fig.pdf", S24Fig, height=8,width=8)
+ggsave("../results/S24Fig.pdf", S24Fig, height=5)
 
 
 ## Supplementary Figure S25
 ## Break down by taxonomic subgroup
-S25Fig <- Fig3B + facet_wrap(. ~ TaxonomicSubgroup)
+S25Fig <- CDS.MGE.ARG.fraction.data %>%
+    filter.correlate.column("TaxonomicSubgroup") %>%
+    make_CDS_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup)
 ## save the plot.
-ggsave("../results/S25Fig.pdf", S25Fig, height=9, width=8)
+ggsave("../results/S25Fig.pdf", S25Fig, height=6, width=10)
 
 
 ## Supplementary FIgure S26
 ## Break down by genus.
-S26Fig <- Fig3B + facet_wrap(. ~ Genus, ncol=50)
+S26Fig <- CDS.MGE.ARG.fraction.data %>%
+    filter.correlate.column("Genus") %>%
+    make_CDS_scaling_base_plot() +
+    facet_wrap(. ~ Genus, ncol=12)
+
 ## save the plot.
-ggsave("../results/S26Fig.pdf", S26Fig, height=50, width=50, limitsize = FALSE)
+ggsave("../results/S26Fig.pdf", S26Fig, height=15, width = 14)
 
 
 ########################################################################
@@ -1737,13 +1676,8 @@ metabolic.gene.plasmid.data <- plasmid.length.data %>%
     left_join(plasmid.annotation.data) %>%
     ## get CDS data for each genome.
     left_join(CDS.MGE.ARG.fraction.data) %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
-    mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType)) %>%
     ## set NA values of metabolic_protein_count to zeros.
-    mutate(metabolic_protein_count = ifelse(is.na(metabolic_protein_count), 0, metabolic_protein_count)) %>%
-    mutate(metabolic_protein_fraction = metabolic_protein_count / protein_count)
+    mutate(metabolic_protein_count = ifelse(is.na(metabolic_protein_count), 0, metabolic_protein_count))
 
 ## join chromosome.length.data to metabolic.genes.in.chromosomes,
 ## since only 100 genomes were examined.
@@ -1751,14 +1685,18 @@ metabolic.gene.plasmid.data <- plasmid.length.data %>%
 metabolic.gene.chromosome.data <- metabolic.genes.in.chromosomes %>%
     left_join(replicon.length.data) %>%
     ## get CDS data for each genome.
-    left_join(CDS.MGE.ARG.fraction.data) %>%
-    mutate(metabolic_protein_fraction = metabolic_protein_count / protein_count)
+    left_join(CDS.MGE.ARG.fraction.data)
 
 ## combine plasmid and chromosome metabolic gene data for Figure 4.
-metabolic.gene.plasmid.and.chromosome.data <- full_join(
-    metabolic.gene.plasmid.data, metabolic.gene.chromosome.data) %>%
+metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.data %>%
+    full_join(metabolic.gene.chromosome.data) %>%
     ## IMPORTANT TODO: filter upstream Annotation so I don't need to do this ad hoc filtering here.
-    filter(!is.na(Annotation))
+    filter(!is.na(Annotation)) %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType))
+    
 
 ## Fig4A: show the combined plot
 Fig4A <- metabolic.gene.plasmid.and.chromosome.data %>%
@@ -1782,27 +1720,27 @@ ggsave("../results/Fig4.pdf", Fig4, height=4, width=7.5)
 ## Break down by taxonomic group.
 S27Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.correlate.column("TaxonomicGroup") %>%
-    make_metabolic_gene_base_plot() +
+    make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicGroup)
 ## save the plot.
-ggsave("../results/S27Fig.pdf", S27Fig, height=8,width=8)
+ggsave("../results/S27Fig.pdf", S27Fig, height=6,width=8)
 
 
 ## Supplementary Figure S28
 ## Break down by taxonomic subgroup
 S28Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
-    make_metabolic_gene_base_plot() +
-    facet_wrap(. ~ TaxonomicSubgroup)
+    make_metabolic_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup, ncol=3)
 ## save the plot.
-ggsave("../results/S28Fig.pdf", S28Fig, height=9, width=8)
+ggsave("../results/S28Fig.pdf", S28Fig, height=12, width=8)
 
 
 ## Supplementary FIgure S29
 ## Break down by genus.
 S29Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.correlate.column("Genus") %>%
-    make_metabolic_gene_base_plot() +
+    make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
 ggsave("../results/S29Fig.pdf", S29Fig, height=50, width=50, limitsize = FALSE)
