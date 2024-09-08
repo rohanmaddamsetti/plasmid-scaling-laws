@@ -1169,7 +1169,7 @@ ggsave("../results/Fig2.pdf", Fig2, height=3.5, width=3.5)
 
 ## Get the MOB-Typer results that Hye-in generated.
 ## This has 10,261 annotated plasmids with PCN data.
-MOB.typed.PIRA.plasmid.estimates <- PIRA.PCN.estimates %>%
+MOB.typed.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     left_join(MOBTyper.results)
 
 ## Now import all the plasmid metadata from other papers.
@@ -1264,10 +1264,10 @@ Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
     scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("PTUs ranked by length")  +
+    xlab("Cliques ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    ggtitle("PTUs in Acman et al. (2020)")
+    ggtitle("Plasmid cliques in Acman et al. (2020)")
 
 
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
@@ -1278,14 +1278,14 @@ Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
     scale_color_manual(values=c("#d95f02","#7570b3")) +
-    xlab("PTUs ranked by length")  +
+    xlab("Cliques ranked by length")  +
     ylab("log10(Copy Number)") +
     guides(color = "none")
 
-Fig2AB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=2)
+S13FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=2)
 
 
-## Figure 2CD.
+## Supplementary Figure S14CD.
 ## The same result holds for the PTUs in the Redondo-Salvo et al. (2020) paper.
 
 ## That is, PTUs  in the plasmid similarity network
@@ -1308,9 +1308,7 @@ PTU.mean.sizes <- PTU.PIRA.estimates %>%
 
 ## now merge the ranks back to the original data.
 PTU.PIRA.estimates <- PTU.PIRA.estimates %>%
-    left_join(PTU.mean.sizes) %>%
-    ## set nice units for linear-scale graphs.
-    mutate(replicon_length_in_Mbp = replicon_length / 1000000)
+    left_join(PTU.mean.sizes)
 
 
 ## Redondo-Salvo cliques show a very limited size distribution.
@@ -1325,7 +1323,8 @@ Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
     xlab("PTUs ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    
+    ggtitle("PTUs in Redondo-Salvo et al. (2020)")
+
 
 Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
     ggplot(aes(
@@ -1340,33 +1339,68 @@ Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
     guides(color = "none")
 
 
-Fig2CD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=2)
+S13FigCD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=2)
 
 
 ## MOB-Typer PTU analysis.
+## plot over primary cluster type.
 ## from $ mob_cluster -h:
-## the mash distance for assigning primary cluster ID is 0.06 by default
+## the mash distance for assigning the primary cluster ID is 0.06 by default.
 
-## plot over primary cluster type
+## sort PTU by replicon size.
+MOB.Typer.PTU.mean.sizes <- MOB.typed.PIRA.PCN.estimates %>%
+    group_by(primary_cluster_id) %>%
+    summarize(mean_replicon_length = mean(replicon_length)) %>%
+    mutate(PTU_replicon_length_rank = row_number(mean_replicon_length))
 
-SX5Fig <- MOB.typed.PIRA.plasmid.estimates %>%
-    filter.correlate.column("primary_cluster_id") %>%
-    make_PCN_base_plot() +
-    facet_wrap(primary_cluster_id ~ .)
-## save the plot
-ggsave("../results/SX5Fig.pdf", SX5Fig, height=12,width=12,limitsize=FALSE)
+## now merge the ranks back to the original data.
+MOB.typed.PIRA.PCN.estimates <- MOB.typed.PIRA.PCN.estimates %>%
+    left_join(MOB.Typer.PTU.mean.sizes)
 
+
+## Redondo-Salvo cliques show a very limited size distribution.
+MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.PCN.estimates %>%
+    ggplot(aes(
+        x = PTU_replicon_length_rank,
+        y = log10(replicon_length),
+        color = Cluster)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("PTUs ranked by length")  +
+    ylab("log10(Length)") +
+    guides(color = "none") +
+    ggtitle("MOB-Cluster Mash Distance < 0.06")
+
+
+MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.PCN.estimates %>%
+    ggplot(aes(
+        x = PTU_replicon_length_rank,
+        y = log10(PIRACopyNumber),
+    color = Cluster)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    xlab("PTUs ranked by length")  +
+    ylab("log10(Copy Number)") +
+    guides(color = "none")
+
+S13FigEF <- plot_grid(MOB.Typer.PTU.size.plot, MOB.Typer.PTU.PCN.plot, labels=c('E','F'), nrow=2)
+
+
+S13Fig <- plot_grid(S13FigAB, S13FigCD, S13FigEF, nrow=1)
+ggsave("../results/S13Fig.pdf", S14Fig, height=5, width=11)
 
 ########################################
 ## replicase type analysis.
 
 ## MOB-typer
-SX1Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+S14Fig <- MOB.typed.PIRA.PCN.estimates %>%
     filter.correlate.column("rep_type.s.") %>%
     make_PCN_base_plot() +
     facet_wrap(rep_type.s. ~ .)
 ## save the plot
-ggsave("../results/SX1Fig.pdf", SX1Fig,height=12,width=12)
+ggsave("../results/S14Fig.pdf", S14Fig,height=12,width=12)
 
 
 ## plot over Replicases
@@ -1383,7 +1417,7 @@ ggsave("../results/SX10Fig.pdf", SX10Fig,height=8,width=8)
 ## mobility group (relaxase) type analysis.
 
 ## plot over relaxase_type.
-SX2Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+SX2Fig <- MOB.typed.PIRA.PCN.estimates %>%
     filter.correlate.column("relaxase_type.s.") %>%
     make_PCN_base_plot() +
     facet_wrap(relaxase_type.s. ~ .)
@@ -1422,7 +1456,7 @@ ggsave("../results/SX12Fig.pdf", SX12Fig,height=8,width=8)
 ## plot over observed host range.
 ## This is: Taxon name of convergence of plasmids in MOB-suite plasmid DB
 ## See documentation here: https://github.com/phac-nml/mob-suite 
-SX8Fig <- MOB.typed.PIRA.plasmid.estimates %>%
+SX8Fig <- MOB.typed.PIRA.PCN.estimates %>%
     filter.correlate.column("observed_host_range_ncbi_name") %>%
     make_PCN_base_plot() +
     facet_wrap(observed_host_range_ncbi_name ~ .)
