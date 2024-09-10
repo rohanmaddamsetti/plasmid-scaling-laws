@@ -405,10 +405,10 @@ metabolic.genes.in.chromosomes <- chromosome.proteins.in.KEGG.metabolism %>%
 ################################################################################
 ## CDS fraction results
 
-##  get output from calculate-CDS-MGE-ARG-fractions.py.
+##  get output from calculate-CDS-rRNA-fractions.py.
 ## We want to answer a basic question that Lingchong asked:
 ## for a typical plasmid or bacterial chromosome, what percentage is genuinely encoding proteins?
-CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>%
+CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     ## make the dataframe compatible with replicon.annotation.data,
     mutate(NCBI_Nucleotide_Accession = str_remove(SeqID, "N(C|Z)_")) %>%
     ## and join.
@@ -424,9 +424,9 @@ CDS.MGE.ARG.fraction.data <- read.csv("../results/CDS-MGE-ARG-fractions.csv") %>
 ## in the Annotation and SeqType columns, and rewrite upstream code to
 ## solve this problem.
 ## FOR DEBUGGING
-bad.annotations.vec <- unique(filter(CDS.MGE.ARG.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
+bad.annotations.vec <- unique(filter(CDS.rRNA.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
 bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
-write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS--MGE-ARG-FRACTIONS.csv", row.names=F, quote=F)
+write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS-rRNA-FRACTIONS.csv", row.names=F, quote=F)
 
 
 ################################################################################
@@ -1654,11 +1654,11 @@ chromosome.vs.min.plasmid.plot
 ## supplementary figure: same figure, separated by Annotation category.
 
 ## Fig 3A: show the combined plot
-Fig3A <- CDS.MGE.ARG.fraction.data %>%
+Fig3A <- CDS.rRNA.fraction.data %>%
     make_CDS_scaling_base_plot()
 
 ## Fig 3B: show generality over ecology.
-Fig3B <- CDS.MGE.ARG.fraction.data %>%    
+Fig3B <- CDS.rRNA.fraction.data %>%    
     make_CDS_scaling_base_plot() +
     facet_wrap(.~Annotation)
 
@@ -1673,7 +1673,7 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
 ## Supplementary Figure S24.
 ## Break down by taxonomic group.
-S24Fig <- CDS.MGE.ARG.fraction.data %>%
+S24Fig <- CDS.rRNA.fraction.data %>%
     filter.correlate.column("TaxonomicGroup") %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicGroup)
@@ -1683,7 +1683,7 @@ ggsave("../results/S24Fig.pdf", S24Fig, height=5)
 
 ## Supplementary Figure S25
 ## Break down by taxonomic subgroup
-S25Fig <- CDS.MGE.ARG.fraction.data %>%
+S25Fig <- CDS.rRNA.fraction.data %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup)
@@ -1693,7 +1693,7 @@ ggsave("../results/S25Fig.pdf", S25Fig, height=6, width=10)
 
 ## Supplementary FIgure S26
 ## Break down by genus.
-S26Fig <- CDS.MGE.ARG.fraction.data %>%
+S26Fig <- CDS.rRNA.fraction.data %>%
     filter.correlate.column("Genus") %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=12)
@@ -1718,7 +1718,7 @@ metabolic.gene.plasmid.data <- plasmid.length.data %>%
     ## and join with plasmid.annotation.data.
     left_join(plasmid.annotation.data) %>%
     ## get CDS data for each genome.
-    left_join(CDS.MGE.ARG.fraction.data) %>%
+    left_join(CDS.rRNA.fraction.data) %>%
     ## set NA values of metabolic_protein_count to zeros.
     mutate(metabolic_protein_count = ifelse(is.na(metabolic_protein_count), 0, metabolic_protein_count))
 
@@ -1728,7 +1728,7 @@ metabolic.gene.plasmid.data <- plasmid.length.data %>%
 metabolic.gene.chromosome.data <- metabolic.genes.in.chromosomes %>%
     left_join(replicon.length.data) %>%
     ## get CDS data for each genome.
-    left_join(CDS.MGE.ARG.fraction.data)
+    left_join(CDS.rRNA.fraction.data)
 
 ## combine plasmid and chromosome metabolic gene data for Figure 4.
 metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.data %>%

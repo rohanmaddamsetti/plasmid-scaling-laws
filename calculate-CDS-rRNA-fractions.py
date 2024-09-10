@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 
 """
- calculate-CDS-MGE-ARG-fractions.py by Rohan Maddamsetti.
+ calculate-CDS-rRNA-fractions.py by Rohan Maddamsetti.
 
 This script answers a basic question that Lingchong asked:
 for a typical plasmid or bacterial chromosome, what percentage is genuinely encoding proteins?
 
-repeat the calculation for MGE-associated proteins and ARGs.
+repeat the calculation for 16S, 23S, 5S rRNAs
 
-CRITICAL TODO: figure out how to add duplicated ARGs as well, accounting for duplicated ARGs
-distributed over different replicons.
-
-Usage: python calculate-CDS-MGE-ARG-fractions.py > ../results/CDS-MGE-ARG-fractions.csv
+Usage: python calculate-CDS-rRNA-fractions.py > ../results/CDS-rRNA-fractions.csv
 """
 
 import os
