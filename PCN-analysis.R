@@ -1110,15 +1110,15 @@ ggsave("../results/S12Fig.pdf", S12Fig, height=8, width=8)
 
 ## Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
 max.plasmid.lengths <- PIRA.PCN.estimates %>%
-group_by(AnnotationAccession) %>%
+group_by(AnnotationAccession, Annotation) %>%
     summarise(max_replicon_length = max(replicon_length))
 
 min.plasmid.lengths <- PIRA.PCN.estimates %>%
-group_by(AnnotationAccession) %>%
+group_by(AnnotationAccession, Annotation) %>%
     summarise(min_replicon_length = min(replicon_length))
 
 max.PCNs <- PIRA.PCN.estimates %>%
-group_by(AnnotationAccession) %>%
+group_by(AnnotationAccession, Annotation) %>%
     summarise(max_PCN = max(PIRACopyNumber))
 
 max.and.min.plasmid.lengths <- max.plasmid.lengths %>%
@@ -1171,6 +1171,7 @@ Fig2_base <- max.and.min.plasmid.lengths %>%
     ylab("log10(length of smallest plasmid)") +
     labs("log10(maximum plasmid copy number)") +
     guides(color = "none") +
+    theme(strip.background = element_blank()) +
     ggtitle("All genomes containing plasmids")
 
 ## Add the marginal histograms.
@@ -1179,6 +1180,9 @@ Fig2 <- ggExtra::ggMarginal(Fig2_base, margins="both")
 ## save the plot.
 ggsave("../results/Fig2.pdf", Fig2, height=4, width=4)
 
+## just to check robustness of findings
+faceted_Fig2_plot <- Fig2_base + facet_wrap(.~Annotation)
+faceted_Fig2_plot
 
 ################################################################################
 ## Examination of Plasmid length and copy number across genetic correlates
@@ -1606,6 +1610,42 @@ S23Fig <- DNA.content.data %>%
 ## save the plot
 ggsave("../results/S23Fig.pdf", S23Fig, height=5)
 
+###################################################################################
+## let's compare the length of the chromosome to the length of the largest and smallest plasmid.
+
+main.chromosome.data <- PIRA.estimates %>%
+    filter(SeqType == "chromosome") %>%
+    filter(replicon_length == max_replicon_length) %>%
+    mutate(chromosome_length = replicon_length) %>%
+    select(AnnotationAccession, Annotation, chromosome_length)
+    
+
+max.plasmid.lengths.vs.chromosome.data <- main.chromosome.data %>%
+    full_join(max.plasmid.lengths) %>%
+    select(AnnotationAccession, Annotation, chromosome_length, max_replicon_length) %>%
+    mutate(max_plasmid_length = max_replicon_length)
+
+min.plasmid.lengths.vs.chromosome.data <- main.chromosome.data %>%
+    full_join(min.plasmid.lengths) %>%
+    select(AnnotationAccession, Annotation, chromosome_length, min_replicon_length) %>%
+    mutate(min_plasmid_length = min_replicon_length)
+
+
+chromosome.vs.max.plasmid.plot <- max.plasmid.lengths.vs.chromosome.data %>%
+    ggplot(aes(x=chromosome_length, y = log10(max_plasmid_length),color=Annotation)) +
+    geom_hline(yintercept=log10(500000), linetype="dashed", color="light gray") +
+    geom_point() +
+    theme_classic()
+
+chromosome.vs.min.plasmid.plot <- min.plasmid.lengths.vs.chromosome.data %>%
+    ggplot(aes(x=log10(chromosome_length), y = log10(min_plasmid_length),color=Annotation)) +
+    geom_hline(yintercept=log10(500000), linetype="dashed", color="light gray") +
+    geom_point() +
+    theme_classic()
+
+chromosome.vs.max.plasmid.plot
+
+chromosome.vs.min.plasmid.plot
 
 ###################################################################################
 ## Figure 3. Coding Sequences (CDS) on plasmids follow an empirical scaling law.
