@@ -1817,3 +1817,41 @@ metabolic_genes_vs_16S_plot <- genome.16S.rRNA.count.and.metabolic.gene.plasmid.
 
 metabolic_genes_vs_16S_plot
  
+
+################################################################################
+## examine the plasmid DNA scaling idea from before,
+## focusing on the small plasmids. normalize based on largest chromosome?
+
+## Levels are Cluster_1 and Cluster_2.
+small.plasmid.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
+    filter(Cluster == "Cluster_2") %>%
+    mutate(plasmid_DNA = replicon_length * PIRACopyNumber)
+
+
+test1 <- ggplotRegression(small.plasmid.PIRA.PCN.estimates , "log10_normalized_replicon_length", "log10_PIRACopyNumber")
+
+test2 <- small.plasmid.PIRA.PCN.estimates %>%
+    ggplot(aes(x=log10(plasmid_DNA))) +
+    geom_histogram(bins=100) +
+    theme_classic()
+
+
+test3.df <- PIRA.PCN.estimates %>%
+    mutate(plasmid_DNA = replicon_length * PIRACopyNumber) %>%
+    group_by(AnnotationAccession, max_replicon_length) %>%
+    summarize(total_plasmid_DNA = sum(plasmid_DNA)) %>%
+    mutate(normalized_total_plasmid_DNA = total_plasmid_DNA / max_replicon_length)
+
+test3 <- test3.df %>%
+    ggplot(aes(x=log10(total_plasmid_DNA))) +
+    geom_histogram(bins=100) +
+    theme_classic()
+
+test4 <- test3.df %>%
+    ggplot(aes(x=normalized_total_plasmid_DNA)) +
+    geom_histogram(bins=100) +
+    theme_classic() +
+    xlim(0,2)
+
+mean(test3.df$total_plasmid_DNA)
+mean(test3.df$normalized_total_plasmid_DNA)
