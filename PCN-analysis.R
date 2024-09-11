@@ -268,8 +268,8 @@ make_normalized_PCN_base_plot <- function(my.PCN.data) {
 }
 
 
-make_CDS_scaling_base_plot <- function(CDS.MGE.ARG.fraction.data) {
-    CDS.MGE.ARG.fraction.data %>%
+make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
+    CDS.fraction.data %>%
         ggplot(
             aes(
                 x = log10(SeqLength),
@@ -1784,8 +1784,36 @@ ggsave("../results/S28Fig.pdf", S28Fig, height=12, width=8)
 S29Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.correlate.column("Genus") %>%
     make_metabolic_scaling_base_plot() +
+##    geom_density() +
     facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
 ggsave("../results/S29Fig.pdf", S29Fig, height=50, width=50, limitsize = FALSE)
 
 
+################################################################################
+## let's see if there is any relationship between rRNA copy number and metabolic genes on plasmids.
+
+genomic.16S.rRNA.count <- CDS.rRNA.fraction.data %>%
+    group_by(AnnotationAccession) %>%
+    summarize(overall_rRNA16S_count = sum(rRNA_16S_count))
+
+genome.16S.rRNA.count.and.metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.and.chromosome.data %>% left_join(genomic.16S.rRNA.count) %>% arrange(desc(overall_rRNA_16S_count))
+
+
+metabolic_genes_vs_16S_plot <- genome.16S.rRNA.count.and.metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(SeqType != "chromosome") %>%
+   ggplot(
+        aes(
+            x = overall_rRNA_16S_count,
+            y = metabolic_protein_count,
+            color = SeqType)) +
+    geom_point(size=0.5,alpha=0.5) +
+    xlab("16S rRNA count") +
+    ylab("metabolic genes") +
+    theme_classic() +
+    guides(color = "none") +
+    theme(strip.background = element_blank()) +
+    facet_wrap(.~Annotation)
+
+metabolic_genes_vs_16S_plot
+ 

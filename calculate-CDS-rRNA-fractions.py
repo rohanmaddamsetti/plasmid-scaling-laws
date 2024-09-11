@@ -23,7 +23,7 @@ def main():
     gbk_files = [x for x in os.listdir(gbk_annotation_path) if x.endswith(".gbff")]
 
     ## print the header of the file
-    print("AnnotationAccession,SeqID,SeqLength,CDS_count,CDS_length,CDS_fraction,5S_rRNA_count,5S_rRNA_length,5S_rRNA_fraction,16S_rRNA_count,16S_rRNA_length,16S_rRNA_fraction,23S_rRNA_count,23S_rRNA_length,23S_rRNA_fraction,total_rRNA_count,total_rRNA_length,total_rRNA_fraction")
+    print("AnnotationAccession,SeqID,SeqLength,CDS_count,CDS_length,CDS_fraction,rRNA_5S_count,rRNA_5S_length,rRNA_5S_fraction,rRNA_16S_count,rRNA_16S_length,rRNA_16S_fraction,rRNA_23S_count,rRNA_23S_length,rRNA_23S_fraction,total_rRNA_count,total_rRNA_length,total_rRNA_fraction")
     for gbk in gbk_files:
         AnnotationAccession = gbk.split("_genomic.gbff")[0]
         gbk_path = os.path.join(gbk_annotation_path, gbk)
