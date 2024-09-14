@@ -1197,18 +1197,18 @@ max.and.min.plasmid.lengths <- max.plasmid.lengths %>%
     inner_join(min.plasmid.lengths) %>%
     inner_join(max.PCNs)
 
-## 10261 plasmids
+## 11381 plasmids
 PIRA.PCN.estimates %>% nrow()
 
-## these 10,261 plasmids are found in 3,458 genomes.
+## these 11,381 plasmids are found in 4,322 genomes.
 PIRA.PCN.estimates %>%
     count(AnnotationAccession) %>%
     nrow()
 
-##3458 genomes containing plasmids
+##4322 genomes containing plasmids
 nrow(max.and.min.plasmid.lengths)
 
-## only 1022 of these have plasmids found by themselves: 1022/3458 = 29.5%
+## only 1689 of these have plasmids found by themselves: 1689/4322 = 39.5%
 max.and.min.plasmid.lengths %>%
     filter(max_replicon_length == min_replicon_length) %>%
     nrow()
@@ -1217,16 +1217,16 @@ max.and.min.plasmid.lengths %>%
 max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids <- max.and.min.plasmid.lengths %>%
     filter(max_PCN > 10)
 
-##1081 genomes containing multicopy plasmids here
+##1319 genomes containing multicopy plasmids here
 nrow(max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids)
 
-## only 33 are found by themselves: 33/1081 = 2.2%
+## only 159 are found by themselves: 159/1319 = 12%
 max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
     filter(max_replicon_length == min_replicon_length) %>%
     nrow()
 
 ## This is obviously statistically significant.
-binom.test(x=33,n=1081, p = (1022/3458))
+binom.test(x=159,n=1319, p = (1689/4322))
 
 Fig2_base <- max.and.min.plasmid.lengths %>%
     ## CRITICAL TODO: FIGURE OUT WHY THIS OUTLIER IS IN THESE DATA!
@@ -1626,23 +1626,23 @@ ggsave("../results/S22Fig.pdf", S22Fig, height = 8, width = 6)
 
 ## calculate the total number of plasmids,
 ## and the number of plasmids with PCN < 1 and PCN > 50.
-PCN.count <- nrow(PIRA.PCN.estimates) ## 10,261 plasmids here
+PCN.count <- nrow(PIRA.PCN.estimates) ## 11,381 plasmids here
 PCN.count
 
-## There are 2238 plasmids with PCN < 1 in these data.
-## this is 22% of plasmids
+## There are 2376 plasmids with PCN < 1 in these data.
+## this is 20.8% of plasmids
 low.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber < 1) %>% nrow()
 low.PCN.count
 low.PCN.count/PCN.count
 
-## There are 473 plasmids with PCN > 50 in these data.
-## This is 4.6% of plasmids.
+## There are 543 plasmids with PCN > 50 in these data.
+## This is 4.8% of plasmids.
 high.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 50) %>% nrow()
 high.PCN.count
 high.PCN.count/PCN.count
 
-## There are 2166 plasmids with PCN > 10 in these data
-## This is 21% of plasmids.
+## There are 2455 plasmids with PCN > 10 in these data
+## This is 21.6% of plasmids.
 multicopy10.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 10) %>% nrow()
 multicopy10.PCN.count
 multicopy10.PCN.count/PCN.count
