@@ -430,22 +430,47 @@ write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS-rRNA-FRACTIONS.
 
 
 ################################################################################
-## Get the PIRA PCN estimates. These are the main data for this paper.
+## Get the PCN estimates. These are the main data for this paper.
 ## IMPORTANT NOTE: We only have PCN estimates for ~10,000 plasmids in ~4,500 genomes,
 ## for which we can find linked short-read data in the NCBI Sequencing Read Archive (SRA).
 ## This is a subset of the genomes and plasmids considered in this paper.
 
-## SMALL TODO: In PCN_pipeline.py, make sure the ThemistoID_right column is dropped
-## and not written out to this CSV file.
 
 ## IMPORTANT: do NOT filter this for just plasmids just yet--
 ## we need to include chromosomes for proper comparison with breseq results.
 
-## CRITICAL TODO: fix upstream annotation so that we don't have any
-## "NA" or "blank" Annotation genomes in PIRA.estimates.
+## IMPORTANT: PIRA was only run on the genomes that had multireads.
+## So, we need to combine the PIRA estimates with the subset of
+## naive themisto estimates for which no multireads were called.
 PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
+    ## SMALL TODO: In PCN_pipeline.py, make sure the ThemistoID_right column is dropped
+## and not written out to this CSV file.
+    select(-ThemistoID_right) %>%
+    ## get rid of unneeded columns.
+    select(-ThemistoID) %>%
+    rename(CopyNumber = PIRA_CopyNumberEstimate)
+
+
+## now get the data for the genomes without multireads.
+no.multiread.naive.themisto.estimates <- read.csv("../results/naive-themisto-PCN-estimates.csv") %>%
+    ## SMALL TODO: In PCN_pipeline.py, make sure the ThemistoID_right column is dropped
+    ## and not written out to this CSV file.
+    select(-SeqType_right) %>%
+    ## filter for the genomes without multireads.
+    filter(!(AnnotationAccession %in% PIRA.estimates$AnnotationAccession)) %>%
+    ## no additional read counts in these data, add these columns for compatibility with PIRA.estimates.
+    mutate(InitialReadCount = ReadCount) %>%
+    mutate(AdditionalReadCount = 0) %>%
+    mutate(InitialCopyNumberEstimate =  CopyNumber)
+
+  
+## now merge the datasets together.
+## CRITICAL TODO: fix upstream annotation so that we don't have any
+## "NA" or "blank" Annotation genomes in full.PIRA.estimates.
+full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.estimates) %>%
+    ## rename columns to so that we can compare estimates for benchmarking.
     rename(
-        PIRACopyNumber = PIRA_CopyNumberEstimate,
+        PIRACopyNumber = CopyNumber,
         PIRAReadCount = ReadCount,
         PIRASequencingCoverage = SequencingCoverage,
         PIRALongestRepliconCoverage = LongestRepliconCoverage) %>%
@@ -456,7 +481,7 @@ PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
     normalize.plasmid.lengths()
 
 ## write the normalized data to disk.
-write.csv(PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
+write.csv(full.PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
 
 ################################################################################
 ## Genomes for Supplementary Table 1.
@@ -467,7 +492,7 @@ write.csv(PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv"
 ## might actually want to report PCN.
 ## for reproducibility, use random seed = 60, which I generated using random.org (see screenshot in ../data).
 
-genomes.to.sample.from.PIRA.PCN.estimates <- PIRA.estimates %>%
+genomes.to.sample.from.PIRA.PCN.estimates <- full.PIRA.estimates %>%
     filter(PIRACopyNumber > 10) %>%
     select(AnnotationAccession) %>%
     distinct()
@@ -505,11 +530,11 @@ naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimate
     select(AnnotationAccession, SeqID, SeqType, ThemistoNaiveCopyNumber, ThemistoNaiveReadCount, InsufficientReads)
 
 PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
-    left_join(PIRA.estimates) %>%
+    left_join(full.PIRA.estimates) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
-## 1,561 plasmids have sufficient reads with PIRA, but not with the naive themisto read mapping.
+## 1,563 plasmids have sufficient reads with PIRA, but not with the naive themisto read mapping.
 sum(PIRA.vs.naive.themisto.df$InsufficientReads == TRUE)
     
 
@@ -611,7 +636,7 @@ low.PCN.minimap2.estimates.df <- read.csv("../results/minimap2-PIRA-low-PCN-benc
 
 ## merge with PIRA estimates
 PIRA.vs.minimap2.df <- low.PCN.minimap2.estimates.df %>%
-    left_join(PIRA.estimates) %>%
+    left_join(full.PIRA.estimates) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -674,8 +699,8 @@ minimap2.PIRA.conf.intervals
 ## probably due to stringent minimap2 parameters by default, for now will not explore or discuss in text.
 
 ## first get the metadata we need from the PIRA estimates.
-PCN.benchmark.metadata.df <- PIRA.estimates %>%
-    select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length") %>%
+PCN.benchmark.metadata.df <- full.PIRA.estimates %>%
+    select("AnnotationAccession", "SeqID", "SeqType", "replicon_length") %>%
     ## IMPORTANT: trim the ".1" suffixes of the SeqIDs so that we can properly merge
     ## with the TrimmedSeqID in the breseq low PCN benchmark summary data (see below).
     mutate(TrimmedSeqID = str_remove(SeqID, "\\..*$"))
@@ -706,7 +731,7 @@ low.PCN.breseq.estimate.df <- low.PCN.breseq.summary.df %>%
 
 ## merge with the PIRA estimates, and benchmark copy number estimates.
 PIRA.vs.breseq.df <- low.PCN.breseq.estimate.df %>%
-    left_join(PIRA.estimates) %>%
+    left_join(full.PIRA.estimates) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -806,7 +831,7 @@ S6Fig <- ggsave("../results/S6Fig.pdf", S6Fig, height=4, width=4)
 ################################################################################
 ## take the PIRA estimates, filter for plasmids,
 ## and annotate plasmids with ARGs, and MOB type.
-PIRA.PCN.estimates <- PIRA.estimates %>%
+PIRA.PCN.estimates <- full.PIRA.estimates %>%
     ## IMPORTANT: this removes megaplasmids and chromids from this analysis!! BE AWARE!
     filter(SeqType == "plasmid") %>%
     ## add Plasmid column to merge plasmid.mobility.data,
@@ -940,6 +965,53 @@ Fig1C_base <- PIRA.PCN.estimates %>%
 
 ## Add the marginal histogram
 Fig1C <- ggExtra::ggMarginal(Fig1C_base, margins="x")
+
+
+################################################################################
+
+## playing with figure visualization.
+
+coexisting.plasmid.df <- PIRA.PCN.estimates %>%
+    group_by(AnnotationAccession) %>%
+    summarize(num_coexisting_plasmids = n())
+
+test.df <- PIRA.PCN.estimates %>%
+    left_join(coexisting.plasmid.df)
+
+test_plot_base <- test.df %>%
+    mutate(has_coexisting_plasmids = ifelse(num_coexisting_plasmids > 1,TRUE,FALSE)) %>%
+        ## Make the basic plot for S7FigA, before adding the marginal histograms,
+    ## or facetting by column
+    ggplot(aes(
+        x = log10_normalized_replicon_length,
+        y = log10_PIRACopyNumber,
+        color = has_coexisting_plasmids)) +
+##        color = num_coexisting_plasmids)) +
+    geom_point(size=0.5,alpha=0.5) +
+    geom_hline(yintercept=0,linetype="dashed",color="gray") +
+    theme_classic() +
+##    scale_color_viridis(option="magma") +
+    xlab("log10(Normalized length)")  +
+    ylab("log10(Copy Number)") +
+    ##    guides(color="none") +
+##    facet_wrap(.~num_coexisting_plasmids) +
+    theme(strip.background = element_blank())
+
+## add marginal histograms
+test_plot <- ggExtra::ggMarginal(test_plot_base, margins="both") 
+
+
+
+
+
+
+
+
+
+
+################################################################################
+
+
 
 ## Break down this result by predicted plasmid mobility.
 Fig1D <- PIRA.PCN.estimates %>%
@@ -1304,12 +1376,12 @@ S13FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A
 ## and small plasmids will not have a lot of shared sequence, by definition.
 
 ## 453 plasmids have copy numbers and assigned PTUs.
-PTU.PIRA.estimates <- PIRA.PCN.estimates %>%
+PTU.full.PIRA.estimates <- PIRA.PCN.estimates %>%
     inner_join(RedondoSalvo.PTU.data) %>%
     rank.correlate.column("PTU")
 
 ## Redondo-Salvo cliques show a very limited size distribution.
-Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
+Redondo.Salvo.PTU.size.plot <- PTU.full.PIRA.estimates %>%
     ggplot(aes(
         x = rank,
         y = log10(replicon_length),
@@ -1323,7 +1395,7 @@ Redondo.Salvo.PTU.size.plot <- PTU.PIRA.estimates %>%
     ggtitle("PTUs in Redondo-Salvo et al. (2020)")
 
 
-Redondo.Salvo.PTU.PCN.plot <- PTU.PIRA.estimates %>%
+Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.estimates %>%
     ggplot(aes(
         x = rank,
         y = log10(PIRACopyNumber),
@@ -1488,7 +1560,7 @@ ggsave("../results/S19Fig.pdf", S19Fig, height=12,width=10,limitsize=FALSE)
 
 
 ## 415 plasmids have copy numbers and host ranges.
-RedondoSalvo.host.range.PIRA.estimates <- PIRA.PCN.estimates %>%
+RedondoSalvo.host.range.full.PIRA.estimates <- PIRA.PCN.estimates %>%
     inner_join(RedondoSalvo.PTU.data) %>%
     filter(Host_range != "-") %>%
     filter(!is.na(Host_range))
@@ -1496,7 +1568,7 @@ RedondoSalvo.host.range.PIRA.estimates <- PIRA.PCN.estimates %>%
 ## This figure shows that copy number / plasmid size does not predict host range.
 ## there are narrow and broad host range plasmids both large and small.
 ## compare with the MOB-Typer result in this vein.
-S20Fig <- RedondoSalvo.host.range.PIRA.estimates %>%
+S20Fig <- RedondoSalvo.host.range.full.PIRA.estimates %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
@@ -1579,16 +1651,16 @@ multicopy10.PCN.count/PCN.count
 ################################################################################
 ## Supplementary Figure S23. Chromosome DNA content does not constrain Plasmid DNA content.
 
-total.DNA.content.data <- PIRA.estimates %>%
+total.DNA.content.data <- full.PIRA.estimates %>%
     group_by(AnnotationAccession) %>%
     summarize(TotalDNAContent = sum(RepliconDNAContent))
 
-chromosome.DNA.content.data <- PIRA.estimates %>%
+chromosome.DNA.content.data <- full.PIRA.estimates %>%
     filter(SeqType == "chromosome") %>%
     group_by(AnnotationAccession) %>%
     summarize(ChromosomeDNAContent = sum(RepliconDNAContent))
 
-plasmid.DNA.content.data <- PIRA.estimates %>%
+plasmid.DNA.content.data <- full.PIRA.estimates %>%
     filter(SeqType == "plasmid") %>%
     group_by(AnnotationAccession) %>%
     summarize(PlasmidDNAContent = sum(RepliconDNAContent))
@@ -1596,7 +1668,7 @@ plasmid.DNA.content.data <- PIRA.estimates %>%
 DNA.content.data <- total.DNA.content.data %>%
     left_join(chromosome.DNA.content.data) %>%
     left_join(plasmid.DNA.content.data) %>%
-    left_join(PIRA.estimates) ## basically to get the Annotation column.
+    left_join(full.PIRA.estimates) ## basically to get the Annotation column.
 
 
 S23Fig <- DNA.content.data %>%
@@ -1613,7 +1685,7 @@ ggsave("../results/S23Fig.pdf", S23Fig, height=5)
 ###################################################################################
 ## let's compare the length of the chromosome to the length of the largest and smallest plasmid.
 
-main.chromosome.data <- PIRA.estimates %>%
+main.chromosome.data <- full.PIRA.estimates %>%
     filter(SeqType == "chromosome") %>%
     filter(replicon_length == max_replicon_length) %>%
     mutate(chromosome_length = replicon_length) %>%
