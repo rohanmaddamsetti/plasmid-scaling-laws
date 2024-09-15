@@ -174,7 +174,7 @@ The number of data files is 41849.
 I noticed that there were many duplicate items in the “combined_mob_typer_results.txt” file.  
 
 First identified the duplicate items from the file by running:  
-$ sort combined_mob_typer_results.txt| sort | uniq -d > duplicated.txt  
+$ sort combined_mob_typer_results.txt | sort | uniq -d > duplicated.txt  
 Then, counted the # of rows from “duplicated.txt”:  
 $ cat duplicated.txt | wc -l  
 There were 19064 items in the “duplicated.txt”.  

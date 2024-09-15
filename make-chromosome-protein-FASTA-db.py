@@ -3,10 +3,9 @@
 """
 make-chromosome-protein-FASTA-db.py by Rohan Maddamsetti.
 
-This script goes through all the gbk annotation files in ../results/gbk-annotation,
-and makes a FASTA database of all proteins found on plasmids.
-
-IMPORTANT TODO: pick a better, more representative set of genomes spanning 
+This script makes a database of proteins found on a random, representative set of
+chromosomes spanning a full range of chromosome sizes, by ranking chromosomes by size,
+and picking genomes that are roughly equally apart in the rank distribution.
 
 """
 
