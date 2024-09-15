@@ -510,6 +510,11 @@ full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.est
     ## which is probably good enough.
     filter(replicon_length > 1000)
 
+## 4,512 genomes in the final PCN dataset.
+length(unique(full.PIRA.estimates$AnnotationAccession))
+## 11,338 plasmids in the final PCN dataset.
+nrow(filter(full.PIRA.estimates, SeqType=="plasmid"))
+
 ## write the normalized data to disk.
 write.csv(full.PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
 
