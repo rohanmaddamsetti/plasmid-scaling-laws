@@ -1095,18 +1095,6 @@ S9Fig <- PIRA.PCN.estimates %>%
 ggsave("../results/S9Fig.pdf", S9Fig, height=11, width=8)
 
 
-## Supplementary Figure S10:
-## show PCN distribution over ecology.
-S10Fig <- PIRA.PCN.estimates %>%
-    filter.correlate.column("Annotation") %>%
-    make_PCN_base_plot() +
-    facet_wrap(. ~ Annotation) +
-    theme(strip.background = element_blank()) +
-    geom_hline(yintercept=2,linetype="dashed",color="gray")
-## save the plot.
-ggsave("../results/S10Fig.pdf", S10Fig, height=8, width=8)
-
-
 ################################################################################
 ## The PCN vs. plasmid length anticorrelation holds within individual genomes.
 
