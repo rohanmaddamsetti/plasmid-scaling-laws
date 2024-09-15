@@ -1108,42 +1108,37 @@ ggsave("../results/S10Fig.pdf", S10Fig, height=8, width=8)
 
 
 ################################################################################
-## Supplementary Figure S12.
 ## The PCN vs. plasmid length anticorrelation holds within individual genomes.
 
-within.genome.correlation.data.df <- PIRA.PCN.estimates %>%
-    group_by(AnnotationAccession) %>%
-    summarize(
-        replicons_within_genome = n(),
-        correlation = cor(log10(replicon_length), log10(PIRACopyNumber)))
+analyze.within.genome.correlations <- function(MIN_PLASMIDS_PER_GENOME=2, df=PIRA.PCN.estimates) {
+    within.genome.correlation.data.df <- df %>%
+        group_by(AnnotationAccession) %>%
+        summarize(
+            plasmids_within_genome = n(),
+            correlation = cor(log10(replicon_length), log10(PIRACopyNumber))) %>%
+        ## make sure there is at least MIN_PLASMIDS_PER_GENOME
+        filter(plasmids_within_genome >= MIN_PLASMIDS_PER_GENOME)
 
-S12Fig <- within.genome.correlation.data.df %>%
-    ## turn replicons_within_genome into a discrete factor for plotting.
-    mutate(replicons_within_genome = as.factor(replicons_within_genome)) %>%
-    ggplot(aes(x = replicons_within_genome, y = correlation)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "light gray") +
-    geom_boxplot(outlier.size = 0.1) +
-    facet_wrap(. ~ replicons_within_genome, scales = "free_x") +
-    theme_classic() +
-    theme(
-    axis.text.x = element_blank(),   # Remove x-axis text labels
-    axis.ticks.x = element_blank()   # Remove x-axis ticks
-    ) +
-    xlab("replicons within genome")
+    negative.within.genome.correlation.data.df <- within.genome.correlation.data.df %>%
+        filter(correlation < 0)
 
-S12Fig <- within.genome.correlation.data.df %>%
-    ggplot(aes(x = correlation, color = replicons_within_genome)) +
-    geom_histogram(bins=1000) +
-    theme_classic() +
-    scale_color_viridis(option="magma")
+    print("the number of genomes with an inverse correlation")
+    print(nrow(negative.within.genome.correlation.data.df))
+    print("the average inverse correlation for these genomes:")
+    print(mean(negative.within.genome.correlation.data.df$correlation))
 
+    positive.within.genome.correlation.data.df <- within.genome.correlation.data.df %>%
+        filter(correlation > 0)
+    print("the number of genomes with an positive correlation")
+    print(nrow(positive.within.genome.correlation.data.df))
+    print("the average correlation for these genomes:")
+    print(mean(positive.within.genome.correlation.data.df$correlation))
 
+    print("")
+}
 
-
-
-
-ggsave("../results/S12Fig.pdf", S12Fig, height=8, width=8)
-
+analyze.within.genome.correlations(2)
+analyze.within.genome.correlations(3)
 
 ################################################################################
 ## Small multicopy plasmid almost always coexist with large low-copy plasmids.
