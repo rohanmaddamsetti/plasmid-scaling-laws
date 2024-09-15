@@ -1521,7 +1521,8 @@ S21Fig <- PIRA.PCN.estimates %>%
     geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
     geom_vline(xintercept = 2, linetype = "dashed", color = "light gray") +
     facet_wrap(. ~ Annotation) +
-    theme_classic()
+    theme_classic() +
+    theme(strip.background = element_blank())
 
 ggsave("../results/S21Fig.pdf", S21Fig, height = 6, width = 6)
 
