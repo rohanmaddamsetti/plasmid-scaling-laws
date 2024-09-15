@@ -1131,6 +1131,17 @@ S12Fig <- within.genome.correlation.data.df %>%
     ) +
     xlab("replicons within genome")
 
+S12Fig <- within.genome.correlation.data.df %>%
+    ggplot(aes(x = correlation, color = replicons_within_genome)) +
+    geom_histogram(bins=1000) +
+    theme_classic() +
+    scale_color_viridis(option="magma")
+
+
+
+
+
+
 ggsave("../results/S12Fig.pdf", S12Fig, height=8, width=8)
 
 
