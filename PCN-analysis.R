@@ -1108,40 +1108,6 @@ ggsave("../results/S10Fig.pdf", S10Fig, height=8, width=8)
 
 
 ################################################################################
-## Supplementary Figure S11. Inverse relationship between plasmid size and copy number
-## in data from Yao et al. (2022) Supplementary Table S4
-## and Bethke et al. (2023) Supplementary Table S1.
-
-YouLab.PCN.data <- read.csv("../data/YouLab-PCN-data.csv") %>%
-    mutate(replicon_length = Length_in_kbp*1000)
-
-## Now combine PIRA PCN estimates with You lab data.
-PIRA.Bethke.Yao.data <- PIRA.PCN.estimates %>%
-    select(SeqID, SeqType, replicon_length, PIRACopyNumber) %>%
-    mutate(Reference="NCBI") %>%
-    ## for joining with Bethke and Yao estimates.
-    mutate(CopyNumber = PIRACopyNumber) %>%
-    mutate(Plasmid = SeqID) %>%
-    full_join(YouLab.PCN.data)
-
-
-## scatterplot of log10(Plasmid copy number) vs. log10(Plasmid length).
-S11Fig <- ggplot(PIRA.Bethke.Yao.data,
-                        aes(x=log10(replicon_length),
-                            y=log10(CopyNumber),
-                            color=Reference)) +
-    geom_point(size=0.2, alpha=0.5) +
-    scale_color_manual(values=c("purple", "light gray", "red")) +
-    theme_classic() +
-    geom_hline(yintercept=0,linetype="dashed",color="gray") +
-    ylab("log10(Plasmid copy number)")  +
-    xlab("log10(Length)") +
-    theme(legend.position="top")
-  
-## save the plot.
-ggsave("../results/S11Fig.pdf", S11Fig, height=4,width=5)
-
-################################################################################
 ## Supplementary Figure S12.
 ## The PCN vs. plasmid length anticorrelation holds within individual genomes.
 
