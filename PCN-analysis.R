@@ -2,7 +2,11 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
+## CRITICAL TODO: REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
+## in the Definition in the Genbank annotation. Right now I remove all sequences < 1000bp in length,
+## which is probably good enough.
+
+## TODO: FIGURE OUT WHY ~1000 PCN GENOMES ARE NOT ANNOTATED.
 
 ## CRITICAL POINT: Annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
 ## The metabolic scaling law emerges in chromids.
@@ -124,6 +128,24 @@ normalize.plasmid.lengths <- function(df.with.AnnotationAccessions) {
         mutate(normalized_replicon_length = replicon_length / max_replicon_length)
 
     return(updated.df)
+}
+
+
+remove.genomes.with.bad.chromosomes <- function(full.PIRA.estimates) {
+    ## remove genomes where the longest replicon is not the chromosome.
+    ## this can be caused by either misannotation of the chromosome/plasmid,
+    ## or by genomes that didn't get any CopyNumber estimate for the chromosome.
+
+    genomes.with.plasmids.that.have.max.replicon.lengths.df <- full.PIRA.estimates %>%
+        filter(replicon_length == max_replicon_length) %>%
+        filter(SeqType == "plasmid")
+
+    bad.genomes.with.plasmids.that.have.max.replicon.lengths <- unique(
+        genomes.with.plasmids.that.have.max.replicon.lengths.df$AnnotationAccession
+    )
+    ## remove these bad genomes from the analysis.
+    full.PIRA.estimates %>%
+        filter(!(AnnotationAccession %in% bad.genomes.with.plasmids.that.have.max.replicon.lengths))
 }
 
 
@@ -478,10 +500,26 @@ full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.est
     mutate(RepliconDNAContent = replicon_length * PIRACopyNumber) %>%
     ## add taxonomic and ecological annotation.
     left_join(replicon.annotation.data) %>%
-    normalize.plasmid.lengths()
+    normalize.plasmid.lengths() %>%
+    ## remove any genomes that either don't have a chromosome with a copy number
+    ## estimate, or that have a 'plasmid' that has the max_replicon_length in the genome.
+    remove.genomes.with.bad.chromosomes() %>%
+    ## Remove outlier 'plasmids' < 1000bp, these are likely small, unassembled contigs.
+    ## CRITICAL TODO: REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
+    ## in the Definition in the Genbank annotation. Right now I remove all sequences < 1000bp in length,
+    ## which is probably good enough.
+    filter(replicon_length > 1000)
 
 ## write the normalized data to disk.
 write.csv(full.PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
+
+
+## TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
+## TODO: FIGURE OUT WHY 1946 GENOMES ARE NOT ANNOTATED RIGHT.
+## This is actually not critical for the PCN analysis, but would be nice to have this fixed.
+unannotated.full.PIRA.estimates <- full.PIRA.estimates %>%
+    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
+
 
 ################################################################################
 ## Genomes for Supplementary Table 1.
@@ -846,18 +884,6 @@ PIRA.PCN.estimates <- full.PIRA.estimates %>%
     mutate(log10_normalized_replicon_length = log10(normalized_replicon_length)) %>%
     ## create a column indicating how plasmids cluster by length.
     cluster_PIRA.PCN.estimates_by_plasmid_length()
-
-    
-## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
-## CRITICAL TODO: FIGURE OUT WHY ~1000 GENOMES ARE NOT ANNOTATED RIGHT.
-unannotated.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
-    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
-
-## CRITICAL TODO: there are still a point or two at normalized plasmid length == 1
-## that look like bugs! Investigate and fix or verify!
-## CHECK WHAT IS GOING ON!
-potential.buggy.normalized.plasmids <- PIRA.PCN.estimates %>%
-    filter(normalized_replicon_length == 1)
 
 
 ################################################################################
