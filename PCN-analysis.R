@@ -1135,7 +1135,7 @@ ggsave("../results/S12Fig.pdf", S12Fig, height=8, width=8)
 
 
 ################################################################################
-## Figure 2. Small multicopy plasmid almost always coexist with large low-copy plasmids.
+## Small multicopy plasmid almost always coexist with large low-copy plasmids.
 ## look at the joint distribution of largest plasmid per cell and smallest plasmid per cell.
 ## Does this give any insight into how small plasmids persist?
 ## there is data suggesting that plasmids tend to live as "packs" in cells.
@@ -1191,34 +1191,6 @@ max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
 
 ## This is obviously statistically significant.
 binom.test(x=159,n=1319, p = (1689/4322))
-
-Fig2_base <- max.and.min.plasmid.lengths %>%
-    ## CRITICAL TODO: FIGURE OUT WHY THIS OUTLIER IS IN THESE DATA!
-    filter(max_PCN < 1000) %>%
-        ggplot(aes(
-        x = log10(max_replicon_length),
-        y = log10(min_replicon_length),
-        color = log10(max_PCN))) +
-    geom_point(size=0.5) +
-    theme_classic() +
-    scale_color_viridis(option="magma") +
-    geom_abline(linetype="dashed", color="light gray",size=0.2) +
-    xlab("log10(length of largest plasmid)") +
-    ylab("log10(length of smallest plasmid)") +
-    labs("log10(maximum plasmid copy number)") +
-    guides(color = "none") +
-    theme(strip.background = element_blank()) +
-    ggtitle("All genomes containing plasmids")
-
-## Add the marginal histograms.
-Fig2 <- ggExtra::ggMarginal(Fig2_base, margins="both") 
-
-## save the plot.
-ggsave("../results/Fig2.pdf", Fig2, height=4, width=4)
-
-## just to check robustness of findings
-faceted_Fig2_plot <- Fig2_base + facet_wrap(.~Annotation)
-faceted_Fig2_plot
 
 ################################################################################
 ## Examination of Plasmid length and copy number across genetic correlates
@@ -1684,27 +1656,27 @@ chromosome.vs.max.plasmid.plot
 chromosome.vs.min.plasmid.plot
 
 ###################################################################################
-## Figure 3. Coding Sequences (CDS) on plasmids follow an empirical scaling law.
+## Figure 2. Coding Sequences (CDS) on plasmids follow an empirical scaling law.
 
 ## Main figure, all the points together.
 ## supplementary figure: same figure, separated by Annotation category.
 
-## Fig 3A: show the combined plot
-Fig3A <- CDS.rRNA.fraction.data %>%
+## Fig 2A: show the combined plot
+Fig2A <- CDS.rRNA.fraction.data %>%
     make_CDS_scaling_base_plot()
 
-## Fig 3B: show generality over ecology.
-Fig3B <- CDS.rRNA.fraction.data %>%    
+## Fig 2B: show generality over ecology.
+Fig2B <- CDS.rRNA.fraction.data %>%    
     make_CDS_scaling_base_plot() +
     facet_wrap(.~Annotation)
 
-Fig3 <- plot_grid(Fig3A, Fig3B, labels = c("A", "B"), nrow=1)
+Fig2 <- plot_grid(Fig2A, Fig2B, labels = c("A", "B"), nrow=1)
 ## save the plot.
-ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
+ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
 
 
 ################################################################################
-## Supplementary Figures  S24 through S6. Break down the result in Figure 3 by taxonomy
+## Supplementary Figures S24 through S6. Break down the result in Figure 3 by taxonomy
 ## and ecological category to show universality of the CDS scaling relationship.
 
 ## Supplementary Figure S24.
@@ -1739,7 +1711,7 @@ ggsave("../results/S26Fig.pdf", S26Fig, height=15, width = 14)
 
 
 ########################################################################
-## Figure 4: plasmid size scales with metabolic capacity.
+## Figure 3: plasmid size scales with metabolic capacity.
 
 ## CRITICAL TODO: we will need to carefully distinguish between true zeros and NA
 ## values created by a plasmid/chromosome not being included in these data.
@@ -1777,18 +1749,18 @@ metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.data %>%
                "chromid", SeqType))
     
 
-## Fig4A: show the combined plot
-Fig4A <- metabolic.gene.plasmid.and.chromosome.data %>%
+## Fig3A: show the combined plot
+Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot()
 
-## Fig4B: show generality over ecology.
-Fig4B <- metabolic.gene.plasmid.and.chromosome.data %>%    
+## Fig3B: show generality over ecology.
+Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%    
     make_metabolic_scaling_base_plot() +
     facet_wrap(.~Annotation, nrow=3)
 
-Fig4 <- plot_grid(Fig4A, Fig4B, labels = c('A', 'B'))
+Fig3 <- plot_grid(Fig4A, Fig4B, labels = c('A', 'B'))
 ## save the plot.
-ggsave("../results/Fig4.pdf", Fig4, height=4, width=7.5)
+ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
 
 ################################################################################
