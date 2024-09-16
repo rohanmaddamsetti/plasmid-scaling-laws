@@ -1565,38 +1565,41 @@ ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
 
 
 ################################################################################
-## Supplementary Figures S24 through S6. Break down the result in Figure 3 by taxonomy
+## Supplementary Figures S13 and S14. Break down the result in Figure 3 by taxonomy
 ## and ecological category to show universality of the CDS scaling relationship.
 
-## Supplementary Figure S24.
+## Supplementary Figure S13A.
 ## Break down by taxonomic group.
-S24Fig <- CDS.rRNA.fraction.data %>%
+S13FigA <- CDS.rRNA.fraction.data %>%
     filter.correlate.column("TaxonomicGroup") %>%
     make_CDS_scaling_base_plot() +
-    facet_wrap(. ~ TaxonomicGroup)
-## save the plot.
-ggsave("../results/S24Fig.pdf", S24Fig, height=5)
+    facet_wrap(. ~ TaxonomicGroup) +
+    ggtitle("NCBI Taxonomic Groups")
 
-
-## Supplementary Figure S25
+## Supplementary Figure S13B
 ## Break down by taxonomic subgroup
-S25Fig <- CDS.rRNA.fraction.data %>%
+S13FigB <- CDS.rRNA.fraction.data %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
+    ## put new lines in the subgroups to improve the aspect ratio of the subpanels.
+    mutate(TaxonomicSubgroup= str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
     make_CDS_scaling_base_plot() +
-    facet_wrap(. ~ TaxonomicSubgroup)
+    facet_wrap(. ~ TaxonomicSubgroup) +
+    ggtitle("NCBI Taxonomic Subgroups")
+
+S13Fig <- plot_grid(S13FigA, S13FigB, labels=c("A","B"),ncol=1)
 ## save the plot.
-ggsave("../results/S25Fig.pdf", S25Fig, height=6, width=10)
+ggsave("../results/S13Fig.pdf", S13Fig, height=10)
 
 
-## Supplementary FIgure S26
+## Supplementary Figure S14
 ## Break down by genus.
-S26Fig <- CDS.rRNA.fraction.data %>%
-    filter.correlate.column("Genus") %>%
+## show genera with more than 100 points.
+S14Fig <- CDS.rRNA.fraction.data %>%
+    filter.correlate.column("Genus", min_group_size = 100) %>%
     make_CDS_scaling_base_plot() +
-    facet_wrap(. ~ Genus, ncol=12)
-
+    facet_wrap(. ~ Genus, ncol=6)
 ## save the plot.
-ggsave("../results/S26Fig.pdf", S26Fig, height=15, width = 14)
+ggsave("../results/S14Fig.pdf", S14Fig, width=8,height=11)
 
 
 ########################################################################
@@ -1647,44 +1650,44 @@ Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(.~Annotation, nrow=3)
 
-Fig3 <- plot_grid(Fig4A, Fig4B, labels = c('A', 'B'))
+Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
 ## save the plot.
 ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
 
 ################################################################################
-## Supplementary Figures S27 through S29. Break down the result in Figure 4 by taxonomy
+## Supplementary Figures S15 through S17. Break down the result in Figure 4 by taxonomy
 ## and ecological category to show universality of the CDS scaling relationship.
 
-## Supplementary Figure S27
+## Supplementary Figure S15
 ## Break down by taxonomic group.
-S27Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+S15Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.correlate.column("TaxonomicGroup") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicGroup)
 ## save the plot.
-ggsave("../results/S27Fig.pdf", S27Fig, height=6,width=8)
+ggsave("../results/S15Fig.pdf", S15Fig, height=6,width=8)
 
 
-## Supplementary Figure S28
+## Supplementary Figure S16
 ## Break down by taxonomic subgroup
-S28Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+S16Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup, ncol=3)
 ## save the plot.
-ggsave("../results/S28Fig.pdf", S28Fig, height=12, width=8)
+ggsave("../results/S16Fig.pdf", S16Fig, height=12, width=8)
 
 
-## Supplementary FIgure S29
+## Supplementary FIgure S17
 ## Break down by genus.
-S29Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+S17Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.correlate.column("Genus") %>%
     make_metabolic_scaling_base_plot() +
 ##    geom_density() +
     facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
-ggsave("../results/S29Fig.pdf", S29Fig, height=50, width=50, limitsize = FALSE)
+ggsave("../results/S17Fig.pdf", S17Fig, height=50, width=50, limitsize = FALSE)
 
 
 ################################################################################
@@ -1692,7 +1695,7 @@ ggsave("../results/S29Fig.pdf", S29Fig, height=50, width=50, limitsize = FALSE)
 
 genomic.16S.rRNA.count <- CDS.rRNA.fraction.data %>%
     group_by(AnnotationAccession) %>%
-    summarize(overall_rRNA16S_count = sum(rRNA_16S_count))
+    summarize(overall_rRNA_16S_count = sum(rRNA_16S_count))
 
 genome.16S.rRNA.count.and.metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.and.chromosome.data %>% left_join(genomic.16S.rRNA.count) %>% arrange(desc(overall_rRNA_16S_count))
 
@@ -1715,40 +1718,3 @@ metabolic_genes_vs_16S_plot <- genome.16S.rRNA.count.and.metabolic.gene.plasmid.
 metabolic_genes_vs_16S_plot
  
 
-################################################################################
-## examine the plasmid DNA scaling idea from before,
-## focusing on the small plasmids. normalize based on largest chromosome?
-
-## Levels are Cluster_1 and Cluster_2.
-small.plasmid.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
-    filter(Size_Cluster == "Cluster_2") %>%
-    mutate(plasmid_DNA = replicon_length * PIRACopyNumber)
-
-
-test1 <- ggplotRegression(small.plasmid.PIRA.PCN.estimates , "log10_normalized_replicon_length", "log10_PIRACopyNumber")
-
-test2 <- small.plasmid.PIRA.PCN.estimates %>%
-    ggplot(aes(x=log10(plasmid_DNA))) +
-    geom_histogram(bins=100) +
-    theme_classic()
-
-
-test3.df <- PIRA.PCN.estimates %>%
-    mutate(plasmid_DNA = replicon_length * PIRACopyNumber) %>%
-    group_by(AnnotationAccession, max_replicon_length) %>%
-    summarize(total_plasmid_DNA = sum(plasmid_DNA)) %>%
-    mutate(normalized_total_plasmid_DNA = total_plasmid_DNA / max_replicon_length)
-
-test3 <- test3.df %>%
-    ggplot(aes(x=log10(total_plasmid_DNA))) +
-    geom_histogram(bins=100) +
-    theme_classic()
-
-test4 <- test3.df %>%
-    ggplot(aes(x=normalized_total_plasmid_DNA)) +
-    geom_histogram(bins=100) +
-    theme_classic() +
-    xlim(0,2)
-
-mean(test3.df$total_plasmid_DNA)
-mean(test3.df$normalized_total_plasmid_DNA)
