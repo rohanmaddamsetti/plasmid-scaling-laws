@@ -561,7 +561,9 @@ write.csv(chosen.genomes.df, "../results/Fifty-random-genomes-with-multicopy-pla
           row.names = FALSE, quote=FALSE)
 
 ################################################################################
-## Supplementary Figure S2: Effect of PIRA compared to naive themisto estimates.
+## Supplementary Figure S2: Plasmid copy number benchmarking.
+################################################################################
+## S2AFig and S2BFig: Effect of PIRA compared to naive themisto estimates.
 
 ## naive calculation with themisto read counts, ignoring multireplicon reads.
 naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimates.csv") %>%
@@ -870,7 +872,6 @@ S5Fig <- naive.themisto.vs.naive.kallisto.df %>%
         formula=y~x)
 ## save Supplementary Figure S5.
 S5Fig <- ggsave("../results/S5Fig.pdf", S5Fig, height=4, width=4)
-
 
 
 ################################################################################
