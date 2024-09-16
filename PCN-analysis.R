@@ -609,18 +609,14 @@ make.PIRA.vs.naive.themisto.plot <- function(PIRA.vs.naive.themisto.df) {
             formula=y~x)
 }
 
-## Now make S2 Figure panel A.
-S2FigA <- PIRA.vs.naive.themisto.df %>%
-    make.PIRA.vs.naive.themisto.plot()
 
-## S2 Figure panel B remove points with insufficient reads.
-S2FigB <- PIRA.vs.naive.themisto.df %>%
+## S2 Figure panel A remove points with insufficient reads.
+S2FigA <- PIRA.vs.naive.themisto.df %>%
     filter(InsufficientReads == FALSE) %>%
     make.PIRA.vs.naive.themisto.plot()
 
-
 ###################################################################################
-## Supplementary Figure S2C
+## Supplementary Figure S2B
 ## Benchmarking of PIRA with themisto against PIRA with minimap2 alignments on 100 random genomes
 ## with low copy number plasmids (PCN < 0.8).
 
@@ -637,8 +633,8 @@ PIRA.vs.minimap2.df <- low.PCN.minimap2.estimates.df %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
-## make S2 Figure panel C
-S2FigC <- PIRA.vs.minimap2.df %>%
+## make S2 Figure panel B
+S2FigB <- PIRA.vs.minimap2.df %>%
     ggplot(aes(
         x = log10(minimap2_PIRA_CopyNumberEstimate),
         y = log10(PIRACopyNumber),
@@ -671,7 +667,7 @@ minimap2.PIRA.conf.intervals
 
 
 ###################################################################################
-## Supplementary Figure S2D.
+## Supplementary Figure S2C.
 ## Benchmarking of these 100 random genomes with breseq as another gold standard control,
 ## This additional test makes sure these estimates are accurate,
 ## and not artifactual due to low sequencing coverage with minimap2 compared to breseq.
@@ -715,8 +711,8 @@ PIRA.vs.breseq.df <- low.PCN.breseq.estimate.df %>%
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
 
-## Now make S2 Figure panel D.
-S2FigD <- PIRA.vs.breseq.df %>%
+## Now make S2 Figure panel C.
+S2FigC <- PIRA.vs.breseq.df %>%
     ggplot(aes(
         x = log10(BreseqCopyNumberEstimate),
         y = log10(PIRACopyNumber),
@@ -748,7 +744,7 @@ breseq.PIRA.conf.intervals
 
 
 ################################################################################
-## Supplementary Figure S2E:
+## Supplementary Figure S2D:
 ## compare naive kallisto to naive themisto PCN estimates to show that PCN numbers by pseudoalignment
 ## are reproducible irrespective of the specific software implementation.
 
@@ -764,8 +760,8 @@ naive.themisto.vs.naive.kallisto.df <- naive.themisto.PCN.estimates %>%
     left_join(kallisto.replicon.PCN.estimates) %>%
     filter(SeqType == "plasmid")
 
-## make Supplementary Figure S2E.
-S2FigE <- naive.themisto.vs.naive.kallisto.df %>%
+## make Supplementary Figure S2D.
+S2FigD <- naive.themisto.vs.naive.kallisto.df %>%
     ggplot(
         aes(x=log10(KallistoNaiveCopyNumber), y=log10(ThemistoNaiveCopyNumber))) +
     geom_point(size=1) +
@@ -782,12 +778,12 @@ S2FigE <- naive.themisto.vs.naive.kallisto.df %>%
 
 
 S2Fig <- plot_grid(
-    S2FigA, S2FigB, S2FigC, S2FigD, S2FigE,
-    labels = c("A", "B", "C", "D", "E"),
-    nrow=3)
+    S2FigA, S2FigB, S2FigC, S2FigD,
+    labels = c("A", "B", "C", "D"),
+    nrow=2)
 
 ## save Supplementary Figure S2.
-S2Fig <- ggsave("../results/S2Fig.pdf", S2Fig, height=11, width=8)
+S2Fig <- ggsave("../results/S2Fig.pdf", S2Fig, height=6, width=6)
 
 
 ################################################################################
@@ -882,12 +878,12 @@ AIC(segmented.normalized.PCN.model)
 
 
 ################################################################################
-## Figure 1BC and Supplementary Figure S6.
+## Figure 1BC and Supplementary Figure S3.
 ## Plasmid copy number pipeline and Anticorrelation between plasmid length and copy number.
 
-## Supplementary Figure S6 shows the unnormalized anticorrelation.
+## Supplementary Figure S3 shows the unnormalized anticorrelation.
 ## Break down this result by predicted plasmid mobility.
-S6FigA_base <- PIRA.PCN.estimates %>%
+S3FigA_base <- PIRA.PCN.estimates %>%
     filter(!is.na(Annotation)) %>%
     filter.correlate.column("PredictedMobility") %>%
     make_PCN_base_plot() +
@@ -895,18 +891,18 @@ S6FigA_base <- PIRA.PCN.estimates %>%
 
 ## draw the segmented regression,
 ## and remove the legend.
-S6FigA_without_marginals <- S6FigA_base +
+S3FigA_without_marginals <- S3FigA_base +
     geom_line(data = segmented.fit.df, color = 'maroon') +
     guides(color = "none")
 
 ## Add the marginal histograms
-S6FigA <- ggExtra::ggMarginal(S6FigA_without_marginals, margins="both") 
+S3FigA <- ggExtra::ggMarginal(S3FigA_without_marginals, margins="both") 
 
-S6FigB <- S6FigA_base + guides(color = "none") + facet_wrap(.~Annotation)
+S3FigB <- S3FigA_base + guides(color = "none") + facet_wrap(.~Annotation)
 
-## make S6 Figure and save to file.
-S6Fig <- plot_grid(S6FigA, S6FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
-ggsave("../results/S6Fig.pdf", S6Fig, height=4.75, width=7.25)
+## make S3 Figure and save to file.
+S3Fig <- plot_grid(S3FigA, S3FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
+ggsave("../results/S3Fig.pdf", S3Fig, height=4.75, width=7.25)
 
 
 ## Figure 1BC.
@@ -949,17 +945,17 @@ ggsave("../results/Fig1BC.pdf", Fig1BC_with_title_and_legend, height=5.5, width=
 
 small.plasmids <- PIRA.PCN.estimates %>%
     filter(Size_Cluster == "Cluster_2")
-## mean length of small plasmids is 6212 bp.
+## mean length of small plasmids is 6433 bp.
 mean(small.plasmids$replicon_length)
-## mean PCN of small plasmids is 28.9.
+## mean PCN of small plasmids is 28.4.
 mean(small.plasmids$PIRACopyNumber)
 
 
 large.plasmids <- PIRA.PCN.estimates %>%
     filter(Size_Cluster == "Cluster_1")
-## mean length of large plasmids is 144070 bp.
+## mean length of large plasmids is 137704 bp.
 mean(large.plasmids$replicon_length)
-## mean PCN of large plasmids is 4.02.
+## mean PCN of large plasmids is 1.79.
 mean(large.plasmids$PIRACopyNumber)
 
 ## examine the tail of very large plasmids that are longer than 500Kbp.
@@ -976,40 +972,41 @@ very.large.plasmids.by.mobility <- very.large.plasmids %>%
 
 
 ################################################################################
-## Supplementary Figures S7 through S10. Break down the result in Figure 1 by taxonomy
+## Supplementary Figures S4, S5, S6. Break down the result in Figure 1 by taxonomy
 ## and ecological category to show universality of the PCN vs. length anticorrelation.
 
-## Supplementary Figure S7. 
+## Supplementary Figure S4 
 ## Break down by taxonomic group.
-S7Fig <- PIRA.PCN.estimates %>%
+S4Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("TaxonomicGroup") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ TaxonomicGroup) +
-    theme(strip.background = element_blank())
+    theme(strip.background = element_blank()) +
+    guides(color = "none")
 ## save the plot.
-ggsave("../results/S7Fig.pdf", S7Fig, height=5,width=5)
+ggsave("../results/S4Fig.pdf", S4Fig, height=5,width=5)
 
-
-## Supplementary Figure S8
+## Supplementary Figure S5
 ## Break down by taxonomic subgroup
-S8Fig <- PIRA.PCN.estimates %>%
+S5Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup, ncol=3) +
-    theme(strip.background = element_blank())
+    theme(strip.background = element_blank()) +
+    guides(color = "none")
 ## save the plot.
-ggsave("../results/S8Fig.pdf", S8Fig, width=8)
+ggsave("../results/S5Fig.pdf", S5Fig, width=8)
 
-
-## Supplementary FIgure S9
+## Supplementary Figure S6.
 ## Break down by genus.
-S9Fig <- PIRA.PCN.estimates %>%
+S6Fig <- PIRA.PCN.estimates %>%
     filter.correlate.column("Genus") %>%
     make_PCN_base_plot() +
-    facet_wrap(. ~ Genus, ncol = 6) +
-    theme(strip.background = element_blank())
+    facet_wrap(. ~ Genus, ncol = 7) +
+    theme(strip.background = element_blank()) +
+    guides(color = "none")
 ## save the plot.
-ggsave("../results/S9Fig.pdf", S9Fig, height=11, width=8)
+ggsave("../results/S6Fig.pdf", S6Fig, height=15, width=8, limitsize=FALSE)
 
 
 ################################################################################
@@ -1072,18 +1069,18 @@ max.and.min.plasmid.lengths <- max.plasmid.lengths %>%
     inner_join(min.plasmid.lengths) %>%
     inner_join(max.PCNs)
 
-## 11381 plasmids
+## 11388 plasmids
 PIRA.PCN.estimates %>% nrow()
 
-## these 11,381 plasmids are found in 4,322 genomes.
+## these 11,388 plasmids are found in 4,317 genomes.
 PIRA.PCN.estimates %>%
     count(AnnotationAccession) %>%
     nrow()
 
-##4322 genomes containing plasmids
+##4317 genomes containing plasmids
 nrow(max.and.min.plasmid.lengths)
 
-## only 1689 of these have plasmids found by themselves: 1689/4322 = 39.5%
+## only 1688 of these have plasmids found by themselves: 1688/4317 = 39.1%
 max.and.min.plasmid.lengths %>%
     filter(max_replicon_length == min_replicon_length) %>%
     nrow()
@@ -1092,16 +1089,16 @@ max.and.min.plasmid.lengths %>%
 max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids <- max.and.min.plasmid.lengths %>%
     filter(max_PCN > 10)
 
-##1319 genomes containing multicopy plasmids here
+##1314 genomes containing multicopy plasmids here
 nrow(max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids)
 
-## only 159 are found by themselves: 159/1319 = 12%
+## only 159 are found by themselves: 159/1314 = 12%
 max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
     filter(max_replicon_length == min_replicon_length) %>%
     nrow()
 
 ## This is obviously statistically significant.
-binom.test(x=159,n=1319, p = (1689/4322))
+binom.test(x=159,n=1314, p = (1688/4317))
 
 ################################################################################
 ## Examination of Plasmid length and copy number across genetic correlates
@@ -1167,15 +1164,15 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 
 
 ########################################
+## Supplementary FIgure S7.
 ## Plasmid length and copy number are conserved within plasmid taxonomic groups.
 
-## Supplementary Figure S13AB
+## Supplementary Figure S7AB
 ## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
 ## have similar sizes and copy numbers.
 
 ## Importantly, In part, the clique structure is determined by plasmid size, since large plasmids
 ## and small plasmids will have a lot of sequence that is not shared, by definition.
-
 
 ## inner_join the Acman et al. (2020) metadata to the PIRA PCN estimates.
 ## we have 1,505 plasmids in this dataset.
@@ -1188,10 +1185,10 @@ Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     ggplot(aes(
         x = rank,
         y = log10(replicon_length),
-        color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Cliques ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
@@ -1202,18 +1199,18 @@ Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     ggplot(aes(
         x = rank,
         y = log10(PIRACopyNumber),
-        color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Cliques ranked by length")  +
     ylab("log10(Copy Number)") +
     guides(color = "none")
 
-S13FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=2)
+S7FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=1)
 
 
-## Supplementary Figure S13CD.
+## Supplementary Figure S7CD.
 ## The same result holds for the PTUs in the Redondo-Salvo et al. (2020) paper.
 
 ## That is, PTUs  in the plasmid similarity network
@@ -1232,10 +1229,10 @@ Redondo.Salvo.PTU.size.plot <- PTU.full.PIRA.estimates %>%
     ggplot(aes(
         x = rank,
         y = log10(replicon_length),
-        color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
@@ -1246,21 +1243,19 @@ Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.estimates %>%
     ggplot(aes(
         x = rank,
         y = log10(PIRACopyNumber),
-    color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Copy Number)") +
     guides(color = "none")
 
-S13FigCD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=2)
+S7FigCD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=1)
 
-S13Fig <- plot_grid(S13FigAB, S13FigCD, nrow=1)
-ggsave("../results/S13Fig.pdf", S13Fig, height=5, width=7)
 
 #########################################################
-## Supplementary Figure S14. MOB-Typer PTU and Rep type analysis.
+## Supplementary Figure S7EFGH. MOB-Typer PTU and Rep type analysis.
 
 ## First plot over primary cluster type.
 ## from $ mob_cluster -h:
@@ -1274,29 +1269,29 @@ MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
     ggplot(aes(
         x = rank,
         y = log10(replicon_length),
-        color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    ggtitle("MOB-Size_Cluster Mash Distance < 0.06")
+    ggtitle("MOB-Cluster Mash Distance < 0.06")
 
 
 MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
     ggplot(aes(
         x = rank,
         y = log10(PIRACopyNumber),
-    color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Copy Number)") +
     guides(color = "none")
 
-S14FigAB <- plot_grid(MOB.Typer.PTU.size.plot, MOB.Typer.PTU.PCN.plot, labels=c('A','B'), nrow=2)
+S7FigEF <- plot_grid(MOB.Typer.PTU.size.plot, MOB.Typer.PTU.PCN.plot, labels=c('E','F'), nrow=1)
 
 ## The same thing holds for rep protein typing.
 MOB.typed.PIRA.reptypes <- MOB.typed.PIRA.PCN.estimates %>%
@@ -1307,10 +1302,10 @@ MOB.Typer.reptype.size.plot <- MOB.typed.PIRA.reptypes %>%
     ggplot(aes(
         x = rank,
         y = log10(replicon_length),
-    color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
@@ -1322,90 +1317,122 @@ MOB.Typer.reptype.PCN.plot <- MOB.typed.PIRA.reptypes %>%
     ggplot(aes(
         x = rank,
         y = log10(PIRACopyNumber),
-        color = Size_Cluster)) +
+        color = PredictedMobility)) +
     geom_point(size=0.2,alpha=0.5) +
     theme_classic() +
-    scale_color_manual(values=c("#d95f02","#7570b3")) +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
     ylab("log10(Copy Number)") +
     guides(color = "none")
 
-S14FigCD <- plot_grid(MOB.Typer.reptype.size.plot, MOB.Typer.reptype.PCN.plot, labels=c('C','D'), nrow=2)
-
-S14Fig <- plot_grid(S14FigAB, S14FigCD, ncol=2)
-## save the plot
-ggsave("../results/S14Fig.pdf", S14Fig)
-
+S7FigGH <- plot_grid(MOB.Typer.reptype.size.plot, MOB.Typer.reptype.PCN.plot, labels=c('G','H'), nrow=1)
 
 ############################
-## Supplementary Figure S15.
-## plot over Rep protein types in Ares-Arroyo et al. (2023).
+## Supplementary Figure S7IJ.
+## the same thing holds over Rep protein types in Ares-Arroyo et al. (2023).
+AresArroyo2023.typed.PIRA.reptypes <- PIRA.PCN.for.AresArroyo2023.data %>%
+    rank.correlate.column("Replicase")
 
-S15Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
-    rank.correlate.column("Replicase") %>%
-    ## only plot groups with more than 10 data points.
-    filter.correlate.column("Replicase") %>%
-    make_PCN_base_plot() +
-    facet_wrap(Replicase ~ .)
-## save the plot
-ggsave("../results/S15Fig.pdf", S15Fig,height=8,width=8)
+## Ares-Arroyo Rep protein type classes by length
+AresArroyo2023.reptype.size.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
+    ggplot(aes(
+        x = rank,
+        y = log10(replicon_length),
+        color = PredictedMobility)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+    xlab("Rep types ranked by length")  +
+    ylab("log10(Length)") +
+    guides(color = "none") +
+    ggtitle("Rep types in Ares-Arroyo et al. (2023)")
+
+
+## Ares-Arroyo Rep protein type classes by PCN
+AresArroyo2023.reptype.PCN.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
+    ggplot(aes(
+        x = rank,
+        y = log10(PIRACopyNumber),
+        color = PredictedMobility)) +
+    geom_point(size=0.2,alpha=0.5) +
+    theme_classic() +
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+    xlab("Rep types ranked by length")  +
+    ylab("log10(Copy Number)") +
+    guides(color = "none")
+
+S7FigIJ <- plot_grid(AresArroyo2023.reptype.size.plot, AresArroyo2023.reptype.PCN.plot, labels=c('I','J'), nrow=1)
+
+## save the full plot.
+S7Fig <- plot_grid(S7FigAB, S7FigCD, S7FigEF, S7FigGH, S7FigIJ, ncol=1)
+ggsave("../results/S7Fig.pdf", S7Fig, width=7.5, height=12)
+
 
 ########################################
-## Supplementary Figure S16. mobility group (relaxase) type analysis.
+## Supplementary Figure S8. mobility group (relaxase) type analysis.
 
 ## plot over relaxase_type.
-S16Fig <- MOB.typed.PIRA.PCN.estimates %>%
+S8Fig <- MOB.typed.PIRA.PCN.estimates %>%
     rank.correlate.column("relaxase_type.s.") %>%
     filter.correlate.column("relaxase_type.s.") %>%
     make_PCN_base_plot() +
-    facet_wrap(relaxase_type.s. ~ .) +
-    ggtitle("MOB-Typer relaxase types")
+    facet_wrap(relaxase_type.s. ~ ., ncol=4) +
+    ggtitle("MOB-Typer relaxase types") +
+    guides(color = "none")
 ## save the plot
-ggsave("../results/S16Fig.pdf", S16Fig)
+ggsave("../results/S8Fig.pdf", S8Fig)
 
 
 ########################################
-## oriT analysis.
+## Supplementary Figure S9: oriT analysis.
 
 ## plot over oriT
-S17Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+S9FigA <- PIRA.PCN.for.AresArroyo2023.data %>%
     rank.correlate.column("oriT") %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT") %>%
     make_PCN_base_plot() +
     facet_wrap(oriT ~ .) +
-    ggtitle("oriT annotated by Ares-Arroyo et al. (2023)")
-## save the plot
-ggsave("../results/S17Fig.pdf", S17Fig)
-
+    ggtitle("oriT annotated by Ares-Arroyo et al. (2023)") +
+    guides(color = "none")
 
 ## plot over oriT_Family
-S18Fig <- PIRA.PCN.for.AresArroyo2023.data %>%
+S9FigB <- PIRA.PCN.for.AresArroyo2023.data %>%
     rank.correlate.column("oriT_Family") %>%
     ## only plot groups with more than 10 data points.
     filter.correlate.column("oriT_Family") %>%
     make_PCN_base_plot() +
     facet_wrap(oriT_Family ~ .) +
-    ggtitle("oriT family annotated by Ares-Arroyo et al. (2023)")
+    ggtitle("oriT family annotated by Ares-Arroyo et al. (2023)") +
+    guides(color = "none")
+
+S9Fig <- plot_grid(S9FigA, S9FigB, labels = c('A','B'), ncol = 1)
 ## save the plot
-ggsave("../results/S18Fig.pdf", S18Fig,height=8,width=8)
+ggsave("../results/S9Fig.pdf", S9Fig, height=11)
+
 
 ##############################
-## Host range analysis.
+## Supplementary Figures S10 and S11: Host range analysis.
+## These are two separate figures to avoid color scale conflicts.
 
+## Supplementary FIgure S10
 ## plot over observed host range.
 ## This is: Taxon name of convergence of plasmids in MOB-suite plasmid DB
 ## See documentation here: https://github.com/phac-nml/mob-suite 
-S19Fig <- MOB.typed.PIRA.PCN.estimates %>%
+S10Fig <- MOB.typed.PIRA.PCN.estimates %>%
     rank.correlate.column("observed_host_range_ncbi_name") %>%
     filter.correlate.column("observed_host_range_ncbi_name") %>%
+    ## put new lines in the host ranges to improve the aspect ratio of the subpanels.
+    mutate(observed_host_range_ncbi_name = str_replace_all(observed_host_range_ncbi_name, ",", ",\n")) %>%
     make_PCN_base_plot() +
-    facet_wrap(observed_host_range_ncbi_name ~ ., ncol=3) +
-    ggtitle("Host range annotated by MOB-Typer")
+    facet_wrap(observed_host_range_ncbi_name ~ ., ncol=6) +
+    ggtitle("Host range annotated by MOB-Typer") +
+    guides(color = "none")
 ## save the plot
-ggsave("../results/S19Fig.pdf", S19Fig, height=12,width=10,limitsize=FALSE)
+ggsave("../results/S10Fig.pdf", S10Fig, height=11,width=8,limitsize=FALSE)
 
 
+## Supplementary Figure S11.
 ## 415 plasmids have copy numbers and host ranges.
 RedondoSalvo.host.range.full.PIRA.estimates <- PIRA.PCN.estimates %>%
     inner_join(RedondoSalvo.PTU.data) %>%
@@ -1415,82 +1442,104 @@ RedondoSalvo.host.range.full.PIRA.estimates <- PIRA.PCN.estimates %>%
 ## This figure shows that copy number / plasmid size does not predict host range.
 ## there are narrow and broad host range plasmids both large and small.
 ## compare with the MOB-Typer result in this vein.
-S20Fig <- RedondoSalvo.host.range.full.PIRA.estimates %>%
+S11Fig <- RedondoSalvo.host.range.full.PIRA.estimates %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
         color = Host_range)) +
     geom_point(size=1,alpha=0.5) +
-    theme_classic()
+    theme_classic() +
+    ggtitle("Host range annotated by\nRedondo-Salvo et al. (2020)") +
+    theme(legend.position = "bottom") +
+    ## make the points in the legend larger.
+    guides(color = guide_legend(override.aes = list(size = 5)))
+
 ## save the plot
-ggsave("../results/S20Fig.pdf", S20Fig, height=3.5, width=6)
+ggsave("../results/S11Fig.pdf", S11Fig, height=4.5, width=4)
 
 
 ################################################################################
-## Supplementary Figure S21. let's make a histogram of PCN in these data.
+## Supplementary Figure S12.
 
-S21Fig <- PIRA.PCN.estimates %>%
+## This vector is used for ordering Annotation levels in this figure.
+order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotation
+
+## Supplementary Figure S12A. let's make a histogram of PCN in these data.
+S12FigA <- PIRA.PCN.estimates %>%
+    ## order the Annotation levels.
+    mutate(Annotation = factor(Annotation, levels = order.by.total.plasmids)) %>%
     ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
     filter(Annotation != "NA") %>%
     filter(Annotation != "blank") %>%
     ggplot(aes(x = log10(PIRACopyNumber))) +
     geom_histogram(bins=1000) +
     geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
-    geom_vline(xintercept = 2, linetype = "dashed", color = "light gray") +
+    ## place the high PCN at log10(50).
+    geom_vline(xintercept = log10(50), linetype = "dashed", color = "light gray") +
     facet_wrap(. ~ Annotation) +
     theme_classic() +
     theme(strip.background = element_blank())
 
-ggsave("../results/S21Fig.pdf", S21Fig, height = 6, width = 6)
-
-################################################################################
-## Supplementary Figure S22.
+## Supplementary Figure S12BC.
 ## Examine the tails of the PCN distribution.
 ## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
 ## there is an enrichment of high PCN plasmids in human-impacted environments.
 
-## This vector is used for ordering axes in this figure and the next figure.
-order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotation
 
 ## calculate the fraction of low PCN plasmids in each category.
 ## Make Z-distributed confidence intervals for the fraction of isolates with
 ## PCN < 1.
 
-low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates)
+low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates) %>%
+    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    filter(Annotation != "NA") %>%
+    filter(Annotation != "blank")
+
 ## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
-S22FigA <- make.confint.figure.panel(low.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN < 1")
+S12FigB <- make.confint.figure.panel(
+                                     low.PCN.plasmids.table,
+                                     order.by.total.plasmids,
+                                     "proportion of plasmids with PCN < 1")
 
 ## calculate the fraction of high PCN plasmids in each category.
 ## there is an enrichment of  PCN > 50 plasmids in human-impacted environments.
 ## Make Z-distributed confidence intervals for the fraction of isolates with
 ## PCN > 50.
 
-high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates)
-## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
-S22FigB <- make.confint.figure.panel(high.PCN.plasmids.table, order.by.total.plasmids, "proportion of plasmids with PCN > 50")
+high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates) %>%
+    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    filter(Annotation != "NA") %>%
+    filter(Annotation != "blank")
 
-S22Fig <- plot_grid(S22FigA, S22FigB, labels=c('A','B'), ncol=1)
-ggsave("../results/S22Fig.pdf", S22Fig, height = 8, width = 6)
+## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
+S12FigC <- make.confint.figure.panel(
+    high.PCN.plasmids.table,
+    order.by.total.plasmids,
+    "proportion of plasmids with PCN > 50")
+
+## save the figure.
+S12Fig <- plot_grid(S12FigA, S12FigB, S12FigC, labels=c('A','B','C'), ncol=1, rel_heights=c(2,1,1))
+ggsave("../results/S12Fig.pdf", S12Fig, height = 8, width = 5)
 
 ## calculate the total number of plasmids,
 ## and the number of plasmids with PCN < 1 and PCN > 50.
-PCN.count <- nrow(PIRA.PCN.estimates) ## 11,381 plasmids here
+PCN.count <- nrow(PIRA.PCN.estimates) ## 11,338 plasmids here
 PCN.count
 
 ## There are 2376 plasmids with PCN < 1 in these data.
-## this is 20.8% of plasmids
+## this is 21% of plasmids
 low.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber < 1) %>% nrow()
 low.PCN.count
 low.PCN.count/PCN.count
 
-## There are 543 plasmids with PCN > 50 in these data.
-## This is 4.8% of plasmids.
+## There are 527 plasmids with PCN > 50 in these data.
+## This is 4.6% of plasmids.
 high.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 50) %>% nrow()
 high.PCN.count
 high.PCN.count/PCN.count
 
-## There are 2455 plasmids with PCN > 10 in these data
-## This is 21.6% of plasmids.
+## There are 2434 plasmids with PCN > 10 in these data
+## This is 21.5% of plasmids.
 multicopy10.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 10) %>% nrow()
 multicopy10.PCN.count
 multicopy10.PCN.count/PCN.count
