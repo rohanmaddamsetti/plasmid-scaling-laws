@@ -21,7 +21,6 @@
 ## The wikipedia page on chromids is very informative:
 ## https://en.wikipedia.org/wiki/Secondary_chromosome
 
-
 library(segmented) ## put this first so that dplyr::select is not masked.
 library(tidyverse)
 library(cowplot)
@@ -520,7 +519,7 @@ length(unique(full.PIRA.estimates$AnnotationAccession))
 nrow(filter(full.PIRA.estimates, SeqType=="plasmid"))
 
 ## write the normalized data to disk.
-write.csv(full.PIRA.estimates, "../results/PIRA-PCN-estimates-with-normalization.csv")
+write.csv(full.PIRA.estimates, "../results/Supplementary-Data-1-PIRA-PCN-estimates-with-normalization.csv")
 
 
 ## TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
@@ -822,7 +821,7 @@ segmented.PCN.model <- segmented(
     seg.Z = ~log10_replicon_length,
     psi = list(log10_replicon_length = 5))
 
-## the breakpoint is at 4.774. 10^4.774 = 59,429bp.
+## the breakpoint is at 4.75. 10^4.75 = 56,234bp.
 ## So plasmids above ~60Kbp have a flatter slope.
 summary(segmented.PCN.model)
 
@@ -856,7 +855,7 @@ segmented.normalized.PCN.model <- segmented(
     seg.Z = ~log10_normalized_replicon_length,
     psi = list(log10_normalized_replicon_length = -1.5))
 
-## the breakpoint is at -1.762. 10^-1.762 = 1.73% of the length of the chromosome.
+## the breakpoint is at -1.761. 10^-1.761 = 1.73% of the length of the chromosome.
 summary(segmented.normalized.PCN.model)
 
 ## save the segmented regression fit as a dataframe.
@@ -966,9 +965,9 @@ very.large.plasmids.by.mobility <- very.large.plasmids %>%
     count(PredictedMobility)
 ## Very large plasmids: these are chromids.
 ##       conjugative  29
-##       mobilizable  29
+##       mobilizable  28
 ##   non-mobilizable 101
-##              <NA>  32
+##              <NA>  31
 
 
 ################################################################################
@@ -1041,6 +1040,7 @@ analyze.within.genome.correlations <- function(MIN_PLASMIDS_PER_GENOME=2, df=PIR
 }
 
 analyze.within.genome.correlations(2)
+
 analyze.within.genome.correlations(3)
 
 ################################################################################
@@ -1165,7 +1165,7 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 
 
 ########################################
-## Supplementary FIgure S7.
+## Supplementary Figure S7.
 ## Plasmid length and copy number are conserved within plasmid taxonomic groups.
 
 ## Supplementary Figure S7AB
