@@ -989,13 +989,14 @@ ggsave("../results/S4Fig.pdf", S4Fig, height=5,width=5)
 ## Supplementary Figure S5
 ## Break down by taxonomic subgroup
 S5Fig <- PIRA.PCN.estimates %>%
+    mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
     filter.correlate.column("TaxonomicSubgroup") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup, ncol=3) +
     theme(strip.background = element_blank()) +
     guides(color = "none")
 ## save the plot.
-ggsave("../results/S5Fig.pdf", S5Fig, width=8)
+ggsave("../results/S5Fig.pdf", S5Fig, width=5)
 
 ## Supplementary Figure S6.
 ## Break down by genus.
@@ -1659,6 +1660,13 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 ## Supplementary Figures S15 through S17. Break down the result in Figure 4 by taxonomy
 ## and ecological category to show universality of the CDS scaling relationship.
 
+
+## CRITICAL TODO: Fix this bug where correlate columns are not being filtered properly??
+test <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(TaxonomicGroup == "Myxococcota")
+
+
+
 ## Supplementary Figure S15
 ## Break down by taxonomic group.
 S15Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
@@ -1688,33 +1696,4 @@ S17Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     facet_wrap(. ~ Genus, ncol=50)
 ## save the plot.
 ggsave("../results/S17Fig.pdf", S17Fig, height=50, width=50, limitsize = FALSE)
-
-
-################################################################################
-## let's see if there is any relationship between rRNA copy number and metabolic genes on plasmids.
-
-genomic.16S.rRNA.count <- CDS.rRNA.fraction.data %>%
-    group_by(AnnotationAccession) %>%
-    summarize(overall_rRNA_16S_count = sum(rRNA_16S_count))
-
-genome.16S.rRNA.count.and.metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.and.chromosome.data %>% left_join(genomic.16S.rRNA.count) %>% arrange(desc(overall_rRNA_16S_count))
-
-
-metabolic_genes_vs_16S_plot <- genome.16S.rRNA.count.and.metabolic.gene.plasmid.and.chromosome.data %>%
-    filter(SeqType != "chromosome") %>%
-   ggplot(
-        aes(
-            x = overall_rRNA_16S_count,
-            y = metabolic_protein_count,
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.5) +
-    xlab("16S rRNA count") +
-    ylab("metabolic genes") +
-    theme_classic() +
-    guides(color = "none") +
-    theme(strip.background = element_blank()) +
-    facet_wrap(.~Annotation)
-
-metabolic_genes_vs_16S_plot
- 
 
