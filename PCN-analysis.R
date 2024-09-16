@@ -310,7 +310,7 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
 }
 
 
-make_metabolic_scaling_base_plot <- function(metabolic.gene.and.chromosome.data) {
+make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromosome.data) {
     metabolic.gene.plasmid.and.chromosome.data %>%
         ggplot(
             aes(
@@ -1657,43 +1657,38 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
 
 
 ################################################################################
-## Supplementary Figures S15 through S17. Break down the result in Figure 4 by taxonomy
+## Supplementary Figures S15 and S16. Break down the result in Figure 4 by taxonomy
 ## and ecological category to show universality of the CDS scaling relationship.
 
-
-## CRITICAL TODO: Fix this bug where correlate columns are not being filtered properly??
-test <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter(TaxonomicGroup == "Myxococcota")
-
-
-
-## Supplementary Figure S15
+## Supplementary Figure S15A
 ## Break down by taxonomic group.
-S15Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter.correlate.column("TaxonomicGroup") %>%
+S15FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter.correlate.column("TaxonomicGroup", 10) %>%
     make_metabolic_scaling_base_plot() +
-    facet_wrap(. ~ TaxonomicGroup)
+    facet_wrap(. ~ TaxonomicGroup) +
+    ggtitle("NCBI Taxonomic Groups")
+
+## Supplementary Figure S15B
+## Break down by taxonomic subgroup
+S15FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
+    ## put new lines in the subgroups to improve the aspect ratio of the subpanels.
+    mutate(TaxonomicSubgroup= str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
+    filter.correlate.column("TaxonomicSubgroup", 10) %>%
+    make_metabolic_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup, ncol=5) +
+    ggtitle("NCBI Taxonomic Subgroups")
+
+S15Fig <- plot_grid(S15FigA, S15FigB, labels=c('A','B'),nrow=2)
 ## save the plot.
-ggsave("../results/S15Fig.pdf", S15Fig, height=6,width=8)
+ggsave("../results/S15Fig.pdf", S15Fig, height=11, width=8)
 
 
 ## Supplementary Figure S16
-## Break down by taxonomic subgroup
+## Break down by genus. Only genera with more than 100 points are shown.
 S16Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter.correlate.column("TaxonomicSubgroup") %>%
+    filter.correlate.column("Genus", 100) %>%
     make_metabolic_scaling_base_plot() +
-    facet_wrap(. ~ TaxonomicSubgroup, ncol=3)
+    facet_wrap(. ~ Genus, ncol=7)
 ## save the plot.
-ggsave("../results/S16Fig.pdf", S16Fig, height=12, width=8)
-
-
-## Supplementary FIgure S17
-## Break down by genus.
-S17Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter.correlate.column("Genus") %>%
-    make_metabolic_scaling_base_plot() +
-##    geom_density() +
-    facet_wrap(. ~ Genus, ncol=50)
-## save the plot.
-ggsave("../results/S17Fig.pdf", S17Fig, height=50, width=50, limitsize = FALSE)
+ggsave("../results/S16Fig.pdf", S16Fig, height=10, width=8.5)
 
