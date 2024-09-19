@@ -1506,6 +1506,20 @@ S12FigA <- PIRA.PCN.estimates %>%
 ## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
 ## there is an enrichment of high PCN plasmids in human-impacted environments.
 
+## How many total plasmids? 11,338.
+PIRA.PCN.estimates %>%
+    nrow()
+
+## How many plasmids have PCN < 1? 2,376.
+PIRA.PCN.estimates %>%
+    filter(PIRACopyNumber < 1) %>%
+    nrow()
+
+## How many plasmids have PCN >= 1? 8,962
+PIRA.PCN.estimates %>%
+    filter(PIRACopyNumber >= 1) %>%
+    nrow()
+
 
 ## calculate the fraction of low PCN plasmids in each category.
 ## Make Z-distributed confidence intervals for the fraction of isolates with
