@@ -268,7 +268,12 @@ make_PCN_base_plot <- function(my.PCN.data) {
         xlab("log10(Length)")  +
         ylab("log10(Copy Number)") +
         theme(legend.position = "bottom") +
-        theme(strip.background = element_blank())
+        theme(strip.background = element_blank()) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
 }
 
 
@@ -289,7 +294,12 @@ make_normalized_PCN_base_plot <- function(my.PCN.data) {
         xlab("log10(Normalized length)")  +
         ylab("log10(Copy Number)") +
         theme(legend.position = "bottom") +
-        theme(strip.background = element_blank())
+        theme(strip.background = element_blank()) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
 }
 
 
@@ -301,11 +311,16 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
                 y = log10(CDS_length),
                 color = SeqType)) +
         geom_point(size=0.05,alpha=0.5) +
-        xlab("log10(replicon length)") +
-        ylab("log10(coding sequence length)") +
+        xlab("log10(Length)") +
+        ylab("log10(Coding sequence length)") +
         theme_classic() +
         guides(color = "none") +
-        theme(strip.background = element_blank())
+        theme(strip.background = element_blank()) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
 }
 
 
@@ -317,11 +332,16 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
                 y = log10(metabolic_protein_count),
                 color = SeqType)) +
         geom_point(size=0.5,alpha=0.5) +
-        xlab("log10(replicon length)") +
-        ylab("log10(metabolic genes)") +
+        xlab("log10(Length)") +
+        ylab("log10(Metabolic genes)") +
         theme_classic() +
         guides(color = "none") +
-        theme(strip.background = element_blank())
+        theme(strip.background = element_blank()) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
 }
 
 
@@ -865,7 +885,7 @@ normalized.segmented.fit.df = data.frame(
 
 ## compare to a second-order polynomial fit.
 second.order.normalized.PCN.lm.model <- lm(
-    formula=log10_PIRACopyNumber ~ poly(log10_normalized_replicon_length,2,raw=TRUE),
+    formula=log10_PIRACopyNumber ~ poly(log10_normalized_replicon_length,2, raw=TRUE),
     data=PIRA.PCN.estimates)
 
 
@@ -895,13 +915,13 @@ S3FigA_without_marginals <- S3FigA_base +
     guides(color = "none")
 
 ## Add the marginal histograms
-S3FigA <- ggExtra::ggMarginal(S3FigA_without_marginals, margins="both") 
+S3FigA <- ggExtra::ggMarginal(S3FigA_without_marginals, groupColour = TRUE, groupFill = TRUE, margins="both") 
 
 S3FigB <- S3FigA_base + guides(color = "none") + facet_wrap(.~Annotation)
 
 ## make S3 Figure and save to file.
 S3Fig <- plot_grid(S3FigA, S3FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
-ggsave("../results/S3Fig.pdf", S3Fig, height=4.75, width=7.25)
+ggsave("../results/S3Fig.pdf", S3Fig, height=4.5, width=7.25)
 
 
 ## Figure 1BC.
@@ -927,7 +947,7 @@ Fig1B_without_marginals <- Fig1B_base +
     guides(color = "none")
 
 ## add the marginal histogram to Figure 1B.
-Fig1B <- ggExtra::ggMarginal(Fig1B_without_marginals, margins="both")
+Fig1B <- ggExtra::ggMarginal(Fig1B_without_marginals, groupColour = TRUE, groupFill = TRUE, margins="both")
 
 ## Figure 1C: facet by ecological annotation.
 Fig1C <- Fig1B_base + guides(color = "none") + facet_wrap(.~Annotation)
@@ -937,7 +957,7 @@ Fig1BC_title <- ggdraw() + draw_label("Plasmid length normalized by chromosome",
 Fig1BC <- plot_grid(Fig1B, Fig1C, labels=c('B', 'C'), ncol=2, rel_widths = c(1, 1))
 Fig1BC_with_title_and_legend <- plot_grid(Fig1BC_title, Fig1BC, Fig1BC_legend, ncol=1, rel_heights = c(0.1,1,0.1))
 
-ggsave("../results/Fig1BC.pdf", Fig1BC_with_title_and_legend, height=5.5, width=7.5)
+ggsave("../results/Fig1BC.pdf", Fig1BC_with_title_and_legend, height=4.5, width=7.25)
 
 ################################################################################
 ## calculate basic statistics about the clusters of small and large plasmids.
@@ -1556,13 +1576,13 @@ Fig2A <- CDS.rRNA.fraction.data %>%
     make_CDS_scaling_base_plot()
 
 ## Fig 2B: show generality over ecology.
-Fig2B <- CDS.rRNA.fraction.data %>%    
+Fig2B <- CDS.rRNA.fraction.data %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(.~Annotation)
 
 Fig2 <- plot_grid(Fig2A, Fig2B, labels = c("A", "B"), nrow=1)
 ## save the plot.
-ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.5)
+ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 
 
 ################################################################################
@@ -1647,13 +1667,13 @@ Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot()
 
 ## Fig3B: show generality over ecology.
-Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%    
+Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(.~Annotation, nrow=3)
 
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
 ## save the plot.
-ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.5)
+ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
 
 
 ################################################################################
