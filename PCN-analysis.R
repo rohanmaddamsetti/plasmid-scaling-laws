@@ -33,8 +33,38 @@ library(viridis)
 ################################################################################
 ## Functions and global variables.
 
-filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 10) {
-    ## this function filters data frames for groups with more than 10 data points in the column
+filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 100) {
+    ## this function filters data frames for groups with more than 100 data points in the column
+    ## named in the string correlate_column_name_string, using tidy evaluation,
+    ## and groups together data points in groups that fall below the min_group_size into "Others".
+    
+    correlate_column_name <- sym(correlate_column_name_string)
+    
+    correlate.groups <- df %>%
+        filter(!is.na(!!correlate_column_name)) %>%
+        filter(!!correlate_column_name != '-') %>%
+        count(!!correlate_column_name) %>%
+        filter(n >= min_group_size)
+    
+    data_in_nice_correlate_groups_df <- df %>%
+        filter(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])
+
+    remaining_data_df <- df %>%
+        ## negate the previous filter,
+        filter(!(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])) %>%
+        ## but be sure to remove any NA or unannotated values in the correlate column.
+        filter(!is.na(!!correlate_column_name)) %>%
+        filter(!!correlate_column_name != '-') %>%
+        ## and lump these point together into the whatever the lumped_group_name is.
+        mutate(!!correlate_column_name := lumped_group_name)
+
+    final_df <- bind_rows(data_in_nice_correlate_groups_df, remaining_data_df)
+    return(final_df)
+}
+
+
+filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 100) {
+    ## this function filters data frames for groups with more than 100 data points in the column
     ## named in the string correlate_column_name_string, using tidy evaluation.
     ## I figured this out using ChatGPT and Chapter 20 of Advanced R by Hadley Wickham
     ## as a reference: https://adv-r.hadley.nz/evaluation.html#tidy-evaluation
@@ -45,7 +75,7 @@ filter.correlate.column <- function(df, correlate_column_name_string, min_group_
         filter(!is.na(!!correlate_column_name)) %>%
         filter(!!correlate_column_name != '-') %>%
         count(!!correlate_column_name) %>%
-        filter(n > min_group_size)
+        filter(n >= min_group_size)
 
     df %>%
         filter(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])
@@ -996,13 +1026,13 @@ very.large.plasmids.by.mobility <- very.large.plasmids %>%
 ## Supplementary Figure S4 
 ## Break down by genus.
 S4Fig <- PIRA.PCN.estimates %>%
-    filter.correlate.column("Genus") %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ Genus, ncol = 7) +
     theme(strip.background = element_blank()) +
     guides(color = "none")
 ## save the plot.
-ggsave("../results/S4Fig.pdf", S4Fig, height=15, width=8, limitsize=FALSE)
+ggsave("../results/S4Fig.pdf", S4Fig, height=7, width=7, limitsize=FALSE)
 
 
 ################################################################################
@@ -1371,7 +1401,7 @@ ggsave("../results/S5Fig.pdf", S5Fig, width=7.5, height=12)
 ## plot over relaxase_type.
 S6Fig <- MOB.typed.PIRA.PCN.estimates %>%
     rank.correlate.column("relaxase_type.s.") %>%
-    filter.correlate.column("relaxase_type.s.") %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("relaxases_type.s.", "All other relaxase types") %>%
     make_PCN_base_plot() +
     facet_wrap(relaxase_type.s. ~ ., ncol=4) +
     ggtitle("MOB-Typer relaxase types") +
@@ -1389,7 +1419,7 @@ ggsave("../results/S8Fig.pdf", S8Fig)
 ## following the documentation here: https://github.com/phac-nml/mob-suite 
 S7FigA <- MOB.typed.PIRA.PCN.estimates %>%
     rank.correlate.column("observed_host_range_ncbi_name") %>%
-    filter.correlate.column("observed_host_range_ncbi_name") %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("observed_host_range_ncbi_name", "All other host ranges") %>%
     ## put new lines in the host ranges to improve the aspect ratio of the subpanels.
     mutate(observed_host_range_ncbi_name = str_replace_all(observed_host_range_ncbi_name, ",", ",\n")) %>%
     make_PCN_base_plot() +
@@ -1552,7 +1582,7 @@ ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 ## Break down by genus.
 ## show genera with more than 100 points.
 S9Fig <- CDS.rRNA.fraction.data %>%
-    filter.correlate.column("Genus", min_group_size = 100) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=6)
 ## save the plot.
@@ -1619,7 +1649,7 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
 ## Supplementary Figure S10
 ## Break down by genus. Only genera with more than 100 points are shown.
 S11Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter.correlate.column("Genus", 100) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=7)
 ## save the plot.
