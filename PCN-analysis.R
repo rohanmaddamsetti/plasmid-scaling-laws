@@ -2,11 +2,18 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## CRITICAL TODO: REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
+## TODO: REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
 ## in the Definition in the Genbank annotation. Right now I remove all sequences < 1000bp in length,
 ## which is probably good enough.
 
 ## TODO: FIGURE OUT WHY ~1000 PCN GENOMES ARE NOT ANNOTATED.
+
+## TODO WHEN RERUNNING FROM SCRATCH:
+## Make sure all the genomes in ../results/gbk-annotation are consistent
+## with the genomes annotated in computationally-annotated-genomes etc.
+## (that is, there are no suppressed RefSeq genomes in this folder, and everything is annotated.)
+## in the Annotation and SeqType columns, and rewrite upstream code to solve this problem.
+
 
 ## CRITICAL POINT: Annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
 ## The metabolic scaling law emerges in chromids.
@@ -14,7 +21,7 @@
 ## conjugative plasmids in chromids or secondary chromosomes,
 ## we excluded from further study the 419 plasmids larger than 500 kb.
 
-## CRTITICAL POINT: my analysis does not distinguish between chromids and megaplasmids,
+## CRITICAL POINT: my analysis does not distinguish between chromids and megaplasmids,
 ## and the definition may be intrinsically blurry.
 ## See the very nice review on megaplasmids by James Hall and David Baltrus.
 
@@ -32,6 +39,45 @@ library(viridis)
 
 ################################################################################
 ## Functions and global variables.
+
+
+filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 50) {    
+    ## this function filters data frames for groups with more than min_group_size data points in the column
+    ## named in the string correlate_column_name_string, using tidy evaluation,
+    ## and groups together data points in groups that fall below the min_group_size into lumped_group_name.
+    
+    correlate_column_name <- sym(correlate_column_name_string)
+    
+    correlate.groups <- df %>%
+        filter(!is.na(!!correlate_column_name)) %>%
+        filter(!!correlate_column_name != '-') %>%
+        count(!!correlate_column_name) %>%
+        filter(n >= min_group_size)
+    
+    data_in_nice_correlate_groups_df <- df %>%
+        filter(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])
+
+    remaining_data_df <- df %>%
+        ## negate the previous filter,
+        filter(!(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])) %>%
+        ## but be sure to remove any NA or unannotated values in the correlate column.
+        filter(!is.na(!!correlate_column_name)) %>%
+        filter(!!correlate_column_name != '-') %>%
+        ## and lump these point together into the whatever the lumped_group_name is.
+        mutate(!!correlate_column_name := lumped_group_name)
+
+    final_df <- bind_rows(data_in_nice_correlate_groups_df, remaining_data_df)
+
+    ## put the group named by lumped_group_name as the final group.
+    group_values_without_lumped_group <- sort(setdiff(unique(final_df[[correlate_column_name_string]]), lumped_group_name))
+    group_levels <- c(group_values_without_lumped_group, lumped_group_name)
+
+    final_df <- final_df %>%
+        mutate(!!correlate_column_name := factor(!!correlate_column_name, levels = group_levels))
+
+    return(final_df)
+}
+
 
 filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 50) {
     ## this function filters data frames for groups with more than min_group_size data points in the column
@@ -71,44 +117,6 @@ rank.correlate.column <- function(df, correlate_column_name_string) {
         inner_join(correlate.column.ranks) %>%
         ## and order the column by replicon length.
         mutate(!!correlate_column_name := fct_reorder(!!correlate_column_name, rank))
-}
-
-
-filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 50) {    
-    ## this function filters data frames for groups with more than min_group_size data points in the column
-    ## named in the string correlate_column_name_string, using tidy evaluation,
-    ## and groups together data points in groups that fall below the min_group_size into lumped_group_name.
-    
-    correlate_column_name <- sym(correlate_column_name_string)
-    
-    correlate.groups <- df %>%
-        filter(!is.na(!!correlate_column_name)) %>%
-        filter(!!correlate_column_name != '-') %>%
-        count(!!correlate_column_name) %>%
-        filter(n >= min_group_size)
-    
-    data_in_nice_correlate_groups_df <- df %>%
-        filter(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])
-
-    remaining_data_df <- df %>%
-        ## negate the previous filter,
-        filter(!(!!correlate_column_name %in% correlate.groups[[correlate_column_name_string]])) %>%
-        ## but be sure to remove any NA or unannotated values in the correlate column.
-        filter(!is.na(!!correlate_column_name)) %>%
-        filter(!!correlate_column_name != '-') %>%
-        ## and lump these point together into the whatever the lumped_group_name is.
-        mutate(!!correlate_column_name := lumped_group_name)
-
-    final_df <- bind_rows(data_in_nice_correlate_groups_df, remaining_data_df)
-
-    ## put the group named by lumped_group_name as the final group.
-    group_values_without_lumped_group <- sort(setdiff(unique(final_df[[correlate_column_name_string]]), lumped_group_name))
-    group_levels <- c(group_values_without_lumped_group, lumped_group_name)
-
-    final_df <- final_df %>%
-        mutate(!!correlate_column_name := factor(!!correlate_column_name, levels = group_levels))
-
-    return(final_df)
 }
 
 
@@ -431,7 +439,6 @@ PCN.replicon.metadata <- read.csv("../results/NCBI-replicon_lengths.csv")
 
 
 ## This is the full file of MOBTyper results
-## CRITICAL TODO: analyze all the additional correlates that may be in these data.
 MOBTyper.results <- read.csv("../data/Maddamsetti2024_FileS5-MOBTyper-plasmid-annotations.csv") %>%
     select(
         sample_id, gc, rep_type.s., rep_type_accession.s., relaxase_type.s.,
@@ -463,7 +470,7 @@ plasmid.length.data <- replicon.length.data %>%
 ################################################################################
 ## KEGG metabolic pathways results.
 
-######### POTENTIALLY IMPORTANT TODO: in the upstream pipeline for the GhostKOALA
+######### TODO: in the upstream pipeline for the GhostKOALA
 ######### annotation of metabolic genes-- INCLUDE THE LENGTH OF EACH GENE!
 ######### This will also me to analyze the FRACTION of sequence dedicated to metabolic proteins
 ######### on each chromosome and plasmid, to be consistent with the results in Figure 3.
@@ -497,18 +504,6 @@ CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     left_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths()
-
-
-## TODO WHEN RERUNNING FROM SCRATCH:
-## Make sure all the genomes in ../results/gbk-annotation are consistent
-## with the genomes annotated in computationally-annotated-genomes etc.
-## (that is, there are no suppressed RefSeq genomes in this folder, and everything is annotated.)
-## in the Annotation and SeqType columns, and rewrite upstream code to
-## solve this problem.
-## FOR DEBUGGING
-bad.annotations.vec <- unique(filter(CDS.rRNA.fraction.data, is.na(SeqType) | is.na(Annotation))$AnnotationAccession)
-bad.annotations.df <- data.frame(BadAnnotationAccessions = bad.annotations.vec)
-write.csv(bad.annotations.df, "../results/BAD-ANNOTATIONS-IN-CDS-rRNA-FRACTIONS.csv", row.names=F, quote=F)
 
 
 ################################################################################
@@ -547,7 +542,7 @@ no.multiread.naive.themisto.estimates <- read.csv("../results/naive-themisto-PCN
 
   
 ## now merge the datasets together.
-## CRITICAL TODO: fix upstream annotation so that we don't have any
+## TODO: fix upstream annotation so that we don't have any
 ## "NA" or "blank" Annotation genomes in full.PIRA.estimates.
 full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.estimates) %>%
     ## rename columns to so that we can compare estimates for benchmarking.
@@ -958,7 +953,7 @@ S3FigB <- S3FigA_base + guides(color = "none") + facet_wrap(.~Annotation)
 
 ## make S3 Figure and save to file.
 S3Fig <- plot_grid(S3FigA, S3FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
-ggsave("../results/S3Fig.pdf", S3Fig, height=4.5, width=7.25)
+ggsave("../results/S3Fig.pdf", S3Fig, height=4, width=7.25)
 
 
 ## Figure 1BC.
@@ -1040,7 +1035,7 @@ S4Fig <- PIRA.PCN.estimates %>%
     theme(strip.background = element_blank()) +
     guides(color = "none")
 ## save the plot.
-ggsave("../results/S4Fig.pdf", S4Fig, height=7, width=7, limitsize=FALSE)
+ggsave("../results/S4Fig.pdf", S4Fig, height=7.2, width=7.2)
 
 
 ################################################################################
@@ -1221,13 +1216,19 @@ Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
         x = rank,
         y = log10(replicon_length),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Cliques ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    ggtitle("Plasmid cliques in Acman et al. (2020)")
+    ggtitle("Plasmid cliques in Acman et al. (2020)") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
+
 
 
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
@@ -1235,12 +1236,17 @@ Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
         x = rank,
         y = log10(PIRACopyNumber),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Cliques ranked by length")  +
     ylab("log10(Copy Number)") +
-    guides(color = "none")
+    guides(color = "none") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 S5FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=1)
 
@@ -1265,13 +1271,18 @@ Redondo.Salvo.PTU.size.plot <- PTU.full.PIRA.estimates %>%
         x = rank,
         y = log10(replicon_length),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    ggtitle("PTUs in Redondo-Salvo et al. (2020)")
+    ggtitle("PTUs in Redondo-Salvo et al. (2020)") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 
 Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.estimates %>%
@@ -1279,12 +1290,17 @@ Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.estimates %>%
         x = rank,
         y = log10(PIRACopyNumber),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Copy Number)") +
-    guides(color = "none")
+    guides(color = "none") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 S5FigCD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=1)
 
@@ -1305,13 +1321,18 @@ MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
         x = rank,
         y = log10(replicon_length),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    ggtitle("MOB-Cluster Mash Distance < 0.06")
+    ggtitle("MOB-Cluster Mash Distance < 0.06") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 
 MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
@@ -1319,12 +1340,17 @@ MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
         x = rank,
         y = log10(PIRACopyNumber),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
     ylab("log10(Copy Number)") +
-    guides(color = "none")
+    guides(color = "none") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 S5FigEF <- plot_grid(MOB.Typer.PTU.size.plot, MOB.Typer.PTU.PCN.plot, labels=c('E','F'), nrow=1)
 
@@ -1338,13 +1364,18 @@ MOB.Typer.reptype.size.plot <- MOB.typed.PIRA.reptypes %>%
         x = rank,
         y = log10(replicon_length),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    ggtitle("MOB-Typer Rep types")
+    ggtitle("MOB-Typer Rep types") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 
 ## MOB-typer Rep protein type classes by PCN
@@ -1353,12 +1384,17 @@ MOB.Typer.reptype.PCN.plot <- MOB.typed.PIRA.reptypes %>%
         x = rank,
         y = log10(PIRACopyNumber),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
     ylab("log10(Copy Number)") +
-    guides(color = "none")
+    guides(color = "none") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 S5FigGH <- plot_grid(MOB.Typer.reptype.size.plot, MOB.Typer.reptype.PCN.plot, labels=c('G','H'), nrow=1)
 
@@ -1374,13 +1410,18 @@ AresArroyo2023.reptype.size.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
         x = rank,
         y = log10(replicon_length),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
     ylab("log10(Length)") +
     guides(color = "none") +
-    ggtitle("Rep types in Ares-Arroyo et al. (2023)")
+    ggtitle("Rep types in Ares-Arroyo et al. (2023)") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 
 ## Ares-Arroyo Rep protein type classes by PCN
@@ -1389,12 +1430,17 @@ AresArroyo2023.reptype.PCN.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
         x = rank,
         y = log10(PIRACopyNumber),
         color = PredictedMobility)) +
-    geom_point(size=0.2,alpha=0.5) +
+    geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
     ylab("log10(Copy Number)") +
-    guides(color = "none")
+    guides(color = "none") +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 S5FigIJ <- plot_grid(AresArroyo2023.reptype.size.plot, AresArroyo2023.reptype.PCN.plot, labels=c('I','J'), nrow=1)
 
@@ -1429,7 +1475,7 @@ S7FigA <- MOB.typed.PIRA.PCN.estimates %>%
     mutate(observed_host_range_ncbi_name = str_replace_all(observed_host_range_ncbi_name, ",", ",\n")) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("observed_host_range_ncbi_name", "All other host ranges") %>%
     make_PCN_base_plot() +
-    facet_wrap(observed_host_range_ncbi_name ~ ., ncol=6) +
+    facet_wrap(observed_host_range_ncbi_name ~ ., nrow=3) +
     ggtitle("Host range annotated by MOB-Typer") +
     guides(color = "none")
 
@@ -1451,14 +1497,17 @@ S7FigB <- RedondoSalvo.host.range.full.PIRA.estimates %>%
     geom_point(size=1,alpha=0.5) +
     theme_classic() +
     ggtitle("Host range annotated by\nRedondo-Salvo et al. (2020)") +
-    theme(legend.position = "bottom") +
+    theme(legend.position = "right") +
     ## make the points in the legend larger.
     guides(color = guide_legend(override.aes = list(size = 5)))
 
-S7Fig <- plot_grid(S7FigA, S7FigB, labels=c('A','B'), ncol=1, rel_heights=c(3,1))
-
+S7Fig <- plot_grid(
+    S7FigA,
+    plot_grid(S7FigB,"", rel_widths=c(1.5,1)),
+    labels=c('A','B'), ncol=1,
+    rel_heights=c(2.5,1))
 ## save the plot
-ggsave("../results/S7Fig.pdf", S7Fig, height=15,width=8,limitsize=FALSE)
+ggsave("../results/S7Fig.pdf", S7Fig, height=8.5,width=7.1)
 
 
 ################################################################################
@@ -1471,7 +1520,7 @@ order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotatio
 S8FigA <- PIRA.PCN.estimates %>%
     ## order the Annotation levels.
     mutate(Annotation = factor(Annotation, levels = order.by.total.plasmids)) %>%
-    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    ## TODO: fix upstream annotation so I don't have to do this filtering.
     filter(Annotation != "NA") %>%
     filter(Annotation != "blank") %>%
     ggplot(aes(x = log10(PIRACopyNumber))) +
@@ -1508,7 +1557,7 @@ PIRA.PCN.estimates %>%
 ## PCN < 1.
 
 low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates) %>%
-    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    ## TODO: fix upstream annotation so I don't have to do this filtering.
     filter(Annotation != "NA") %>%
     filter(Annotation != "blank")
 
@@ -1524,7 +1573,7 @@ S8FigB <- make.confint.figure.panel(
 ## PCN > 50.
 
 high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates) %>%
-    ## CRITICAL TODO: fix upstream annotation so I don't have to do this filtering.
+    ## TODO: fix upstream annotation so I don't have to do this filtering.
     filter(Annotation != "NA") %>%
     filter(Annotation != "blank")
 
@@ -1586,11 +1635,12 @@ ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 ## to show universality of the CDS scaling relationship.
 
 ## Break down by genus.
-## show genera with more than 100 points.
 S9Fig <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_CDS_scaling_base_plot() +
-    facet_wrap(. ~ Genus, ncol=6)
+    facet_wrap(. ~ Genus, ncol=6) +
+    ## improve the y-axis labels.
+    scale_y_continuous(breaks=c(2, 7))
 ## save the plot.
 ggsave("../results/S9Fig.pdf", S9Fig, width=8,height=11)
 
@@ -1626,7 +1676,7 @@ metabolic.gene.chromosome.data <- metabolic.genes.in.chromosomes %>%
 ## combine plasmid and chromosome metabolic gene data for Figure 4.
 metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.data %>%
     full_join(metabolic.gene.chromosome.data) %>%
-    ## IMPORTANT TODO: filter upstream Annotation so I don't need to do this ad hoc filtering here.
+    ## TODO: filter upstream Annotation so I don't need to do this ad hoc filtering here.
     filter(!is.na(Annotation)) %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
     mutate(SeqType = ifelse(
@@ -1650,14 +1700,17 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
 
 ################################################################################
 ## Supplementary Figure S10. Break down the result in Figure 4 by genus
-## to show universality of the CDS scaling relationship.
+## to show universality of the CDS scaling relationship among genera containing chromids.
 
+genera.containing.chromids <- filter(metabolic.gene.plasmid.and.chromosome.data, SeqType == "chromid")$Genus
+    
 ## Supplementary Figure S10
-## Break down by genus. Only genera with more than 100 points are shown.
+## Break down by genus, only showing genera containing megaplasmids.
 S10Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(Genus %in% genera.containing.chromids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
-    facet_wrap(. ~ Genus, ncol=7)
+    facet_wrap(. ~ Genus, ncol=6)
 ## save the plot.
-ggsave("../results/S10Fig.pdf", S10Fig, height=10, width=8.5)
+ggsave("../results/S10Fig.pdf", S10Fig, height=10, width=8)
 
