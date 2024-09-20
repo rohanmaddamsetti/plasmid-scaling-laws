@@ -1404,34 +1404,6 @@ S8Fig <- MOB.typed.PIRA.PCN.estimates %>%
 ggsave("../results/S8Fig.pdf", S8Fig)
 
 
-########################################
-## Supplementary Figure S9: oriT analysis.
-
-## plot over oriT
-S9FigA <- PIRA.PCN.for.AresArroyo2023.data %>%
-    rank.correlate.column("oriT") %>%
-    ## only plot groups with more than 10 data points.
-    filter.correlate.column("oriT") %>%
-    make_PCN_base_plot() +
-    facet_wrap(oriT ~ .) +
-    ggtitle("oriT annotated by Ares-Arroyo et al. (2023)") +
-    guides(color = "none")
-
-## plot over oriT_Family
-S9FigB <- PIRA.PCN.for.AresArroyo2023.data %>%
-    rank.correlate.column("oriT_Family") %>%
-    ## only plot groups with more than 10 data points.
-    filter.correlate.column("oriT_Family") %>%
-    make_PCN_base_plot() +
-    facet_wrap(oriT_Family ~ .) +
-    ggtitle("oriT family annotated by Ares-Arroyo et al. (2023)") +
-    guides(color = "none")
-
-S9Fig <- plot_grid(S9FigA, S9FigB, labels = c('A','B'), ncol = 1)
-## save the plot
-ggsave("../results/S9Fig.pdf", S9Fig, height=11)
-
-
 ##############################
 ## Supplementary Figures S10 and S11: Host range analysis.
 ## These are two separate figures to avoid color scale conflicts.
