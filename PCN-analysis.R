@@ -287,7 +287,12 @@ make.confint.figure.panel <- function(Table, order.by.total.plasmids, title,
         theme_classic() +
         ggtitle(title) +
         ## plot CIs.
-        geom_errorbarh(aes(xmin=Left,xmax=Right), height=0.2, size=0.2)
+        geom_errorbarh(aes(xmin=Left,xmax=Right), height=0.2, size=0.2) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
     
     if (no.category.label)
         Fig.panel <- Fig.panel +
@@ -1524,13 +1529,20 @@ S8FigA <- PIRA.PCN.estimates %>%
     filter(Annotation != "NA") %>%
     filter(Annotation != "blank") %>%
     ggplot(aes(x = log10(PIRACopyNumber))) +
-    geom_histogram(bins=1000) +
+    geom_histogram(bins=100) +
     geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
     ## place the high PCN at log10(50).
     geom_vline(xintercept = log10(50), linetype = "dashed", color = "light gray") +
+    xlab("log10(Copy Number)") +
+    ylab("Count") +
     facet_wrap(. ~ Annotation) +
     theme_classic() +
-    theme(strip.background = element_blank())
+    theme(strip.background = element_blank()) +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
 
 ## Supplementary Figure S8BC.
 ## Examine the tails of the PCN distribution.
@@ -1565,7 +1577,7 @@ low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates) %>%
 S8FigB <- make.confint.figure.panel(
                                      low.PCN.plasmids.table,
                                      order.by.total.plasmids,
-                                     "proportion of plasmids with PCN < 1")
+                                     "Proportion of plasmids with PCN < 1")
 
 ## calculate the fraction of high PCN plasmids in each category.
 ## there is an enrichment of  PCN > 50 plasmids in human-impacted environments.
@@ -1581,7 +1593,7 @@ high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates) %>%
 S8FigC <- make.confint.figure.panel(
     high.PCN.plasmids.table,
     order.by.total.plasmids,
-    "proportion of plasmids with PCN > 50")
+    "Proportion of plasmids with PCN > 50")
 
 ## save the figure.
 S8Fig <- plot_grid(S8FigA, S8FigB, S8FigC, labels=c('A','B','C'), ncol=1, rel_heights=c(2,1,1))
