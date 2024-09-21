@@ -510,7 +510,6 @@ CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths()
 
-
 ################################################################################
 ## Get the PCN estimates. These are the main data for this paper.
 ## IMPORTANT NOTE: We only have PCN estimates for ~10,000 plasmids in ~4,500 genomes,
@@ -945,6 +944,9 @@ S3FigA_base <- PIRA.PCN.estimates %>%
     make_PCN_base_plot() +
     theme(strip.background = element_blank())
 
+## Get the legend.
+S3Fig_legend <- get_legend(S3FigA_base)
+
 ## draw the segmented regression,
 ## and remove the legend.
 S3FigA_without_marginals <- S3FigA_base +
@@ -954,11 +956,15 @@ S3FigA_without_marginals <- S3FigA_base +
 ## Add the marginal histograms
 S3FigA <- ggExtra::ggMarginal(S3FigA_without_marginals, groupColour = TRUE, groupFill = TRUE, margins="both") 
 
+## S3Fig panel B: facet by ecological annotation.
 S3FigB <- S3FigA_base + guides(color = "none") + facet_wrap(.~Annotation)
 
-## make S3 Figure and save to file.
-S3Fig <- plot_grid(S3FigA, S3FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
-ggsave("../results/S3Fig.pdf", S3Fig, height=4, width=7.25)
+## make the panels without the legend
+S3FigAB <- plot_grid(S3FigA, S3FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
+
+## make S3 Figure with the legend and save to file.
+S3Fig <- plot_grid(S3FigAB, S3Fig_legend, ncol=1, rel_heights = c(1,0.1))
+ggsave("../results/S3Fig.pdf", S3Fig, height=4.25, width=7.25)
 
 
 ## Figure 1BC.
@@ -1630,10 +1636,22 @@ multicopy10.PCN.count/PCN.count
 
 ## Fig 2A: show the combined plot
 Fig2A <- CDS.rRNA.fraction.data %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## but we have to make these annotations right before we make the figure, so
+    ## that we don't accidentally filter out chromids when selecting plasmids.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType)) %>%
     make_CDS_scaling_base_plot()
 
 ## Fig 2B: show generality over ecology.
 Fig2B <- CDS.rRNA.fraction.data %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## but we have to make these annotations right before we make the figure, so
+    ## that we don't accidentally filter out chromids when selecting plasmids.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType)) %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(.~Annotation)
 
@@ -1649,6 +1667,12 @@ ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 ## Break down by genus.
 S9Fig <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## but we have to make these annotations right before we make the figure, so
+    ## that we don't accidentally filter out chromids when selecting plasmids.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType)) %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=6) +
     ## improve the y-axis labels.
