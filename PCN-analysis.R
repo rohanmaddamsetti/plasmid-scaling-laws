@@ -1750,3 +1750,18 @@ S10Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
 ## save the plot.
 ggsave("../results/S10Fig.pdf", S10Fig, height=10, width=8)
 
+## ChatGPT says these are the default 3 colors in ggplot2.
+## "#F8766D" (a red shade)
+## "#00BA38" (a green shade)
+## "#619CFF" (a blue shade)
+
+## as a control, examine those genera that don't contain megaplasmids.
+## we see the same trend, but it is less obvious.
+S11Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(!(Genus %in% genera.containing.chromids)) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
+    make_metabolic_scaling_base_plot() +
+    scale_color_manual(values=c("#00BA38","#619CFF")) +
+    facet_wrap(. ~ Genus, ncol=6)
+## save the plot.
+ggsave("../results/S11Fig.pdf", S11Fig, height=10, width=8)
