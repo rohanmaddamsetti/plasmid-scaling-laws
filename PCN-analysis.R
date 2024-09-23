@@ -41,7 +41,7 @@ library(viridis)
 ## Functions and global variables.
 
 
-filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 50) {    
+filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 100) {    
     ## this function filters data frames for groups with more than min_group_size data points in the column
     ## named in the string correlate_column_name_string, using tidy evaluation,
     ## and groups together data points in groups that fall below the min_group_size into lumped_group_name.
@@ -79,7 +79,7 @@ filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df,
 }
 
 
-filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 50) {
+filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 100) {
     ## this function filters data frames for groups with more than min_group_size data points in the column
     ## named in the string correlate_column_name_string, using tidy evaluation.
     ## I figured this out using ChatGPT and Chapter 20 of Advanced R by Hadley Wickham
@@ -1664,6 +1664,61 @@ ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 ## Supplementary Figure S9. Break down the result in Figure 3 by genus
 ## to show universality of the CDS scaling relationship.
 
+## Break down by taxonomy group -- EXPERIMENTAL.
+S9AFig <- CDS.rRNA.fraction.data %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other taxonomic groups") %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## but we have to make these annotations right before we make the figure, so
+    ## that we don't accidentally filter out chromids when selecting plasmids.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType)) %>%
+    make_CDS_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicGroup, ncol=6) +
+    ## improve the y-axis labels.
+    scale_y_continuous(breaks=c(2, 7))
+## save the plot.
+ggsave("../results/S9AFig.pdf", S9AFig, width=8,height=11)
+
+## Break down by taxonomy group -- EXPERIMENTAL.
+S9BFig <- CDS.rRNA.fraction.data %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicSubgroup", "All other taxonomic subgroups") %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## but we have to make these annotations right before we make the figure, so
+    ## that we don't accidentally filter out chromids when selecting plasmids.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType)) %>%
+    make_CDS_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup, ncol=6) +
+    ## improve the y-axis labels.
+    scale_y_continuous(breaks=c(2, 7))
+## save the plot.
+ggsave("../results/S9BFig.pdf", S9BFig, width=8,height=11)
+
+
+######
+
+
+
+
+## Break down by genus.
+S9Fig <- CDS.rRNA.fraction.data %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## but we have to make these annotations right before we make the figure, so
+    ## that we don't accidentally filter out chromids when selecting plasmids.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType)) %>%
+    make_CDS_scaling_base_plot() +
+    facet_wrap(. ~ Genus, ncol=6) +
+    ## improve the y-axis labels.
+    scale_y_continuous(breaks=c(2, 7))
+## save the plot.
+ggsave("../results/S9Fig.pdf", S9Fig, width=8,height=11)
+
+
 ## Break down by genus.
 S9Fig <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
@@ -1737,12 +1792,34 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
 ################################################################################
 ## Supplementary Figure S10. Break down the result in Figure 4 by genus
 ## to show universality of the CDS scaling relationship among genera containing chromids.
-
 genera.containing.chromids <- filter(metabolic.gene.plasmid.and.chromosome.data, SeqType == "chromid")$Genus
-    
+
+
+## examining taxonomic groups -- EXPERIMENTAL
+S10AFig <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(Genus %in% genera.containing.chromids) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other taxonomic groups") %>%
+    make_metabolic_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicGroup, ncol=6)
+## save the plot.
+ggsave("../results/S10AFig.pdf", S10AFig, height=10, width=8)
+
+## examining taxonomic subgroups -- EXPERIMENTAL
+S10BFig <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(Genus %in% genera.containing.chromids) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicSubgroup", "All other taxonomic subgroups") %>%
+    make_metabolic_scaling_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup, ncol=6)
+## save the plot.
+ggsave("../results/S10BFig.pdf", S10BFig, height=10, width=8)
+
+
+
+
 ## Supplementary Figure S10
+
 ## Break down by genus, only showing genera containing megaplasmids.
-S10Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+S10FigC <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
