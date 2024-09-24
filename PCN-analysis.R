@@ -41,7 +41,7 @@ library(viridis)
 ## Functions and global variables.
 
 
-filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 100) {    
+filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 50) {    
     ## this function filters data frames for groups with more than min_group_size data points in the column
     ## named in the string correlate_column_name_string, using tidy evaluation,
     ## and groups together data points in groups that fall below the min_group_size into lumped_group_name.
@@ -79,7 +79,7 @@ filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df,
 }
 
 
-filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 100) {
+filter.correlate.column <- function(df, correlate_column_name_string, min_group_size = 50) {
     ## this function filters data frames for groups with more than min_group_size data points in the column
     ## named in the string correlate_column_name_string, using tidy evaluation.
     ## I figured this out using ChatGPT and Chapter 20 of Advanced R by Hadley Wickham
@@ -1819,7 +1819,7 @@ ggsave("../results/S10BFig.pdf", S10BFig, height=10, width=8)
 ## Supplementary Figure S10
 
 ## Break down by genus, only showing genera containing megaplasmids.
-S10FigC <- metabolic.gene.plasmid.and.chromosome.data %>%
+S10Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
