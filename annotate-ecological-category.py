@@ -21,6 +21,15 @@ Usage: python annotate-ecological-category.py > ../results/computationally-annot
 #############################################################################################
 
 animal_hosts = [
+    "atlantic salmon (salmo salar l.)", "amphibia",
+    "alectorobius puertoricensis", "tribolium castaneum", "ornithodoros coriaceus", "aquatic animal",
+    "babylonia areolata", "trachurus japonicus", "tenebrio molitor", "animal_env", "black bass",
+    "culex pipiens", "tachysurus fulvidraco (yellow catfish)", "oncorhynchus mykiss irideus",
+    "pantropical spotted dolphin", "elephant", "drosophila hydei", "ruditapes philippinarum",
+    "dinoflagellate", "alopochen aegyptiaca", "anguilla marmorata", "manis javanica",
+    "hexagrammos agrammus", "housefly", "moth", "delichon urbicum", "calliactis tricolor",
+    "free-range white-tailed deer", "fungi", "branta canadensis", "silurus asotus (catfish)",
+    "tetragonula carbonaria", "rodent", "anasa tristis", "periphyllus lyropictus", "mus musculus (g2 mouse)",
     "hoplopleura acanthopus", "capra aegagrus", "iguana iguana", "phasianus colchicus",
     "eurypanopeus depressus", "dermanyssus gallinae (poultry red mite)", "polytelis", "jguana",
     "reticulitermes santonensis (termite)", "steinernema", "mus musculus c3h/hen", "monkey",
@@ -85,7 +94,7 @@ animal_hosts = [
     "larus michahellis", "camponotus nipponensis", "equus ferus", "turkeys", "myotis velifer",
     "dermacentor variabilis", "camponotus (colobopsis) obliquus", "schizaphis graminum",
     "panesthia angustipennis yayeyamensis", "sparus aurata", "dysmicoccus sylvarum",
-    "monobia quadridens", "mesoclemmys nasuta", "llaveia axin axin", 
+    "monobia quadridens", "mesoclemmys nasuta", "llaveia axin axin", "cricetinae",
     "spheniscus magellanicus", "vagitanus terminalis", "caprine (goat)", "amblyomma ovale",
     "macrosteles sp. nr. severini", "tiphiidae", "mandarin fish", "small ruminants", "frieseomelitta varia",
     "black-faced spoonbill", "murine", "lateolabrax japonicus", "meimuna opalifera",
@@ -102,7 +111,7 @@ animal_hosts = [
     "rock hyrax", "chrysomya megacephala (blowfly)", "midday gerbil", "iguana",
     "leptinotarsa decemlineata (colorado potato beetle)", "caracal caracal", "musca domestica",
     "drosophila ananassae florida (14024_0371.12)", "tilapia (oreochromis niloticus)",
-    "lophura swinhoei", "sea lion", "acanthamoeba castellanii",
+    "lophura swinhoei", "sea lion", "acanthamoeba castellanii", "zophobas morio",
     "finch", "anopheles sinensis", "cicindelidae", "hirondellea gigas", "austroplebeia australis",
     "heteropsylla cubana", "syrphidae", "salvelinus namaycush (lean lake trout)",
     "heteropsylla texana", "snail", "wild rodents", "sponge", "hymeniacidon perleve",
@@ -269,6 +278,8 @@ animal_hosts = [
 
 
 animal_isolation_sources = [
+    "litopenaeus vannamei",
+    "sea urchin; strongylocentrotus intermedius", "fly", "isolated from bluespotted cornetfish",
     "myodes rufocanus", "terpios hoshinota", "fish (cod)", "chimpanzee", "a dead ark clam",
     "sea squirt", "archimandrita tessellata", "gut of tenebrio molitor", "saimiri sciureus", "silkworm feces",
     "cacatua galerita", "panthera tigris amoyensis", "geotrupidae", "paguma larvata", "blattella germanica",
@@ -280,7 +291,7 @@ animal_isolation_sources = [
     "sturnus nigricollis", "rabbit tick", "spoon worm", "meleagris", "sparus aurata", "ornithodoros turicata",
     "whole fish sold as black tilapia; muscle", "shellfish: shrimp", "wild bird feces", "bird (unidentified species)",
     "onchrhynchus mykiss", "farmed eel", "chitin", "environmental-quail", "animal tissue", "gut of an abalone",
-    "gut of an ablaone",
+    "gut of an ablaone", "animal droppings", "zebrafish", "pancreas of a zebra",
     "panthera tigris amoyensis facel", "coleoptera cantharidae", "clams", "silurus asotus",
     "marmot respiratory tract", "cockatoo feces", "bee gut", "animal feces", "cuttlefish", "beehive",
     "myotis velifer", "gentoo penguin", "insect gut", "female abdomens", "oysters", "nigg3",
@@ -335,7 +346,11 @@ animal_isolation_sources = [
 
 
 plant_hosts = [
-    "sesuvium verrucosum",
+    "capsella bursa-pastoris", "sinapis arvensis",
+    "dendrobium", "rhamnus alaternus", "sulla coronaria", "stylosanthes guianensis", "pelargonium",
+    "chamaecytisus prolifer var. palmensis", "euphorbia pulcherrima cv. scandic red", "yarrow",
+    "lilium davidii var. unicolor (hoog) cotton", "desmanthus virgatus", "gaillardia",
+    "sesuvium verrucosum", "ixora coccinea l.", "matthiola incana", "sainfoin", "vicia sp.",
     "melilotus albus", "geranium", "calliandra calothyrsus", "sisymbrium officinale (syn. erysimum)",
     "gynura procumbens", "iris germanica", "paulownia", "chrysanthemum x morifolium",
     "mallotus japonicus", "alnus rubra", "fagus sylvatica", "alliaria petiolata", "glycyrrhiza uralensis",
@@ -390,7 +405,7 @@ plant_hosts = [
     "indosasa shibataeoides", "barbarea vulgaris", "phalaris arundinacea", "antirrhinum majus",
     "commiphora wightii", "alhagi sparsifolia shap.", "acacia farnesiana", "hyacinthus sp.",
     "lobaria pulmonaria thallus", "lotus", "erigeron annuus l. pers", "sida hermaphrodita",
-    "hyacinthus orientalis", "sporobolus anglicus", "malus prunifolia (crab apple)",
+    "hyacinthus orientalis", "sporobolus anglicus", "malus prunifolia (crab apple)", "astragalus sp.",
     "tephrosia apollinea", "vitis", "echinacea purpurea", "phyla canescens", "ripariosida hermaphrodita",
     "aeschynomene fluminensis", "vavilovia formosa", "prunus sp.", "plant tissues", 
     "oenothera speciosa", "acaciella angustissima", "euphorbia pulcherrima", "euphorbia pulcherrima cv. atla",
@@ -404,7 +419,7 @@ plant_hosts = [
 
 
 plant_isolation_sources = [
-    "cassava root", "noni",
+    "cassava root", "noni", "stem", "root nodule of vicia costata", "sap",
     "mulberry mosaic dwarf leaf", "surface-sterilized vetiver roots", "arctic grass", "geum aleppicum",
     "white-flowered calla lily", "luffa aegyptiaca", "root rhizomes", "tree", "sedge blades", "bolbostemmatis rhizoma",
     "kumarahou flower", "the root nodule of glycyrrhiza uralensis", "saccharum officinarum",
@@ -414,7 +429,7 @@ plant_isolation_sources = [
     "sida hermaphrodita", "roots of desert plants", "pphyllosphere of grasses", "mulberry blight tissue",
     "arabidopsis thaliana seedling from surface sterilized seed", "plant matter", "grass",
     "flower of forsythia koreana", "algal phycosphere", "lotus corniculatus nodule",
-    "dendrobium officinale kimura et migo", "healthy mulberry endophytes",
+    "dendrobium officinale kimura et migo", "healthy mulberry endophytes", "nodule",
     "malus sylvestris", "morning glory", "dongxiang wild rice", "napier grass", "carex pumila",
     "flower of rhododendron schlippenbachii", "root of codonopsis pilosula", "root nodules",
     "chrysochromulina tobin phycosphere", "algae", "artificially infected catharanthus",
@@ -432,81 +447,14 @@ plant_isolation_sources = [
     "flower of rhododendron sclippenbachii", "plant xylem"]
 
 
-terrestrial_isolation_sources = [
-    "top of mount daeam; south korea", "yuncheng salt lake", "stratosphere", "envo:01001711",
-    "nature biofilm", "red biofilm", "molybdenum mine", "biofilms", "natural biofilms", "atcc 43099",
-    "pieces of wood at the bottom of a cave", "environment monitoring (air)", "natural biofilm",
-    "2-km-deep aquifer", "aquifer", "richmond mine", "air sample", "debris flow", "biofilm material",
-    "crystal cave (limestone)", "karstic limestone", "granitic rock aquifer at 600 m depth", "salt well",
-    "terrestrial subsurface brine", "a deep subsurface coal seam", "bentonite", "mineral material",
-    "obsidian pool; yellowstone national park", "water from a salt pit", "mat", "taupo volcanic zone",
-    "stomatolites grown in far red light (720nm)", "surface of island", "surface brine", "cave biofilm",
-    "microbial mat; hamelin pool", "tar pits", "salt field", "salt particles", "limestone cave wall",
-    "sulfur enrichment", "environmental sample", "outdoor air", "sulfide deposits", "lichen surface",
-    "salt crystallizer of the great rann of kutch", "alkaline pod", "gomso solar saltern", "xiaochaidan salt lake",
-    "isolated from slime streamers and attached to pyrite surfaces at a sulfide ore body",
-    "2.8-km deep subsurface aquifer", "subsurface mine microbial mat", "hot spings runoff",
-    "64.1 degree centigrade; ph 3.72 in naghaso; the philippines", "cave entrance",
-    "64.1 degree centigrade; ph 3.72", "rock from karst cave", "dead sea", "shale", "coastal saline-alkali land",
-    "solfataric thermal field close to moutnovsky volcano", "halite rock", "qaidam basin",
-    "iron hydroxide deposits", "solar salt", "air", "elton hypersaline lake", "solar salterns",
-    "brazilian saline-alkaline lake", "desert", "saltpan", "hyperthermophilic compost",
-    "coal bed", "moderate hot spring", "salt marsh", "alkaline pool submerged anode electrode",
-    "kulunda steppe hypersaline lake", "hypersaline environment", "saline lake",
-    "chronically low temperature and dry polar region", "thermophilic environment",
-    "solar saltern", "dust", "beach sand", "salar de atacama; atacama desert", "beach",
-    "weathered rock sample", "antimony mine", "sand", "weathered tuff", "salt crystallizer",
-    "moist arsenopyrite (feass)-containing rock taken from a mine tunnel approximately 300 m below the ground in the granites gold mine", "microbial mat", "subsurface rock", "coal", "microbial mat material",
-    "salt crystallizer of little rann of kutch", "stalactite biofilm", "saturated brine",
-    "inside the caves of drach", "non-purified solar salt", "gold-copper mine",
-    "antimony vein of nakase mine", "underground brine",
-    "xinjiang aibi salt lake", "carbonated precipitates", "soda-saline lake", "microbial mat/biofilm",
-    "shar-burdin hypersaline soda lake", "marine solar saltern brine", "soda lake magadi",
-    "rock (envo:00001995)", "geothermal reservoir", "rocky sand", "solar saltern in gomso bay",
-    "lava", "brine", "saltern", "baengnokdam summit crater area; mt. halla", "saltern pond",
-    "taibei marine solar saltern near lianyungang city", "orthoquartzite cave surface", "cave",
-    "the bange salt-alkaline lake in tibet", "the surfaces of weathered potassic trachyte",
-    "deep subseafloor coal bed", "deep subsurface anoxic brine", "chaqia salt lake",
-    "phototrophic microbial mat in hot lake; a shallow mgso4 dominated salt lake",
-    "geothermal isolate", "salt crust", "coal spoil heap", "salt lake", "acidic salty water",
-    "flat; laminated microbial mat in a salt marsh", "solar saltern of 19% salinity",
-    "rock (envo:00001995)", "saline saltern", "hypersaline lake", "yates shaft; surf",
-    "thiodendron' bacterial sulfur mat from mineral sulfide spring"]
-
-
-soil_hosts = ["decaying wood"]
-
-
-soil_isolation_sources = [
-    "trebel valley fen", "rhizobacterium", "heilongjiang province", "solo", ## not an error: portuguese for soil.
-    "rice paddy field", "mixed forest with bamboo", "mixed forest near oak tree",
-    "envo:00001998", "leaf litter", "field land",
-    "decomposing algal scum", "rice paddy", "envo:00005769", "pasture", "peanut land",
-    "decaying vegetation", "corn stalk residue compost", "environment - litter/manure",
-    "decaying manure", "tomato rhisosphere", "antonio's farm; antonio rd.", "rhizophere",
-    "agricultural site", "equine field isolate", "kaolin clays", "banks of congaree river",
-    "tomato field", "agricultural fields", "cotton field", "wheat field", "pasture", "surface compost",
-    "isolated from the rice field", "sugar beet rhizoshpere", "mango ochard",
-    "rice fields", "sugarcane field", "less and more altered tuff", "organic material",
-    "agricultural field", "tundra wetland", "permafrost", "compost", "mixed sand sample",
-    "sphagnum peat from the bog obukhovskoe (acidic wetland)", "norway spruce forest humus",
-    "paddy field; sungai manik; malaysia", "dune grassland", "decaying wood", "forest soi",
-    "rice fields", "sphagnum peat", "soil around hot spring", "dirt", "ginseng field",
-    "sphagnum bog", "fertilizer", "ancient permafrost from mammoth", "montane grasslands",
-    "solar salt farm", "enriched culture of compost", "farmland", "permafrost; kolyma lowland",
-    "siberian permafrost", "particulate matter", "pine forest", "mushroom compost",
-    "manure compost", "angelo meadow plot 1; 20cm depth; 2 days after second rain event (91mm)",
-    "composted cattle manure", "agricultural waste material", "wood decay material",
-    "long-term organic manure fertilized", "compost sample from farm", "rice field",
-    "Microscale soil grain", "ermafrost region of qilian mountains"]
-
-
 agri_hosts = [
-    "glycine max cv. ac glengarry", "cicer arietinum l.",
+    "asian pear tree", "raphanus sativus longipinnatus", "cherry", "manihot esculenta crantz",
+    "glycine max cv. ac glengarry", "cicer arietinum l.", "tomate", "cucurbita pepo", "crocus sativus",
     "dioscorea alata", "cichorium endivia", "oryza sp.", "nicotiana tabacum", "potato_root",
     "brassica napus subsp. oleifera", "tobacco_roots_ghana", "dragon fruit tree", "rape", "chili",
     "vitis labrusca x vitis vinifera cultivar black queen", "coriandrum sativum", "eutrema japonicum",
     "brassica rapa subsp. oleifera", "wheat root", "pistacia vera l.", "brassica rapa", "raphanus sativus l seed",
+    "raphanus sativus cv. aviso", "olives", "trigonella foenum-graecum", "coffea canephora",
     "ribes nigrum", "helianthus annuus", "fruit", "potato stem", "brassica oleracea var. capitata",
     "vasconcellea heilbornii", "triticum aestivum l. cv. tabasi", "surface-sterilized wheat roots",
     "cabbage", "phaseolus lunatus", "tapioca", "sweet potato", "pyrus communis",
@@ -524,7 +472,7 @@ agri_hosts = [
     "brassica rapa subsp. pekinensis", "humulus lupulus", "morus alba", "organic baby spinach",
     "triticum aestivum", "areca catechu", "date palm", "zea mays l.", "ginger", "plum", "cowpea",
     "potato", "wheat", "malus domestica", "brassica oleracea", "rice plant", "morus alba l.",
-    "saccharum officinarum", "cotton", "soybean", "mandarin orange", "fava bean",
+    "saccharum officinarum", "cotton", "soybean", "mandarin orange", "fava bean", "tea plant",
     "vitis vinifera l. cv. aurora black", "ziziphus mauritiana lam", "pyrus pyrifolia", "kale",
     "sesame seedling", "tobacco", "peanut", "carrot", "apple tree", "banana", "walnut",
     "soybean (glycine max (l.) merrill)", "ipomoea aquatica", "elaeis guineensis", "endophyte of potato root",
@@ -547,6 +495,7 @@ agri_hosts = [
 
 
 agri_isolation_sources = [
+    "tobacco leaf", "winter wheat (triticum aestivum)", "citrus", "vegetable", "kiwifruit",
     "mango leaves", "tomato 'raisa f1'", "squash", "fresh alfalfa sprout", "pepper field", "alfalfa sprout",
     "leaves of diseased walnut trees", "infected peach leaf", "surface layer of rice grains", "apple",
     "isolated from stem bases of diseased rice plants", "dried rice straw", "carrot leaf", "cotton",
@@ -586,10 +535,82 @@ agri_isolation_sources = [
     "white nectarines fire pearl variety", "soybean nodules", "field isolate", "brazil nut tree leaves",
     "phyllosphere of musa spp. aaa cv. grand naine. leaf number 10"]
 
+
+terrestrial_isolation_sources = [
+    "sandstone of the ordos basin", "rock salt from permian period",
+    "top of mount daeam; south korea", "yuncheng salt lake", "stratosphere", "envo:01001711",
+    "nature biofilm", "red biofilm", "molybdenum mine", "biofilms", "natural biofilms", "atcc 43099",
+    "pieces of wood at the bottom of a cave", "environment monitoring (air)", "natural biofilm",
+    "2-km-deep aquifer", "aquifer", "richmond mine", "air sample", "debris flow", "biofilm material",
+    "crystal cave (limestone)", "karstic limestone", "granitic rock aquifer at 600 m depth", "salt well",
+    "terrestrial subsurface brine", "a deep subsurface coal seam", "bentonite", "mineral material",
+    "obsidian pool; yellowstone national park", "water from a salt pit", "mat", "taupo volcanic zone",
+    "stomatolites grown in far red light (720nm)", "surface of island", "surface brine", "cave biofilm",
+    "microbial mat; hamelin pool", "tar pits", "salt field", "salt particles", "limestone cave wall",
+    "sulfur enrichment", "environmental sample", "outdoor air", "sulfide deposits", "lichen surface",
+    "salt crystallizer of the great rann of kutch", "alkaline pod", "gomso solar saltern", "xiaochaidan salt lake",
+    "isolated from slime streamers and attached to pyrite surfaces at a sulfide ore body",
+    "2.8-km deep subsurface aquifer", "subsurface mine microbial mat", "hot spings runoff",
+    "64.1 degree centigrade; ph 3.72 in naghaso; the philippines", "cave entrance",
+    "64.1 degree centigrade; ph 3.72", "rock from karst cave", "dead sea", "shale", "coastal saline-alkali land",
+    "solfataric thermal field close to moutnovsky volcano", "halite rock", "qaidam basin",
+    "iron hydroxide deposits", "solar salt", "air", "elton hypersaline lake", "solar salterns",
+    "brazilian saline-alkaline lake", "desert", "saltpan", "hyperthermophilic compost",
+    "coal bed", "moderate hot spring", "salt marsh", "alkaline pool submerged anode electrode",
+    "kulunda steppe hypersaline lake", "hypersaline environment", "saline lake",
+    "chronically low temperature and dry polar region", "thermophilic environment",
+    "solar saltern", "dust", "beach sand", "salar de atacama; atacama desert", "beach",
+    "weathered rock sample", "antimony mine", "sand", "weathered tuff", "salt crystallizer",
+    "moist arsenopyrite (feass)-containing rock taken from a mine tunnel approximately 300 m below the ground in the granites gold mine", "microbial mat", "subsurface rock", "coal", "microbial mat material", "isla bacuta saltern",
+    "salt crystallizer of little rann of kutch", "stalactite biofilm", "saturated brine", "glacial till moraine",
+    "inside the caves of drach", "non-purified solar salt", "gold-copper mine",
+    "antimony vein of nakase mine", "underground brine", "saloons bayovar",
+    "xinjiang aibi salt lake", "carbonated precipitates", "soda-saline lake", "microbial mat/biofilm",
+    "shar-burdin hypersaline soda lake", "marine solar saltern brine", "soda lake magadi",
+    "rock (envo:00001995)", "geothermal reservoir", "rocky sand", "solar saltern in gomso bay",
+    "lava", "brine", "saltern", "baengnokdam summit crater area; mt. halla", "saltern pond",
+    "taibei marine solar saltern near lianyungang city", "orthoquartzite cave surface", "cave",
+    "the bange salt-alkaline lake in tibet", "the surfaces of weathered potassic trachyte",
+    "deep subseafloor coal bed", "deep subsurface anoxic brine", "chaqia salt lake",
+    "phototrophic microbial mat in hot lake; a shallow mgso4 dominated salt lake",
+    "geothermal isolate", "salt crust", "coal spoil heap", "salt lake", "acidic salty water",
+    "flat; laminated microbial mat in a salt marsh", "solar saltern of 19% salinity",
+    "rock (envo:00001995)", "saline saltern", "hypersaline lake", "yates shaft; surf",
+    "thiodendron' bacterial sulfur mat from mineral sulfide spring"]
+
+
+soil_hosts = ["decaying wood"]
+
+
+soil_isolation_sources = [
+    "no application of phosphorus fertilizer",
+    "trebel valley fen", "rhizobacterium", "heilongjiang province", "solo", ## not an error: portuguese for soil.
+    "rice paddy field", "mixed forest with bamboo", "mixed forest near oak tree",
+    "envo:00001998", "leaf litter", "field land", "wampee planting region", "mouldy hay",
+    "decomposing algal scum", "rice paddy", "envo:00005769", "pasture", "peanut land",
+    "decaying vegetation", "corn stalk residue compost", "environment - litter/manure",
+    "decaying manure", "tomato rhisosphere", "antonio's farm; antonio rd.", "rhizophere",
+    "agricultural site", "equine field isolate", "kaolin clays", "banks of congaree river",
+    "tomato field", "agricultural fields", "cotton field", "wheat field", "pasture", "surface compost",
+    "isolated from the rice field", "sugar beet rhizoshpere", "mango ochard",
+    "rice fields", "sugarcane field", "less and more altered tuff", "organic material",
+    "agricultural field", "tundra wetland", "permafrost", "compost", "mixed sand sample",
+    "sphagnum peat from the bog obukhovskoe (acidic wetland)", "norway spruce forest humus",
+    "paddy field; sungai manik; malaysia", "dune grassland", "decaying wood", "forest soi",
+    "rice fields", "sphagnum peat", "soil around hot spring", "dirt", "ginseng field",
+    "sphagnum bog", "fertilizer", "ancient permafrost from mammoth", "montane grasslands",
+    "solar salt farm", "enriched culture of compost", "farmland", "permafrost; kolyma lowland",
+    "siberian permafrost", "particulate matter", "pine forest", "mushroom compost",
+    "manure compost", "angelo meadow plot 1; 20cm depth; 2 days after second rain event (91mm)",
+    "composted cattle manure", "agricultural waste material", "wood decay material",
+    "long-term organic manure fertilized", "compost sample from farm", "rice field",
+    "Microscale soil grain", "ermafrost region of qilian mountains"]
+
+
 marine_hosts = ["argopecten purpuratus", "seawater", "pyropia tenera", "red alga", "jania sp. (red alga)",
                 "saccharina japonica", "ecklonia cava", "microalgae", "sea", "thalassiosira profunda",
-                "brown alga", "cyclotella cryptica", "posidonia oceanica (seagrass)", "marine",
-                "marine sponge lissodendoryx isodictyalis in the bahamas",
+                "brown alga", "cyclotella cryptica", "posidonia oceanica (seagrass)", "marine", "seaweed",
+                "marine sponge lissodendoryx isodictyalis in the bahamas", "alexandrium ostenfeldii",
                 "prorocentrum lima", "marine sponge", "marine sponge pandaros acanthifolium",
                 "(seagrass) posidonia oceanica", "porphyridium cruentum", "bathymodiolus marisindicus",
                 "trichodesmium erythraeum ims101", "asterionellopsis glacialis strain a3", "neopyropia tenera",
@@ -599,7 +620,10 @@ marine_hosts = ["argopecten purpuratus", "seawater", "pyropia tenera", "red alga
                 "ulva prolifera", "macroalgae", "asparagopsis taxiformis", "stypopodium (algae)",
                 "heterostera chilensis", "grateloupia sp.", "brown algae", "comscasia"]
 
+
 marine_isolation_sources = [
+    "whale bone on the intertidal seashore of punta plaza; Antarctica", "salt water", "rudong intertidal zone",
+    "brackish water; varlaxudden; baltic sea", "south sea", "kelp frond", "deep-sea water",
     "shallow sea; symbosis with harmful algal bloom algae", "qidong intertidal zone",
     "sea water (sand filtered); china; hong kong", "sea water [envo:00002149]", "pacific ocean",
     "the surface of red algae", "isolated from fouling in the littoral zone of the white sea",
@@ -643,12 +667,16 @@ marine_isolation_sources = [
     "cyanobacterial aggregates", "synechocystis sp. gt-l",
     "seawater", "shallow-sea hydrothermal system"]
 
+
 freshwater_hosts = [
     "water (environment)", "water", "mesostigma viride", "groundwater", "water from a lake",
     "microcystis culture", "microcystis aeruginosa", "cyclostephanos tholiformis",
     "skeletonema potamos", "cryoconite"]
 
+
 freshwater_isolation_sources = [
+    "a pond on the huanglong mountain",
+    "kaeda river; miyazaki; japan", "river sand", "main river that flows through guiyu town",
     "usa: oklahoma; sallisaw; sallisaw creek public use area; robert s. kerr reservoir", "well",
     "zhenhai reservoir in guangdong province", "seine river", "manawatu river", "shallow pond",
     "hyporheic zone", "oligotrophic pond", "aqueous", "reddish brown snow from a moor", "owen's river",
@@ -660,12 +688,15 @@ freshwater_isolation_sources = [
     "euglena gracilis from city ponds", "glacier from lahual spiti valley", "river", "groundwater",
     "pool at botanical garden; havana; cuba", "daechung reservoir", "ayakekumsalt lake", "envo:00002006"]
 
+
 food_hosts = ["kimchi cabbage", "mung bean", "kombucha scoby", "seujeot", "pickle", "salted seafood",
               "pickled cabbage", "kimchi", "milk", "carrageenan", "frozen raw chicken", "garlic; cabbage",
-              "kefir grains", "food material", "kefir grain",
+              "kefir grains", "food material", "kefir grain", "food", "bean paste",
               "beef", "koumiss", "nostoc flagelliforme", "sichuan pickle","tibetan kefir grain", "poultry meat"]
 
+
 food_isolation_sources = [
+    "andong sikhe (andong rice punch)", "egg white", "ganjang", "frozen dumplings",
     "chinese cabbage geotjeori", "egg", "pate collected as part of botulism investigation",
     "curd", "pumiao rice noodle", "sake", "lobster tail", "whey culture", "garam masala hot spice mixture",
     "brewing environment of maotai-flavor liquor", "pixian county bean paste", "pistachio", "poultry meat",
@@ -697,7 +728,7 @@ food_isolation_sources = [
     "crab marinated in soy sauce", "pork product", "chinese sauerkraut", "yoghourt",
     "honey", "ham", "bobby veal steak", "10' wieners", "natto", "yogurt", "arugula",
     "gochujang", "cheonggukjang", "cheese starter culture", "corn steep liquor",
-    "bacterial strain isolated from sardine",
+    "bacterial strain isolated from sardine", "barbeque",
     "traditional greek kasseri cheese", "pork & cabbage dumplings", "lettuce", "fish balls",
     "new zealand cheese", "wine", "pork casserole; fp", "the red brine of salted laminaria",
     "beer", "tibetan kefir", "carrot juice", "pickle", "butter starter", "home-made vinegar",
@@ -756,7 +787,7 @@ livestock_hosts = [
     "equus caballus ferus", "pork", "sus", "bubalus bubalis", "water buffalo", "dairy herd",
     "goat", "sheep", "equus ferus caballus", "bos bovis", "turkey", "rabbit", "alpaca", "equus",
     "bos primigenius taurus", "canine", "laoshan milk goat", "black pig", "domestic animals",
-    "broiler chickens", "xinyang black-feather laying hens",
+    "broiler chickens", "xinyang black-feather laying hens", "taurus", "felix catus domesticus",
     "canis lupus familiaris", "bos taurus coreanae", "yak", "dog", "equine", "ovis aries", "ruminant",
     "young chicken", "gallus gallus domesticus isa15", "beef cattle", "korean short hair cat",
     "dairy cow", "poultry", "piglets", "lama glama", "ovis aries (domestic sheep)", "sheep rumen",
@@ -767,6 +798,8 @@ livestock_hosts = [
 
 
 livestock_isolation_sources = [
+    "livestock manure", "pig feed",
+    "anaerobic effluent of swine manure", "rabbit liver", "ovis aries", "laying hen", "swab samples of pig",
     "swine preevisceration carcass swab", "air sacs", "sus scrofa domesticus", "rumen contents",
     "liquid joint sample of pig", "air sac of a pipped embryo", "weaned piglets", "guinea pig", "porcine tongue",
     "apoblema of swine", "isolated from cattle with blackleg", "psittacosis outbreak", "ropy milk",
@@ -824,14 +857,19 @@ anthropogenic_hosts = ["sewage", "soil (polluted)", "dsmz strain", "laboratory",
 
 
 anthropogenic_isolation_sources = [
+    "polyester fabric recovered from compost", "luria bertani broth miller", "medium 987",
+    "mutant of streptomyces rimosus subsp. rimosus r7", "out-of-house environment",
+    "otc cluster deletion mutant of streptomyces rimosus subsp. rimosus hp126",
+    "in-house environment", "dialysis fluid", "an irradiated device", "locker_p26_bu28",
+    "pharmaceutical solution", "button", "fence", "zoo environmental surface", "farmer market",
     "artp mutation", "the leaf of flue-cured tobacco", "interstitial fluid", "in vitro substrate",
-    "parking lot island in grocery store parking lot", "disinfectant bottle", "kaist",
+    "parking lot island in grocery store parking lot", "disinfectant bottle", "kaist", "draining-matting conveyor",
     "water from shower head", "cell culture", "primary hospital lab", "atcc 35296",
     "hospital universitari germans trias i pujol (badalona)", "digestate", "enriched consortium",
     "hospital universitario son de espases (palma de mallorca)", "elanco animal health",
     "shoe sole from worker", "phosphate mine", "air conditioner condensate drain pipe",
     "re-isolation from atcc 39073", "airborne", "spontaneous mutant", "lab mutant", "sluge",
-    "starvation in luria bertani broth", "thermophilic stage of composting process",
+    "starvation in luria bertani broth", "thermophilic stage of composting process", "shoe",
     "flange fragments", "lab mutation of atcc 17978", "alginate-supplemented microcosm",
     "derived from cip 106327 (collection de l'institute pasteur; paris; france)", "ceramic particles",
     "strain ev g. gerard; g robic (vaccine strain ev line niieg is mutant strain; was isolated from other stain ev gerard and robic)",
@@ -867,6 +905,7 @@ anthropogenic_isolation_sources = [
     "vinegar factory", "freshwater ras system; circulating water", "traditional dairy",
     "chemical and physical mutagen treatment of atcc 25486", "lactic starter", "starter culture",
     "snottite biofilm from former pyrite mine", "dairy fan", "dsmz", "dsmz isolate",
+    "guide to japan collection of microorganisms", "rust layer", "bioleaching solution",
     "cleaning system aquaculture", "clam larvae aquaculture", "mineral salt medium",
     "combined sewer", "oil", "roundup", "culture mutant", "turbot fish farm", "t5 medium",
     "commercial lactic starter", "beet pulp; sugar refinery", "mural paintings", "stone ruins (granite) of a fort",
@@ -919,6 +958,7 @@ anthropogenic_isolation_sources = [
     "e-waste recycling site", "paper mill kaolin", "municipal wwtp", "sucrose solution",
     "np30 nitrate/perchlorate-reducing mixed", "dust collector of pigpen",
     "acid mining effluent decantation pond", "fish farm", "subarctic landfill",
+    "environment of horse clinic", "iss environmental surface", "household dust",
     "anaerobic digester", "cooling tower water", "dairy", "uninoculated hep-2 tissue culture",
     "tattoo ink", "environment of small animal veterinary clinic", "environmental swab veterinary clinic",
     "derivative of strain mm294 except the mutated alleles reca1 and gyra96",
@@ -947,8 +987,8 @@ anthropogenic_isolation_sources = [
     "doe field research center at oakridge; tennessee; area 5; well fw507",
     "hygromycin b antibiotic bottle", "paper pulp mill", "residential yard",
     "biofilm reactor", "nutrient broth", "bed controller_p22_bu23",
-    "dsmz collection (dsm 12730)",
-    "foot panel of ared on iss"]
+    "dsmz collection (dsm 12730)", "chemical plant",
+    "foot panel of ared on iss", "iss mineral grit embedded in adhesive paper 3 environmental surface"]
 
 
 sediment_hosts = ["ocean sediments", "sediment"]
@@ -966,10 +1006,11 @@ sediment_isolation_sources = [
 
 
 human_hosts = ["ethnic koreans living in china", "young woman","nist mixed microbial rm strain",
-               "infant", "soldier"]
+               "infant", "soldier", "people", "blood", "female", "humen being", "children"]
 
 
 human_isolation_sources = [
+    "bronchoalveolar lavage fluid", "small intestine",
     "isolate from baby feces", "bile", "faecal swabs", "healthy gingiva", "cecal contents", "ucc isolate",
     "ventricular fluid", "body surface", "skin sampling", "bile bronchoalveolar lavage fluid", "carious dentine",
     "cephalorachidian fluid", "adult feces", "gingival margin", "oral swab", "respiratory sample", "knee fluid",
@@ -1018,18 +1059,19 @@ na_hosts = ["environmental", "jamiecosley", "environment", "not available: not c
             "ucc strain", "natural / free-living", "obscured"]
 
 na_isolation_sources = [
+    "the strain was isolated from guangdong province; china in 2020-12", "passage", "cicc",
     "environmental material [envo:00010483]", "japan", "mssing", "nanchang", "environmetal",
     "envo:00010483", "not provided; submitted under migs 2.1", "huangshui", "shanghai", "ucc strain",
     "enviornmental", "host's whole body", "bacterial consortium", "missing", "unknown", "environmental",
     "afb-diseased colony", "environment swab", "physical", "free-living", "cell culture", "bacteria",
-    "biological fluid", "not available: to be reported later", "environment", "unavailable",
+    "biological fluid", "not available: to be reported later", "environment", "unavailable", "substrate",
     "r.j.roberts", "whole body", "atcc isolate", "feed", "not available: not collected", "tianjin",
     "isolate obtained from atcc:7955 nca", "kimoto", "ncimb", "valley", "conjugation", "kyoto",
     "obscured", "peter dedon mit", "swab", "dsm:3754", "laboratory isolate", "tsoundzou", "surface",
     "environmental surface", "ghana", "minnesota", "jiangsu", "not available", "iam12617", "singapore", 
     "usa: wa: seattle", "not available: to be reported later", "not known", "bone powder",
     "greensboro; alabama", "n.a.", "cameron currie (currie@bact.wisc.edu)", "no", "missing: control sample",
-    "terry c. hazen (tchazen@lbl.gov)", "envo:00002034", "orsay", "wenzhou; china",
+    "terry c. hazen (tchazen@lbl.gov)", "envo:00002034", "orsay", "wenzhou; china", "from china",
     "prof douwe van sinderen; university college cork; western road; cork; ireland",
     "derek lovley (dlovley@microbio.umass.edu)", "atcc strain", "atcc", "china: tianjin",
     "laboratory strain derived from cip", "local geographical source", "neb433", "not isolated",
