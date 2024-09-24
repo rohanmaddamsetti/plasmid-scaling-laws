@@ -2,11 +2,21 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## TODO: REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
+## CRITICAL TODO DURING REVISION:
+## REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
 ## in the Definition in the Genbank annotation. Right now I remove all sequences < 1000bp in length,
 ## which is probably good enough.
 
-## TODO: FIGURE OUT WHY ~1000 PCN GENOMES ARE NOT ANNOTATED.
+## CRITICAL TODO DURING REVISION:
+## There are 483 genomes that DO NOT have ecological annotation-- these
+## are genomes with "Chromosome" level assembly in the PCN pipeline,
+## which are not found in the "Complete Genome" annotations used in the main
+## ecological annotation pipeline. This inconsistency between the sets of genomes
+## used across the two analyses is causing this issue. This does not affect any fundamental
+## analyses here, but this inconsistency is extremely annoying and needs to be fixed.
+
+## One simple choice would be to just remove all the chromosome-level assemblies,
+## and stick to 'Complete Genome' level assemblies throughout. This is probably the cleanest solution.
 
 ## TODO WHEN RERUNNING FROM SCRATCH:
 ## Make sure all the genomes in ../results/gbk-annotation are consistent
@@ -15,13 +25,14 @@
 ## in the Annotation and SeqType columns, and rewrite upstream code to solve this problem.
 
 
-## CRITICAL POINT: Annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
+## IMPORTANT: In Figures 2 and 3,
+## I annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
 ## The metabolic scaling law emerges in chromids.
 ## From Coluzzi et al. (2022): To avoid the misidentification of ICEs as
 ## conjugative plasmids in chromids or secondary chromosomes,
 ## we excluded from further study the 419 plasmids larger than 500 kb.
 
-## CRITICAL POINT: my analysis does not distinguish between chromids and megaplasmids,
+## IMPORTANT: my analysis does not distinguish between chromids and megaplasmids,
 ## and the definition may be intrinsically blurry.
 ## See the very nice review on megaplasmids by James Hall and David Baltrus.
 
@@ -423,8 +434,7 @@ gbk.annotation <- read.csv("../results/computationally-annotated-gbk-annotation-
     mutate(Annotation = replace(Annotation, Annotation == "Terrestrial", "Earth")) %>%
     mutate(Annotation = replace(Annotation, Annotation == "Plants", "Plants")) %>%
     mutate(Annotation = replace(Annotation, Annotation == "Agriculture", "Plants")) %>%
-    mutate(Annotation = replace(Annotation, Annotation == "Animals", "Animals")) %>%
-    mutate(Annotation = replace(Annotation, Annotation == "blank", "Unannotated"))
+    mutate(Annotation = replace(Annotation, Annotation == "Animals", "Animals"))
 
 ## get the metadata for chromosomes and plasmids,
 ## generated from the table of complete genomes with plasmids.
@@ -546,7 +556,7 @@ no.multiread.naive.themisto.estimates <- read.csv("../results/naive-themisto-PCN
 
   
 ## now merge the datasets together.
-## TODO: fix upstream annotation so that we don't have any
+## CRITICAL TODO: fix upstream annotation so that we don't have any
 ## "NA" or "blank" Annotation genomes in full.PIRA.estimates.
 full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.estimates) %>%
     ## rename columns to so that we can compare estimates for benchmarking.
@@ -1241,7 +1251,6 @@ Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
         axis.text.y  = element_text(size=11))
 
 
-
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     ggplot(aes(
         x = rank,
@@ -1698,7 +1707,6 @@ ggsave("../results/S9BFig.pdf", S9BFig, width=8,height=11)
 
 
 ######
-
 
 
 

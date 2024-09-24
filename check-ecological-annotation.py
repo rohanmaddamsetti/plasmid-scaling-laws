@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-check-ecological-annotation.py by Vincent Huang and Rohan Maddamsetti.
+check-ecological-annotation.py by Rohan Maddamsetti and Vincent Huang.
 
 This script compares the output of annotate-ecological-category.py
 to the manual annotation in manually-curately-gbk-annotation.table.csv.
