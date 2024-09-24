@@ -21,7 +21,13 @@ Usage: python annotate-ecological-category.py > ../results/computationally-annot
 #############################################################################################
 
 animal_hosts = [
-    "atlantic salmon (salmo salar l.)", "amphibia",
+    "coturnix coturnix", "micropterus salmoides",
+    "macrotermes natalensis colony mn106", "kareius bicoloratus", "atrina pectinata",
+    "melipona lateralis", "macaca assamensis", "costelytra zealandica", "ibex", "loach",
+    "corcyra cephalonica", "coregonus peled", "jalysus wickhami", "laodelphax striatellus",
+    "amazona aestiva", "harpadon nehereus", "paralichthtys olivaceus (olive flounder)",
+    "andrias davidianus", "dryococelus australis", "assamese macaque", "lysandra bellargus",
+    "atlantic salmon (salmo salar l.)", "amphibia", "alectorobius rudis", "etmopterus lucifer",
     "alectorobius puertoricensis", "tribolium castaneum", "ornithodoros coriaceus", "aquatic animal",
     "babylonia areolata", "trachurus japonicus", "tenebrio molitor", "animal_env", "black bass",
     "culex pipiens", "tachysurus fulvidraco (yellow catfish)", "oncorhynchus mykiss irideus",
@@ -212,7 +218,7 @@ animal_hosts = [
     "parakeet", "geronticus eremita", "melanaphis sacchari", "dendrolimus ibiricus",
     "drosophila melanogaster oregon", "allacta bimaculata", "peafowl", "melopsittacus undulatus",
     "homalodisca coagulata (glassy-winged sharpshooter)", "pachypsylla venusta",
-    "cinara pseudotaxifoliae", "cuttlefish", "rhodnius prolixus",
+    "cinara pseudotaxifoliae", "cuttlefish", "rhodnius prolixus", "tetragnatha maxillosa",
     "myzus persicae (green peach aphid)", "macrotermes barneyi", "glossina morsitans morsitans",
     "nauphoeta cinerea", "delphinapterus leucas (beluga whale)", "sea urchin", "cinara piceae",
     "oryctolagus cuniculus", "corvus brachyrhynchos", "drosophila melanogaster oregon-r modencode",
@@ -238,7 +244,7 @@ animal_hosts = [
     "pthirus pubis", "manis javanica (pangolin)", "sipalinus gigas", "geodia barretti",
     "macrosiphoniella sanborni", "muscaphis stroyani", "aphis urticata", "cotinis nitida",
     "crassostrea gigas (pacific oyster)", "crassostrea virginica", "ellychnia corrusca",
-    "glossina brevipalpis", 
+    "glossina brevipalpis", "pachycrepoideus vindemmiae",
     "catfish", "morone chrysops x morone saxatilis", "pediculus humanus", "rattus norvegicus",
     "bothriocroton concolor", "hyperomyzus lactucae", "trimyema compressum", "macaca fascicularis",
     "neohaemonia nigricornis", "haemaphysalis juxtakochi", "columba livia", "diaphorina citri",
@@ -278,7 +284,9 @@ animal_hosts = [
 
 
 animal_isolation_sources = [
-    "litopenaeus vannamei",
+    "bird (jay)", "perithecium", "faecal sample of a golden lion tamarin",
+    "andrias davidianus", "a strain isolated from ascites of an andrias davidianus by shanghai ocean university",
+    "litopenaeus vannamei", "pike", "digestive tract of a zophobas atratus larvae", "hybrid catfish",
     "sea urchin; strongylocentrotus intermedius", "fly", "isolated from bluespotted cornetfish",
     "myodes rufocanus", "terpios hoshinota", "fish (cod)", "chimpanzee", "a dead ark clam",
     "sea squirt", "archimandrita tessellata", "gut of tenebrio molitor", "saimiri sciureus", "silkworm feces",
@@ -291,7 +299,7 @@ animal_isolation_sources = [
     "sturnus nigricollis", "rabbit tick", "spoon worm", "meleagris", "sparus aurata", "ornithodoros turicata",
     "whole fish sold as black tilapia; muscle", "shellfish: shrimp", "wild bird feces", "bird (unidentified species)",
     "onchrhynchus mykiss", "farmed eel", "chitin", "environmental-quail", "animal tissue", "gut of an abalone",
-    "gut of an ablaone", "animal droppings", "zebrafish", "pancreas of a zebra",
+    "gut of an ablaone", "animal droppings", "zebrafish", "pancreas of a zebra", "siamese crocodiles",
     "panthera tigris amoyensis facel", "coleoptera cantharidae", "clams", "silurus asotus",
     "marmot respiratory tract", "cockatoo feces", "bee gut", "animal feces", "cuttlefish", "beehive",
     "myotis velifer", "gentoo penguin", "insect gut", "female abdomens", "oysters", "nigg3",
@@ -340,16 +348,20 @@ animal_isolation_sources = [
     "waxworms gut", "flea", "intestinal contents of termite nasutitermes nigriceps",
     "muskrat during outbreak", "invertebrate gut", "cockless", "herring gull; cloacal swab",
     "gromphadorhina portentosa cockroaches", "mushroom substrate", "brewery yeast",
-    "fungal mycelia of mortierella elongata fmr23-6",
+    "fungal mycelia of mortierella elongata fmr23-6", "gut of black soldier fly larvae",
     "white-rot fungus phanerochaete", "hyphae", "white-rot fungus phanerochaete chrysosporium",
     "fungal hypha of mortierella elongata fmr23-6", "entomortierella parvispora"]
 
 
 plant_hosts = [
-    "capsella bursa-pastoris", "sinapis arvensis",
+    "duranta erecta",
+    "olea", "gypsophila paniculata", "listia bainesii", "leucaena leucocephala", "rhododendron sp.",
+    "bolboschoenus planiculmis", "pogostemon cablin (blanco) benth.", "gliricidia sp.", "aglaonema sp.",
+    "betula schmidtii", "populus x canadensis cv. '74/76'", "ficus microcarpa", "brassica tournefortii",
+    "capsella bursa-pastoris", "sinapis arvensis", "ulmus americana", "syzygium aromaticum",
     "dendrobium", "rhamnus alaternus", "sulla coronaria", "stylosanthes guianensis", "pelargonium",
     "chamaecytisus prolifer var. palmensis", "euphorbia pulcherrima cv. scandic red", "yarrow",
-    "lilium davidii var. unicolor (hoog) cotton", "desmanthus virgatus", "gaillardia",
+    "lilium davidii var. unicolor (hoog) cotton", "desmanthus virgatus", "gaillardia", "chrysanthemum",
     "sesuvium verrucosum", "ixora coccinea l.", "matthiola incana", "sainfoin", "vicia sp.",
     "melilotus albus", "geranium", "calliandra calothyrsus", "sisymbrium officinale (syn. erysimum)",
     "gynura procumbens", "iris germanica", "paulownia", "chrysanthemum x morifolium",
@@ -360,7 +372,7 @@ plant_hosts = [
     "tripterygium wilfordii", "corylus avellana", "oryza longistaminata", "plants", "kummerowia stipulacea",
     "phyllosphere of grasses", "melaleuca quinquenervia", "trachydiscus minutus", "rose",
     "brasillia sp.", "cinnamomum camphora", "eutrema wasabi", "parthenium hysterophorus",
-    "phaseolus microcarpus", "stevia rebaudiana bertoni", "new guinea impatiens",
+    "phaseolus microcarpus", "stevia rebaudiana bertoni", "new guinea impatiens", "aglaonema",
     "populus euphratica oliv", "bruguiera gymnorhiza", "polypogon monspeliensis",
     "carex pumila", "adenophora trachelioides maxim", "leaves", "hypericum perforatum",
     "olive knot (olea europaea)", "basil", "astragalus pelecinus l.", "rosa rugosa", "cercis occidentalis",
@@ -407,7 +419,7 @@ plant_hosts = [
     "lobaria pulmonaria thallus", "lotus", "erigeron annuus l. pers", "sida hermaphrodita",
     "hyacinthus orientalis", "sporobolus anglicus", "malus prunifolia (crab apple)", "astragalus sp.",
     "tephrosia apollinea", "vitis", "echinacea purpurea", "phyla canescens", "ripariosida hermaphrodita",
-    "aeschynomene fluminensis", "vavilovia formosa", "prunus sp.", "plant tissues", 
+    "aeschynomene fluminensis", "vavilovia formosa", "prunus sp.", "plant tissues", "lilac",
     "oenothera speciosa", "acaciella angustissima", "euphorbia pulcherrima", "euphorbia pulcherrima cv. atla",
     "catharanthus roseus", "dracaena sanderiana", "parthenium argentatum gray (guayule shrubs)",
     "medicago arborea", "medicago lupulina l.", "dongxiang wild rice", "tephrosia purpurea subsp. apollinea",
@@ -419,7 +431,7 @@ plant_hosts = [
 
 
 plant_isolation_sources = [
-    "cassava root", "noni", "stem", "root nodule of vicia costata", "sap",
+    "cassava root", "noni", "stem", "root nodule of vicia costata", "sap", "mulberry", "duranta erecta",
     "mulberry mosaic dwarf leaf", "surface-sterilized vetiver roots", "arctic grass", "geum aleppicum",
     "white-flowered calla lily", "luffa aegyptiaca", "root rhizomes", "tree", "sedge blades", "bolbostemmatis rhizoma",
     "kumarahou flower", "the root nodule of glycyrrhiza uralensis", "saccharum officinarum",
@@ -428,7 +440,7 @@ plant_isolation_sources = [
     "4-year-old roots of korean ginseng", "new guinea impatiens", "mangrove", "algal mat",
     "sida hermaphrodita", "roots of desert plants", "pphyllosphere of grasses", "mulberry blight tissue",
     "arabidopsis thaliana seedling from surface sterilized seed", "plant matter", "grass",
-    "flower of forsythia koreana", "algal phycosphere", "lotus corniculatus nodule",
+    "flower of forsythia koreana", "algal phycosphere", "lotus corniculatus nodule", "aglaonema",
     "dendrobium officinale kimura et migo", "healthy mulberry endophytes", "nodule",
     "malus sylvestris", "morning glory", "dongxiang wild rice", "napier grass", "carex pumila",
     "flower of rhododendron schlippenbachii", "root of codonopsis pilosula", "root nodules",
@@ -448,6 +460,8 @@ plant_isolation_sources = [
 
 
 agri_hosts = [
+    "arachis hypogaea l.", "morella rubra", "peas",
+    "cucurbita pepo ssp. texana", "cucurbita moschata", "cichorium endivia var. crispum",
     "asian pear tree", "raphanus sativus longipinnatus", "cherry", "manihot esculenta crantz",
     "glycine max cv. ac glengarry", "cicer arietinum l.", "tomate", "cucurbita pepo", "crocus sativus",
     "dioscorea alata", "cichorium endivia", "oryza sp.", "nicotiana tabacum", "potato_root",
@@ -463,7 +477,7 @@ agri_hosts = [
     "phaseolus", "punica granatum", "pyrus pyrifolia var. culta", "alfalfa", "cucumis sativus",
     "cucurbita maxima", "lentil", "lathyrus sativus", "coffea arabica", "calimyrna fig",
     "solanum melongena", "vitis vinifera", "vitis vinifera l. cv. seto giants", "grapevine",
-    "sakura tree", "rice", "japanese radish", "black pepper plant", "radish", "lavender",
+    "sakura tree", "rice", "japanese radish", "black pepper plant", "radish", "lavender", "pisum sativum l.",
     "chinese cabbage", "kiwifruit", "pisum sativum l. (pea)", "common bean", "melon", "pepper",
     "glycine max", "glycine", "g.max", "manihot esculenta", "capsicum annuum", "cashew",
     "actinidia deliciosa", "sugarcane", "actinidia chinensis", "lettuce", "olea europaea",
@@ -495,10 +509,12 @@ agri_hosts = [
 
 
 agri_isolation_sources = [
-    "tobacco leaf", "winter wheat (triticum aestivum)", "citrus", "vegetable", "kiwifruit",
+    "red topaz apple blossom from from strickhof; wuelflingen. source trees not treated with conventional pesticides.",
+    "green onion", "peach leaves", "wolfberry", "olive knot caused by pseudomonas savastanoi pv. savastanoi",
+    "tobacco leaf", "winter wheat (triticum aestivum)", "citrus", "vegetable", "kiwifruit", "asian pear tree",
     "mango leaves", "tomato 'raisa f1'", "squash", "fresh alfalfa sprout", "pepper field", "alfalfa sprout",
     "leaves of diseased walnut trees", "infected peach leaf", "surface layer of rice grains", "apple",
-    "isolated from stem bases of diseased rice plants", "dried rice straw", "carrot leaf", "cotton",
+    "isolated from stem bases of diseased rice plants", "dried rice straw", "carrot leaf", "cotton", "pepper",
     "phaseolus vulgaris", "rhizoplane rice", "taro", "hazelnut", "wheatstraw", "raw almonds", "raw almond",
     "brassica oleracea var. capitata", "wheat anther", "grapevine phylloplane", "tobacco", "bean seeds",
     "cucumber seedling substrate", "peach", "raw pecans", "cotton plant surface sterilized stem",
@@ -510,7 +526,7 @@ agri_isolation_sources = [
     "vegetable(malt)", "plant (maize/sorghum/rice)", "walnut", "hay", "rapeseed", "rice seeds", "blueberry",
     "the tomato root in nanchang", "inner tissues of cotton plant (gossypium sp.)", "raw peanut",
     "raw almond kernel nonpareil", "almond kernel (raw; variety nonpariel)", "raw pistachios",
-    "leaves of field beans", "grape plant", "ginger", "baby spinach", "grape", "rotten onion",
+    "leaves of field beans", "grape plant", "ginger", "baby spinach", "grape", "rotten onion", "peas",
     "styrian pumpkin anthrosphere", "citrus paradisi", "soy bean root", "cotton root", "raw pecan",
     "greenhouse grown plants with black leg infection", "marjoram", "affected cabbage tissue",
     "ucb-1 pistachio rootstock", "pineapple", "plants with moko disease", "mango", "chives",
@@ -583,7 +599,7 @@ soil_hosts = ["decaying wood"]
 
 
 soil_isolation_sources = [
-    "no application of phosphorus fertilizer",
+    "no application of phosphorus fertilizer", "pine shavings",
     "trebel valley fen", "rhizobacterium", "heilongjiang province", "solo", ## not an error: portuguese for soil.
     "rice paddy field", "mixed forest with bamboo", "mixed forest near oak tree",
     "envo:00001998", "leaf litter", "field land", "wampee planting region", "mouldy hay",
@@ -622,9 +638,10 @@ marine_hosts = ["argopecten purpuratus", "seawater", "pyropia tenera", "red alga
 
 
 marine_isolation_sources = [
-    "whale bone on the intertidal seashore of punta plaza; Antarctica", "salt water", "rudong intertidal zone",
-    "brackish water; varlaxudden; baltic sea", "south sea", "kelp frond", "deep-sea water",
-    "shallow sea; symbosis with harmful algal bloom algae", "qidong intertidal zone",
+    "coastal area",
+    "whale bone on the intertidal seashore of punta plaza; antarctica", "salt water", "rudong intertidal zone",
+    "brackish water; varlaxudden; baltic sea", "south sea", "kelp frond", "deep-sea water", "kelp tisue",
+    "shallow sea; symbosis with harmful algal bloom algae", "qidong intertidal zone", "gracilaria",
     "sea water (sand filtered); china; hong kong", "sea water [envo:00002149]", "pacific ocean",
     "the surface of red algae", "isolated from fouling in the littoral zone of the white sea",
     "turbid saltwater", "rotten brown algae", "yellow-gray fringes", "sea water of daya bay",
@@ -675,7 +692,7 @@ freshwater_hosts = [
 
 
 freshwater_isolation_sources = [
-    "a pond on the huanglong mountain",
+    "a pond on the huanglong mountain", "envo:00002228",
     "kaeda river; miyazaki; japan", "river sand", "main river that flows through guiyu town",
     "usa: oklahoma; sallisaw; sallisaw creek public use area; robert s. kerr reservoir", "well",
     "zhenhai reservoir in guangdong province", "seine river", "manawatu river", "shallow pond",
@@ -696,6 +713,8 @@ food_hosts = ["kimchi cabbage", "mung bean", "kombucha scoby", "seujeot", "pickl
 
 
 food_isolation_sources = [
+    "bacterial strain isolated from fresh salmon", "sour bamboo shoots sample",
+    "soybean product", "tahini", "sugarcane exudate", "sweet potato sour liquid", "sour porridge",
     "andong sikhe (andong rice punch)", "egg white", "ganjang", "frozen dumplings",
     "chinese cabbage geotjeori", "egg", "pate collected as part of botulism investigation",
     "curd", "pumiao rice noodle", "sake", "lobster tail", "whey culture", "garam masala hot spice mixture",
@@ -728,7 +747,7 @@ food_isolation_sources = [
     "crab marinated in soy sauce", "pork product", "chinese sauerkraut", "yoghourt",
     "honey", "ham", "bobby veal steak", "10' wieners", "natto", "yogurt", "arugula",
     "gochujang", "cheonggukjang", "cheese starter culture", "corn steep liquor",
-    "bacterial strain isolated from sardine", "barbeque",
+    "bacterial strain isolated from sardine", "barbeque", "spicy squid salad",
     "traditional greek kasseri cheese", "pork & cabbage dumplings", "lettuce", "fish balls",
     "new zealand cheese", "wine", "pork casserole; fp", "the red brine of salted laminaria",
     "beer", "tibetan kefir", "carrot juice", "pickle", "butter starter", "home-made vinegar",
@@ -798,7 +817,7 @@ livestock_hosts = [
 
 
 livestock_isolation_sources = [
-    "livestock manure", "pig feed",
+    "livestock manure", "pig feed", "swine faeces",
     "anaerobic effluent of swine manure", "rabbit liver", "ovis aries", "laying hen", "swab samples of pig",
     "swine preevisceration carcass swab", "air sacs", "sus scrofa domesticus", "rumen contents",
     "liquid joint sample of pig", "air sac of a pipped embryo", "weaned piglets", "guinea pig", "porcine tongue",
@@ -831,7 +850,7 @@ livestock_isolation_sources = [
     "heifer vaginal mucus", "cloaca", "buffalo calf", "aborted piglet fetus", "pig related",
     "calf", "animal feed", "rectal swab of cattle in slaughterhouse", "horse faces",
     "retail chicken", "canine oral plaque", "bovine pre-evisceration carcass at",
-    "novine (bobby calf; fecal)", "a feces sample of chicken origin", "gallus gallus",
+    "novine (bobby calf; fecal)", "a feces sample of chicken origin", "gallus gallus", "poultry rinse",
     "lung of aborted horse fetus", "beef liver", "swine", "chicken intestine", "collected from calf feces",
     "pooled faeces sample collected from floor of poultry farm", "rectal swab samples of pig",
     "broiler chick cecum", "isolated from the intestines of sick", "chicken cecum", "bulk pig ear",
@@ -851,15 +870,18 @@ livestock_isolation_sources = [
 
 
 anthropogenic_hosts = ["sewage", "soil (polluted)", "dsmz strain", "laboratory", "lab",
-                       "padding",
+                       "padding", "medium 987", "bgsc database",
+                       "sw4881 was obtained from city park lake; baton rouge; louisiana; u.s.a.",
                        "cell culture collection", "mine", "bacillus thuringiensis subsp", "activated sludge",
                        "zymobiomics microbial community standard strain"]
 
 
 anthropogenic_isolation_sources = [
+    "hopper", "isp2",
+    "biogas digestate", "ventilator shelf_p101_bu22", "infusion stand_p63_bu16",
     "polyester fabric recovered from compost", "luria bertani broth miller", "medium 987",
     "mutant of streptomyces rimosus subsp. rimosus r7", "out-of-house environment",
-    "otc cluster deletion mutant of streptomyces rimosus subsp. rimosus hp126",
+    "otc cluster deletion mutant of streptomyces rimosus subsp. rimosus hp126", "hand rail",
     "in-house environment", "dialysis fluid", "an irradiated device", "locker_p26_bu28",
     "pharmaceutical solution", "button", "fence", "zoo environmental surface", "farmer market",
     "artp mutation", "the leaf of flue-cured tobacco", "interstitial fluid", "in vitro substrate",
@@ -870,7 +892,7 @@ anthropogenic_isolation_sources = [
     "shoe sole from worker", "phosphate mine", "air conditioner condensate drain pipe",
     "re-isolation from atcc 39073", "airborne", "spontaneous mutant", "lab mutant", "sluge",
     "starvation in luria bertani broth", "thermophilic stage of composting process", "shoe",
-    "flange fragments", "lab mutation of atcc 17978", "alginate-supplemented microcosm",
+    "flange fragments", "lab mutation of atcc 17978", "alginate-supplemented microcosm", "cookware",
     "derived from cip 106327 (collection de l'institute pasteur; paris; france)", "ceramic particles",
     "strain ev g. gerard; g robic (vaccine strain ev line niieg is mutant strain; was isolated from other stain ev gerard and robic)",
     "thermophilic microbial from zc4 compost from a compost operation in the sao paulo zoo (brazil)",
@@ -896,7 +918,8 @@ anthropogenic_isolation_sources = [
     "anthropogenic environmental material", "environmental swab sponge bakery hallway",
     "chinese petroleum corporation 77 kaoshiung refinery located in kaoshiung 78 city; taiwan",
     "rusty iron plate", "commercial product serenade (bayer)", "evaporator", "commercial plant nursery",
-    "enrichment community growing on the high-molecular-weight fraction of a black liquor sample from federal paper board company inc.; augusta; ga", "sunki", "commercial mycovac-l vaccine", "farm environment",
+    "enrichment community growing on the high-molecular-weight fraction of a black liquor sample from federal paper board company inc.; augusta; ga",
+    "sunki", "commercial mycovac-l vaccine", "farm environment", "aeromonas salmonicida j223 after thermal shock",
     "pxo1 plasmid-cured derivative of pno2 using crispr/cas9 system", "former landfill site for plastics",
     "sea water aquarium outflow", "vaccinal strain", "retail fish market", "fishmeal",
     "bakery environment - bottom metal shelf on table used for making birthday cakes",
@@ -904,7 +927,7 @@ anthropogenic_isolation_sources = [
     "petroleum polluted river", "corrosion products from a corroded pipe in an fpso",
     "vinegar factory", "freshwater ras system; circulating water", "traditional dairy",
     "chemical and physical mutagen treatment of atcc 25486", "lactic starter", "starter culture",
-    "snottite biofilm from former pyrite mine", "dairy fan", "dsmz", "dsmz isolate",
+    "snottite biofilm from former pyrite mine", "dairy fan", "dsmz", "dsmz isolate", "fishpond",
     "guide to japan collection of microorganisms", "rust layer", "bioleaching solution",
     "cleaning system aquaculture", "clam larvae aquaculture", "mineral salt medium",
     "combined sewer", "oil", "roundup", "culture mutant", "turbot fish farm", "t5 medium",
@@ -920,10 +943,12 @@ anthropogenic_isolation_sources = [
     "clone isolated from the evolution experiment described in ketola et al. 2013 (doi: 10.1111/evo.12148)",
     "the sample was isolated from cell culture after 9 month of microevolution experiment",
     "salt mine", "bioreactor", "sewage & soil", "tung meal", "cooling tower",
-    "surface of a polyethylene microplastic particle present in tank 6 of a marine aquarium containing stony-coral fragments and water maintained at 26 degree c", "mutagenisis derived",
-    "aquarium water", "biofilm sample", "medium", "dairy slurry uk", "landfill",
-    "detritus agregates formed in tank 6 of a marine aquarium containing stony-coral fragments and water maintained at 26 degree c", "duedonoscope instrument", "air in a school dining room",
-    "non-filtered water from the water column of tank 6 of a marine aquarium containing stony-coral fragments. water maintained at 26 degree c", "cheddar cheese factory", "mine", "brewing yeast sample",
+    "surface of a polyethylene microplastic particle present in tank 6 of a marine aquarium containing stony-coral fragments and water maintained at 26 degree c",
+    "mutagenisis derived", "aquarium water", "biofilm sample", "medium", "dairy slurry uk", "landfill",
+    "detritus agregates formed in tank 6 of a marine aquarium containing stony-coral fragments and water maintained at 26 degree c",
+    "duedonoscope instrument", "air in a school dining room",
+    "non-filtered water from the water column of tank 6 of a marine aquarium containing stony-coral fragments. water maintained at 26 degree c",
+    "cheddar cheese factory", "mine", "brewing yeast sample", "agrosavia",
     "anabaena culture", "dairy environment", "genome shuffling", "jugular catheter",
     "telephone of nurse station", "shower 3", "geothermal power plant", "sink aerator",
     "shelf", "brewery environment", "lab strain", "coffee cup", "culture collection",
@@ -986,8 +1011,8 @@ anthropogenic_isolation_sources = [
     "probitic products", "washroom sink in hospital intensive care unit", "pig farm dust",
     "doe field research center at oakridge; tennessee; area 5; well fw507",
     "hygromycin b antibiotic bottle", "paper pulp mill", "residential yard",
-    "biofilm reactor", "nutrient broth", "bed controller_p22_bu23",
-    "dsmz collection (dsm 12730)", "chemical plant",
+    "biofilm reactor", "nutrient broth", "bed controller_p22_bu23", "aquaculture ponds",
+    "dsmz collection (dsm 12730)", "chemical plant", "medicine capsule",
     "foot panel of ared on iss", "iss mineral grit embedded in adhesive paper 3 environmental surface"]
 
 
@@ -1006,7 +1031,7 @@ sediment_isolation_sources = [
 
 
 human_hosts = ["ethnic koreans living in china", "young woman","nist mixed microbial rm strain",
-               "infant", "soldier", "people", "blood", "female", "humen being", "children"]
+               "infant", "soldier", "people", "blood", "female", "humen being", "children", "wei dai","faeces"]
 
 
 human_isolation_sources = [
@@ -1059,6 +1084,7 @@ na_hosts = ["environmental", "jamiecosley", "environment", "not available: not c
             "ucc strain", "natural / free-living", "obscured"]
 
 na_isolation_sources = [
+    "bacillus thuringiensis ssp. tenebrionis (btt)", "tibet", "henan",
     "the strain was isolated from guangdong province; china in 2020-12", "passage", "cicc",
     "environmental material [envo:00010483]", "japan", "mssing", "nanchang", "environmetal",
     "envo:00010483", "not provided; submitted under migs 2.1", "huangshui", "shanghai", "ucc strain",
@@ -1072,13 +1098,13 @@ na_isolation_sources = [
     "usa: wa: seattle", "not available: to be reported later", "not known", "bone powder",
     "greensboro; alabama", "n.a.", "cameron currie (currie@bact.wisc.edu)", "no", "missing: control sample",
     "terry c. hazen (tchazen@lbl.gov)", "envo:00002034", "orsay", "wenzhou; china", "from china",
-    "prof douwe van sinderen; university college cork; western road; cork; ireland",
+    "prof douwe van sinderen; university college cork; western road; cork; ireland", "jiangshui",
     "derek lovley (dlovley@microbio.umass.edu)", "atcc strain", "atcc", "china: tianjin",
     "laboratory strain derived from cip", "local geographical source", "neb433", "not isolated",
     "swab with brown-gray powder", "epidemic", "anaerobic environments", "environmental", "neb269",
     "environmental swabs", "uruguay", "coconi", "csf", "balf", "china: zibo; shandong",
     "integrative microbiology research center; south china agricultural university (scau); tianhe district; guangzhou china",
-    "gram-negative and facultative anaerobes; with flagellated and non-spore-forming",
+    "gram-negative and facultative anaerobes; with flagellated and non-spore-forming", "maari",
     "wild type strain isolated from a natural source", "beijing", "poland; warsaw area",
     "bal", "unkown", "other", "to be completed", "agr", "enviornmental"]
 
