@@ -49,8 +49,6 @@ library(ggExtra)
 library(ggrepel)
 library(viridis)
 
-library(mgcv) ## for geom_smooth model fit in Figures 2 and 3.
-
 
 ################################################################################
 ## Functions and global variables.
