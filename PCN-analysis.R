@@ -296,7 +296,7 @@ make.confint.figure.panel <- function(Table, order.by.total.plasmids, title,
         ggplot(aes(y = Annotation, x = p)) +
         geom_point(size=1) +
         ylab("") +
-        xlab("Proportion of Plasmids") +
+        xlab("proportion of plasmids") +
         theme_classic() +
         ggtitle(title) +
         ## plot CIs.
@@ -329,8 +329,8 @@ make_PCN_base_plot <- function(my.PCN.data) {
         scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
         ## make the points in the legend larger.
         guides(color = guide_legend(override.aes = list(size = 5))) +
-        xlab("log10(Length)")  +
-        ylab("log10(Copy Number)") +
+        xlab("log10(length)")  +
+        ylab("log10(copy number)") +
         theme(legend.position = "bottom") +
         theme(strip.background = element_blank()) +
         theme(
@@ -352,11 +352,11 @@ make_normalized_PCN_base_plot <- function(my.PCN.data) {
         geom_point(size=0.5,alpha=0.8) +
         geom_hline(yintercept=0,linetype="dashed",color="gray") +
         theme_classic() +
-        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="plasmid mobility") +
         ## make the points in the legend larger.
         guides(color = guide_legend(override.aes = list(size = 5))) +
-        xlab("log10(Normalized length)")  +
-        ylab("log10(Copy Number)") +
+        xlab("log10(normalized length)")  +
+        ylab("log10(copy number)") +
         theme(legend.position = "bottom") +
         theme(strip.background = element_blank()) +
         theme(
@@ -375,8 +375,8 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
                 y = log10(CDS_length),
                 color = SeqType)) +
         geom_point(size=0.05,alpha=0.5) +
-        xlab("log10(Length)") +
-        ylab("log10(Coding sequence length)") +
+        xlab("log10(length)") +
+        ylab("log10(coding sequence length)") +
         theme_classic() +
         guides(color = "none") +
         theme(strip.background = element_blank()) +
@@ -396,8 +396,8 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
                 y = log10(metabolic_protein_count),
                 color = SeqType)) +
         geom_point(size=0.5,alpha=0.5) +
-        xlab("log10(Length)") +
-        ylab("log10(Metabolic genes)") +
+        xlab("log10(length)") +
+        ylab("log10(metabolic genes)") +
         theme_classic() +
         guides(color = "none") +
         theme(strip.background = element_blank()) +
@@ -1242,8 +1242,8 @@ Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("Cliques ranked by length")  +
-    ylab("log10(Length)") +
+    xlab("cliques ranked by length")  +
+    ylab("log10(length)") +
     guides(color = "none") +
     ggtitle("Plasmid cliques in Acman et al. (2020)") +
     theme(
@@ -1261,8 +1261,8 @@ Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     geom_point(size=0.5,alpha=0.8) +
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("Cliques ranked by length")  +
-    ylab("log10(Copy Number)") +
+    xlab("cliques ranked by length")  +
+    ylab("log10(copy number)") +
     guides(color = "none") +
     theme(
         axis.title.x = element_text(size=11),
@@ -1297,7 +1297,7 @@ Redondo.Salvo.PTU.size.plot <- PTU.full.PIRA.estimates %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
-    ylab("log10(Length)") +
+    ylab("log10(length)") +
     guides(color = "none") +
     ggtitle("PTUs in Redondo-Salvo et al. (2020)") +
     theme(
@@ -1316,7 +1316,7 @@ Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.estimates %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
-    ylab("log10(Copy Number)") +
+    ylab("log10(copy number)") +
     guides(color = "none") +
     theme(
         axis.title.x = element_text(size=11),
@@ -1347,7 +1347,7 @@ MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
-    ylab("log10(Length)") +
+    ylab("log10(length)") +
     guides(color = "none") +
     ggtitle("MOB-Cluster Mash Distance < 0.06") +
     theme(
@@ -1366,7 +1366,7 @@ MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("PTUs ranked by length")  +
-    ylab("log10(Copy Number)") +
+    ylab("log10(copy number)") +
     guides(color = "none") +
     theme(
         axis.title.x = element_text(size=11),
@@ -1390,7 +1390,7 @@ MOB.Typer.reptype.size.plot <- MOB.typed.PIRA.reptypes %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
-    ylab("log10(Length)") +
+    ylab("log10(length)") +
     guides(color = "none") +
     ggtitle("MOB-Typer Rep types") +
     theme(
@@ -1410,7 +1410,7 @@ MOB.Typer.reptype.PCN.plot <- MOB.typed.PIRA.reptypes %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
-    ylab("log10(Copy Number)") +
+    ylab("log10(copy number)") +
     guides(color = "none") +
     theme(
         axis.title.x = element_text(size=11),
@@ -1436,7 +1436,7 @@ AresArroyo2023.reptype.size.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
-    ylab("log10(Length)") +
+    ylab("log10(length)") +
     guides(color = "none") +
     ggtitle("Rep types in Ares-Arroyo et al. (2023)") +
     theme(
@@ -1456,7 +1456,7 @@ AresArroyo2023.reptype.PCN.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
     theme_classic() +
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
     xlab("Rep types ranked by length")  +
-    ylab("log10(Copy Number)") +
+    ylab("log10(copy number)") +
     guides(color = "none") +
     theme(
         axis.title.x = element_text(size=11),
@@ -1538,7 +1538,7 @@ ggsave("../results/S6Fig.pdf", S6Fig, height=8.5,width=7.1)
 ## This vector is used for ordering Annotation levels in this figure.
 order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotation
 
-## Supplementary Figure S8A. let's make a histogram of PCN in these data.
+## Supplementary Figure S7A. let's make a histogram of PCN in these data.
 S7FigA <- PIRA.PCN.estimates %>%
     ## order the Annotation levels.
     mutate(Annotation = factor(Annotation, levels = order.by.total.plasmids)) %>%
@@ -1550,8 +1550,8 @@ S7FigA <- PIRA.PCN.estimates %>%
     geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
     ## place the high PCN at log10(50).
     geom_vline(xintercept = log10(50), linetype = "dashed", color = "light gray") +
-    xlab("log10(Copy Number)") +
-    ylab("Count") +
+    xlab("log10(copy number)") +
+    ylab("count") +
     facet_wrap(. ~ Annotation) +
     theme_classic() +
     theme(strip.background = element_blank()) +
@@ -1613,8 +1613,8 @@ S7FigC <- make.confint.figure.panel(
     "Proportion of plasmids with PCN > 50")
 
 ## save the figure.
-S7Fig <- plot_grid(S8FigA, S8FigB, S8FigC, labels=c('A','B','C'), ncol=1, rel_heights=c(2,1,1))
-ggsave("../results/S8Fig.pdf", S8Fig, height = 8, width = 5)
+S7Fig <- plot_grid(S7FigA, S7FigB, S7FigC, labels=c('A','B','C'), ncol=1, rel_heights=c(2,1,1))
+ggsave("../results/S7Fig.pdf", S7Fig, height = 8, width = 5)
 
 ## calculate the total number of plasmids,
 ## and the number of plasmids with PCN < 1 and PCN > 50.
@@ -1818,7 +1818,7 @@ S9Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=6)
 ## save the plot.
-ggsave("../results/S10Fig.pdf", S10Fig, height=10, width=8)
+ggsave("../results/S9Fig.pdf", S9Fig, height=10, width=8)
 
 ## ChatGPT says these are the default 3 colors in ggplot2.
 ## "#F8766D" (a red shade)
