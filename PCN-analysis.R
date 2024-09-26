@@ -1050,15 +1050,40 @@ very.large.plasmids.by.mobility <- very.large.plasmids %>%
 ## by genus to show universality of the PCN vs. length anticorrelation.
 
 ## Supplementary Figure S3 
+S3FigA <- PIRA.PCN.estimates %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column(
+        "TaxonomicGroup", "All other\ntaxonomic groups") %>%
+    make_PCN_base_plot() +
+    facet_wrap(. ~ TaxonomicGroup, nrow = 1) +
+    theme(strip.background = element_blank()) +
+    guides(color = "none") +
+    ggtitle("Taxonomic groups")
+
+
+S3FigB <- PIRA.PCN.estimates %>%
+    ## put new lines after slasks to improve the aspect ratio of the subpanels.
+    mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column(
+        "TaxonomicSubgroup", "All other\ntaxonomic subgroups") %>%
+    make_PCN_base_plot() +
+    facet_wrap(. ~ TaxonomicSubgroup, ncol = 5) +
+    theme(strip.background = element_blank()) +
+    guides(color = "none") +
+    ggtitle("Taxonomic subgroups")
+
 ## Break down by genus.
-S4Fig <- PIRA.PCN.estimates %>%
+S3FigC <- PIRA.PCN.estimates %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ Genus, ncol = 7) +
     theme(strip.background = element_blank()) +
-    guides(color = "none")
+    guides(color = "none") +
+    ggtitle("Microbial genera")
+
+S3Fig <- plot_grid(S3FigA, S3FigB, S3FigC, labels=c('A','B','C'), ncol = 1, rel_heights=c(1.5,2.5,3.5))
+
 ## save the plot.
-ggsave("../results/S4Fig.pdf", S4Fig, height=7.2, width=7.2)
+ggsave("../results/S3Fig.pdf", S3Fig, height=11, width=7.5, limitsize=FALSE)
 
 
 ################################################################################
@@ -1544,7 +1569,6 @@ S7FigA <- PIRA.PCN.estimates %>%
     mutate(Annotation = factor(Annotation, levels = order.by.total.plasmids)) %>%
     ## TODO: fix upstream annotation so I don't have to do this filtering.
     filter(Annotation != "NA") %>%
-    filter(Annotation != "blank") %>%
     ggplot(aes(x = log10(PIRACopyNumber))) +
     geom_histogram(bins=100) +
     geom_vline(xintercept = 0, linetype = "dashed", color = "light gray") +
@@ -1587,8 +1611,7 @@ PIRA.PCN.estimates %>%
 
 low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates) %>%
     ## TODO: fix upstream annotation so I don't have to do this filtering.
-    filter(Annotation != "NA") %>%
-    filter(Annotation != "blank")
+    filter(Annotation != "NA")
 
 ## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
 S7FigB <- make.confint.figure.panel(
@@ -1675,9 +1698,9 @@ ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 ## Supplementary Figure S8. Break down the result in Figure 3 by genus
 ## to show universality of the CDS scaling relationship.
 
-## Break down by taxonomy group -- EXPERIMENTAL.
-S8AFig <- CDS.rRNA.fraction.data %>%
-    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other taxonomic groups") %>%
+## Break down by taxonomic group.
+S8FigA <- CDS.rRNA.fraction.data %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other\ntaxonomic groups") %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
     ## that we don't accidentally filter out chromids when selecting plasmids.
@@ -1687,13 +1710,14 @@ S8AFig <- CDS.rRNA.fraction.data %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicGroup, ncol=6) +
     ## improve the y-axis labels.
-    scale_y_continuous(breaks=c(2, 7))
-## save the plot.
-ggsave("../results/S8AFig.pdf", S8AFig, width=8,height=11)
+    scale_y_continuous(breaks=c(2, 7)) +
+    ggtitle("Taxonomic groups")
 
-## Break down by taxonomy group -- EXPERIMENTAL.
-S8BFig <- CDS.rRNA.fraction.data %>%
-    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicSubgroup", "All other taxonomic subgroups") %>%
+## Break down by taxonomic subgroup
+S8FigB <- CDS.rRNA.fraction.data %>%
+    ## put new lines after slasks to improve the aspect ratio of the subpanels.
+    mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicSubgroup", "All other\ntaxonomic subgroups") %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
     ## that we don't accidentally filter out chromids when selecting plasmids.
@@ -1703,17 +1727,11 @@ S8BFig <- CDS.rRNA.fraction.data %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup, ncol=6) +
     ## improve the y-axis labels.
-    scale_y_continuous(breaks=c(2, 7))
-## save the plot.
-ggsave("../results/S8BFig.pdf", S8BFig, width=8,height=11)
-
-
-######
-
-
+    scale_y_continuous(breaks=c(2, 7)) +
+    ggtitle("Taxonomic subgroups")
 
 ## Break down by genus.
-S8Fig <- CDS.rRNA.fraction.data %>%
+S8FigC <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
@@ -1722,11 +1740,17 @@ S8Fig <- CDS.rRNA.fraction.data %>%
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
                "chromid", SeqType)) %>%
     make_CDS_scaling_base_plot() +
-    facet_wrap(. ~ Genus, ncol=6) +
+    facet_wrap(. ~ Genus, ncol=10) +
     ## improve the y-axis labels.
-    scale_y_continuous(breaks=c(2, 7))
-## save the plot.
-ggsave("../results/S8Fig.pdf", S8Fig, width=8,height=11)
+    scale_y_continuous(breaks=c(2, 7)) +
+    ggtitle("Microbial genera")
+
+
+## save the plot over two pages.
+S8FigAB_page <- plot_grid(S8FigA, S8FigB, labels=c("A","B"), ncol = 1, rel_heights=c(1.5,2))
+S8FigC_page <- plot_grid(S8FigC, labels=c("C"))
+ggsave("../results/S8FigAB.pdf", S8FigAB_page, width=9.5,height=11, limitsize=FALSE)
+ggsave("../results/S8FigC.pdf", S8FigC_page, width=13,height=15, limitsize=FALSE)
 
 
 ########################################################################
@@ -1788,37 +1812,39 @@ ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
 genera.containing.chromids <- filter(metabolic.gene.plasmid.and.chromosome.data, SeqType == "chromid")$Genus
 
 
-## examining taxonomic groups -- EXPERIMENTAL
-S9AFig <- metabolic.gene.plasmid.and.chromosome.data %>%
+## examining taxonomic groups 
+S9FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
-    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other taxonomic groups") %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other\ntaxonomic groups") %>%
     make_metabolic_scaling_base_plot() +
-    facet_wrap(. ~ TaxonomicGroup, ncol=6)
-## save the plot.
-ggsave("../results/S9AFig.pdf", S9AFig, height=10, width=8)
+    facet_wrap(. ~ TaxonomicGroup, nrow = 1) +
+    ggtitle("Taxonomic groups")
 
-## examining taxonomic subgroups -- EXPERIMENTAL
-S9BFig <- metabolic.gene.plasmid.and.chromosome.data %>%
+## examining taxonomic subgroups
+S9FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
-    filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicSubgroup", "All other taxonomic subgroups") %>%
+    ## put new lines after slasks to improve the aspect ratio of the subpanels.
+    mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
+    filter.and.group.together.smaller.groups.in.the.correlate.column(
+        "TaxonomicSubgroup", "All other\ntaxonomic subgroups") %>%
     make_metabolic_scaling_base_plot() +
-    facet_wrap(. ~ TaxonomicSubgroup, ncol=6)
-## save the plot.
-ggsave("../results/S9BFig.pdf", S9BFig, height=10, width=8)
+    facet_wrap(. ~ TaxonomicSubgroup, ncol=6) +
+    ggtitle("Taxonomic subgroups")
 
-
-
-
-## Supplementary Figure S9
+S9FigAB <- plot_grid(S9FigA, S9FigB, labels=c("A","B"),ncol =1, rel_heights=c(1.25,2))
 
 ## Break down by genus, only showing genera containing megaplasmids.
-S9Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+S9FigC <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
-    facet_wrap(. ~ Genus, ncol=6)
+    facet_wrap(. ~ Genus, ncol=5) +
+    ggtitle("Microbial genera")
+
+S9Fig <- plot_grid(S9FigAB, S9FigC, labels = c("","C"), ncol=1, rel_heights=c(2,3.5))
+
 ## save the plot.
-ggsave("../results/S9Fig.pdf", S9Fig, height=10, width=8)
+ggsave("../results/S9Fig.pdf", S9Fig, height=14, width=8.5,limitsize=FALSE)
 
 ## ChatGPT says these are the default 3 colors in ggplot2.
 ## "#F8766D" (a red shade)
