@@ -51,7 +51,17 @@ library(viridis)
 
 
 ################################################################################
-## Functions and global variables.
+## Global variables and functions.
+
+## require that PCN estimates are supported by a minimum of MIN_READ_COUNT reads per replicon.
+MIN_READ_COUNT <- 10000
+
+## To avoid the misidentification of ICEs as conjugative plasmids in chromids or secondary chromosomes,
+## specifically label megaplasmids or chromids larger than 500 kb (Cite Coluzzi et al. 2022 for this practice).
+PLASMID_LENGTH_THRESHOLD <- 500000
+
+## Threshold for showing the emergent metabolic scaling relation.
+METABOLIC_GENE_THRESHOLD <- 100
 
 
 filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 50) {    
@@ -389,11 +399,31 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
 
 
 make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromosome.data) {
+
+    ## fit a linear regression to the chromosome data, and save the fit,
+    ## to show the emergent scaling trend on the figures.
+    ## Using chromosome here to preserve independence between data
+    ## and the predicted scaling.
+    chromosome.metabolic.scaling.model <- lm(
+        formula = log10_metabolic_protein_count ~ log10_replicon_length,
+        data = filter(
+            metabolic.gene.plasmid.and.chromosome.data,
+            SeqType == "chromosome"))
+        
+    ## save the model fit as a dataframe for plotting.
+    chromosome.metabolic.scaling.fit.df <- data.frame(
+        log10_replicon_length =  filter(
+            metabolic.gene.plasmid.and.chromosome.data,
+            SeqType== "chromosome")$log10_replicon_length,
+        log10_metabolic_protein_count = chromosome.metabolic.scaling.model$fit
+    )
+
+   
     metabolic.gene.plasmid.and.chromosome.data %>%
         ggplot(
             aes(
-                x = log10(SeqLength),
-                y = log10(metabolic_protein_count),
+                x = log10_replicon_length,
+                y = log10_metabolic_protein_count,
                 color = SeqType)) +
         geom_point(size=0.5,alpha=0.5) +
         xlab("log10(length)") +
@@ -405,17 +435,9 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
             axis.title.x = element_text(size=11),
             axis.title.y = element_text(size=11),
             axis.text.x  = element_text(size=11),
-            axis.text.y  = element_text(size=11))
+            axis.text.y  = element_text(size=11)) +
+        geom_line(data = chromosome.metabolic.scaling.fit.df, color = 'gray', linetype = "dashed")
 }
-
-
-## require that PCN estimates are supported by a minimum of MIN_READ_COUNT reads per replicon.
-MIN_READ_COUNT <- 10000
-
-## To avoid the misidentification of ICEs as conjugative plasmids in chromids or secondary chromosomes,
-## specifically label megaplasmids or chromids larger than 500 kb (Cite Coluzzi et al. 2022 for this practice).
-PLASMID_LENGTH_THRESHOLD <- 500000
-
 
 ################################################################################
 ## Import files for the superset of all complete genomes with plasmids.
@@ -1781,7 +1803,7 @@ metabolic.gene.chromosome.data <- metabolic.genes.in.chromosomes %>%
     ## get CDS data for each genome.
     left_join(CDS.rRNA.fraction.data)
 
-## combine plasmid and chromosome metabolic gene data for Figure 4.
+## combine plasmid and chromosome metabolic gene data for Figure 3.
 metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.data %>%
     full_join(metabolic.gene.chromosome.data) %>%
     ## TODO: filter upstream Annotation so I don't need to do this ad hoc filtering here.
@@ -1789,16 +1811,52 @@ metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.data %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType))
+               "chromid", SeqType)) %>%
+    ## The next two lines is for convenience when plotting the emergent metabolic scaling fit.
+    mutate(log10_replicon_length = log10(replicon_length)) %>%
+    mutate(log10_metabolic_protein_count = log10(metabolic_protein_count))
+
+## fit a linear regression to the points with >= 100 metabolic genes, and save the fit,
+## to show the emergent scaling trend on the figures.
+metabolic.scaling.model <- lm(
+    formula = log10_metabolic_protein_count ~ log10_replicon_length,
+    data = filter(
+        metabolic.gene.plasmid.and.chromosome.data,
+        metabolic_protein_count >= METABOLIC_GENE_THRESHOLD))
+## the slope estimate = 1.03, and the Adjusted R-squared = 0.8774.
+summary(metabolic.scaling.model)
+
+## look at the chromosome metabolic scaling regression model.
+chromosome.metabolic.scaling.model <- lm(
+    formula = log10_metabolic_protein_count ~ log10_replicon_length,
+    data = filter(
+        metabolic.gene.plasmid.and.chromosome.data,
+        SeqType == "chromosome"))
+## slope estimate = 0.987, Adjusted R-squared = 0.8903.
+summary(chromosome.metabolic.scaling.model)
+
+
+## make a table of the mean lengths per metabolic gene for plasmids & chromids for Fig3.
+Fig3.mean.length.per.metabolic.gene.table <- metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(SeqType != "chromosome") %>%
+    group_by(Annotation, log10_metabolic_protein_count) %>%
+    summarize(log10_replicon_length = mean(log10_replicon_length))
 
 
 ## Fig3A: show the combined plot
 Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
-    make_metabolic_scaling_base_plot()
+    make_metabolic_scaling_base_plot() +
+    geom_smooth(
+                data = Fig3.mean.length.per.metabolic.gene.table,
+                size = 0.4, alpha = 0.2, color = "black")
+   
 
 ## Fig3B: show generality over ecology.
 Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
+    geom_smooth(
+                data = Fig3.mean.length.per.metabolic.gene.table,
+                size = 0.2, alpha = 0.2, color = "black") +
     facet_wrap(.~Annotation, nrow=3)
 
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
