@@ -1843,10 +1843,11 @@ Fig3.mean.length.per.metabolic.gene.table <- metabolic.gene.plasmid.and.chromoso
     summarize(log10_replicon_length = mean(log10_replicon_length))
 
 ## make a table of the mean number of metabolic genes for plasmids and chromosomes of a given length for Fig 3.
-## IMPORTANT POINT: The smoothed curve omits all plasmids with zero metabolic genes.
+## IMPORTANT POINT: The smoothed curve omits all points with zero metabolic genes.
 Fig3.mean.metabolic.genes.per.length <-  metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(SeqType != "chromosome") %>% 
     ## only plot the trend for plasmids (exclude chromids) to show generality.
-    filter(SeqType == "plasmid") %>% 
+    ##filter(SeqType == "plasmid") %>%
     group_by(Annotation, log10_replicon_length) %>%
     summarize(metabolic_protein_count = mean(metabolic_protein_count)) %>%
     mutate(log10_metabolic_protein_count = log10(metabolic_protein_count))
