@@ -164,24 +164,6 @@ cluster_PIRA.PCN.estimates_by_plasmid_length <- function(PIRA.PCN.estimates) {
 }
 
 
-ggplotRegression <- function(dat, xvar, yvar){
-    ## code from:
-    ## https://community.rstudio.com/t/annotate-ggplot2-with-regression-equation-and-r-squared/6112/7  
-  fml <- paste(yvar, "~", xvar)
-
-  fit <- lm(fml, dat)
-  
-  ggplot(fit$model, aes(x = .data[[xvar]], y = .data[[yvar]])) + 
-      geom_point() +
-      theme_classic() +
-    stat_smooth(method = "lm", col = "red") +
-    labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 5),
-                       "Intercept =",signif(fit$coef[[1]],5 ),
-                       " Slope =",signif(fit$coef[[2]], 5),
-                       " P =",signif(summary(fit)$coef[2,4], 5)))
-}
-
-
 normalize.plasmid.lengths <- function(df.with.AnnotationAccessions) {
     ## Make a column representing plasmid length normalized by chromosome length in each AnnotationAccession
     ## Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
@@ -377,6 +359,47 @@ make_normalized_PCN_base_plot <- function(my.PCN.data) {
 }
 
 
+make_PTU_length_rank_plot <- function(PTUs.with.PIRA.PCN.estimates, my.title) {
+    PTUs.with.PIRA.PCN.estimates %>%
+        ggplot(aes(
+            x = rank,
+            y = log10(replicon_length),
+            color = PredictedMobility)) +
+        geom_point(size=0.5,alpha=0.8) +
+        theme_classic() +
+        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+        xlab("PTUs")  +
+        ylab("log10(length)") +
+        guides(color = "none") +
+        ggtitle(my.title) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
+}
+
+
+make_PTU_PCN_rank_plot <- function(PTUs.with.PIRA.PCN.estimates) {
+    PTUs.with.PIRA.PCN.estimates %>%
+        ggplot(aes(
+            x = rank,
+            y = log10(PIRACopyNumber),
+            color = PredictedMobility)) +
+        geom_point(size=0.5,alpha=0.8) +
+        theme_classic() +
+        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+        xlab("PTUs")  +
+        ylab("log10(copy number)") +
+        guides(color = "none") +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
+}
+
+
 make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
     CDS.fraction.data %>%
         ggplot(
@@ -384,7 +407,7 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
                 x = log10(SeqLength),
                 y = log10(CDS_length),
                 color = SeqType)) +
-        geom_point(size=0.05,alpha=0.5) +
+        geom_point(size=0.5,alpha=0.8) +
         xlab("log10(length)") +
         ylab("log10(coding sequence length)") +
         theme_classic() +
@@ -425,7 +448,7 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
                 x = log10_replicon_length,
                 y = log10_metabolic_protein_count,
                 color = SeqType)) +
-        geom_point(size=0.5,alpha=0.5) +
+        geom_point(size=0.5,alpha=0.8) +
         xlab("log10(length)") +
         ylab("log10(metabolic genes)") +
         theme_classic() +
@@ -1282,40 +1305,11 @@ Acman.cliques.with.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
 
 ## Acman cliques show a very limited size distribution.
 Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(replicon_length),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("cliques ranked by length")  +
-    ylab("log10(length)") +
-    guides(color = "none") +
-    ggtitle("Plasmid cliques in Acman et al. (2020)") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
+    make_PTU_length_rank_plot("PTUs defined by Acman et al. (2020)")
 
 
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(PIRACopyNumber),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("cliques ranked by length")  +
-    ylab("log10(copy number)") +
-    guides(color = "none") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
+make_PTU_PCN_rank_plot()
 
 S4FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=1)
 
@@ -1336,40 +1330,10 @@ PTU.full.PIRA.estimates <- PIRA.PCN.estimates %>%
 
 ## Redondo-Salvo cliques show a very limited size distribution.
 Redondo.Salvo.PTU.size.plot <- PTU.full.PIRA.estimates %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(replicon_length),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("PTUs ranked by length")  +
-    ylab("log10(length)") +
-    guides(color = "none") +
-    ggtitle("PTUs in Redondo-Salvo et al. (2020)") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
-
+    make_PTU_length_rank_plot("PTUs defined by\nRedondo-Salvo et al. (2020)")
 
 Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.estimates %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(PIRACopyNumber),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("PTUs ranked by length")  +
-    ylab("log10(copy number)") +
-    guides(color = "none") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
+    make_PTU_PCN_rank_plot()
 
 S4FigCD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=1)
 
@@ -1386,40 +1350,11 @@ MOB.typed.PIRA.clusters <- MOB.typed.PIRA.PCN.estimates %>%
     
 ## Make the plots.
 MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(replicon_length),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("PTUs ranked by length")  +
-    ylab("log10(length)") +
-    guides(color = "none") +
-    ggtitle("MOB-Cluster Mash Distance < 0.06") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
+    make_PTU_length_rank_plot("PTUs defined by MOB-Cluster\n(Mash distance < 0.06)")
 
 
 MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(PIRACopyNumber),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("PTUs ranked by length")  +
-    ylab("log10(copy number)") +
-    guides(color = "none") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
+    make_PTU_PCN_rank_plot()
 
 S4FigEF <- plot_grid(MOB.Typer.PTU.size.plot, MOB.Typer.PTU.PCN.plot, labels=c('E','F'), nrow=1)
 
@@ -1429,41 +1364,11 @@ MOB.typed.PIRA.reptypes <- MOB.typed.PIRA.PCN.estimates %>%
 
 ## MOB-typer Rep protein type classes by length
 MOB.Typer.reptype.size.plot <- MOB.typed.PIRA.reptypes %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(replicon_length),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("Rep types ranked by length")  +
-    ylab("log10(length)") +
-    guides(color = "none") +
-    ggtitle("MOB-Typer Rep types") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
-
+        make_PTU_length_rank_plot("PTUs defined by MOB-Typer\n(Rep protein typing)")
 
 ## MOB-typer Rep protein type classes by PCN
 MOB.Typer.reptype.PCN.plot <- MOB.typed.PIRA.reptypes %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(PIRACopyNumber),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("Rep types ranked by length")  +
-    ylab("log10(copy number)") +
-    guides(color = "none") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
+    make_PTU_PCN_rank_plot()
 
 S4FigGH <- plot_grid(MOB.Typer.reptype.size.plot, MOB.Typer.reptype.PCN.plot, labels=c('G','H'), nrow=1)
 
@@ -1475,47 +1380,19 @@ AresArroyo2023.typed.PIRA.reptypes <- PIRA.PCN.for.AresArroyo2023.data %>%
 
 ## Ares-Arroyo Rep protein type classes by length
 AresArroyo2023.reptype.size.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(replicon_length),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("Rep types ranked by length")  +
-    ylab("log10(length)") +
-    guides(color = "none") +
-    ggtitle("Rep types in Ares-Arroyo et al. (2023)") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
-
+    make_PTU_length_rank_plot("PTUs defined by Rep types\nin Ares-Arroyo et al. (2023)")
 
 ## Ares-Arroyo Rep protein type classes by PCN
 AresArroyo2023.reptype.PCN.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
-    ggplot(aes(
-        x = rank,
-        y = log10(PIRACopyNumber),
-        color = PredictedMobility)) +
-    geom_point(size=0.5,alpha=0.8) +
-    theme_classic() +
-    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
-    xlab("Rep types ranked by length")  +
-    ylab("log10(copy number)") +
-    guides(color = "none") +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
+    make_PTU_PCN_rank_plot()
 
 S4FigIJ <- plot_grid(AresArroyo2023.reptype.size.plot, AresArroyo2023.reptype.PCN.plot, labels=c('I','J'), nrow=1)
 
+S4Fig_title <- ggdraw() + draw_label("Length is more conserved than copy numbers within plasmid taxonomy units (PTUs)", fontface='bold')
+
 ## save the full plot.
-S4Fig <- plot_grid(S4FigAB, S4FigCD, S4FigEF, S4FigGH, S4FigIJ, ncol=1)
-ggsave("../results/S4Fig.pdf", S4Fig, width=7.5, height=12)
+S4Fig <- plot_grid(S4Fig_title, S4FigAB, S4FigCD, S4FigEF, S4FigGH, S4FigIJ, rel_heights = c(0.15,1,1,1,1,1), ncol=1)
+ggsave("../results/S4Fig.pdf", S4Fig, width=8, height=12)
 
 
 ########################################
