@@ -1842,21 +1842,30 @@ Fig3.mean.length.per.metabolic.gene.table <- metabolic.gene.plasmid.and.chromoso
     group_by(Annotation, log10_metabolic_protein_count) %>%
     summarize(log10_replicon_length = mean(log10_replicon_length))
 
+## make a table of the mean number of metabolic genes for plasmids and chromosomes of a given length for Fig 3.
+Fig3.mean.metabolic.genes.per.length <-  metabolic.gene.plasmid.and.chromosome.data %>%
+    filter(SeqType != "chromosome") %>%
+    group_by(Annotation, log10_replicon_length) %>%
+    summarize(metabolic_protein_count = mean(metabolic_protein_count)) %>%
+    mutate(log10_metabolic_protein_count = log10(metabolic_protein_count))
+
 
 ## Fig3A: show the combined plot
 Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     geom_smooth(
-                data = Fig3.mean.length.per.metabolic.gene.table,
-                size = 0.4, alpha = 0.2, color = "black")
+        data = Fig3.mean.metabolic.genes.per.length,
+        ##data = Fig3.mean.length.per.metabolic.gene.table,
+        size = 0.4, alpha = 0.2, color = "black", se=FALSE)
    
 
 ## Fig3B: show generality over ecology.
 Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     geom_smooth(
-                data = Fig3.mean.length.per.metabolic.gene.table,
-                size = 0.2, alpha = 0.2, color = "black") +
+        data = Fig3.mean.metabolic.genes.per.length,
+        ##data = Fig3.mean.length.per.metabolic.gene.table,
+        size = 0.2, alpha = 0.2, color = "black", se=FALSE) +
     facet_wrap(.~Annotation, nrow=3)
 
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
