@@ -1843,8 +1843,10 @@ Fig3.mean.length.per.metabolic.gene.table <- metabolic.gene.plasmid.and.chromoso
     summarize(log10_replicon_length = mean(log10_replicon_length))
 
 ## make a table of the mean number of metabolic genes for plasmids and chromosomes of a given length for Fig 3.
+## IMPORTANT POINT: The smoothed curve omits all plasmids with zero metabolic genes.
 Fig3.mean.metabolic.genes.per.length <-  metabolic.gene.plasmid.and.chromosome.data %>%
-    filter(SeqType == "plasmid") %>% ## only plot the trend for plasmids (exclude chromids) to show generality.
+    ## only plot the trend for plasmids (exclude chromids) to show generality.
+    filter(SeqType == "plasmid") %>% 
     group_by(Annotation, log10_replicon_length) %>%
     summarize(metabolic_protein_count = mean(metabolic_protein_count)) %>%
     mutate(log10_metabolic_protein_count = log10(metabolic_protein_count))
@@ -1926,3 +1928,30 @@ S11Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     facet_wrap(. ~ Genus, ncol=6)
 ## save the plot.
 ggsave("../results/S11Fig.pdf", S11Fig, height=10, width=8)
+
+################################################################################
+## Supplementary Figure S12. Plot plasmid DNA content normalized by chromosome DNA content.
+## plasmid DNA content is almost always < 0.5 of chromosome DNA content in the genome,
+## indicated by the vertical dashed line.
+
+plasmid.DNA.content.data <- full.PIRA.estimates %>%
+    filter(SeqType != "chromosome") %>%
+    group_by(AnnotationAccession, Annotation) %>%
+    summarize(plasmid.DNA.content = sum(RepliconDNAContent))
+
+chromosome.DNA.content.data <- full.PIRA.estimates %>%
+    filter(SeqType == "chromosome") %>%
+    group_by(AnnotationAccession, Annotation) %>%
+    summarize(chromosome.DNA.content = sum(RepliconDNAContent))
+
+normalized.plasmid.DNA.content.data <- full_join(plasmid.DNA.content.data, chromosome.DNA.content.data) %>%
+    group_by(AnnotationAccession, Annotation) %>%
+    summarize(normalized.plasmid.DNA.content = plasmid.DNA.content / chromosome.DNA.content)
+
+S12Fig <- normalized.plasmid.DNA.content.data %>%
+    ggplot(aes(x = log10(normalized.plasmid.DNA.content))) +
+    geom_histogram(bins=100) +
+    facet_grid(Annotation~.) +
+    theme_classic() +
+    geom_vline(xintercept = log10(0.5), linetype = "dashed", color="light gray") +
+    theme(strip.background = element_blank())
