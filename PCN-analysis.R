@@ -1307,7 +1307,6 @@ Acman.cliques.with.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
 Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     make_PTU_length_rank_plot("PTUs defined by Acman et al. (2020)")
 
-
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
 make_PTU_PCN_rank_plot()
 
