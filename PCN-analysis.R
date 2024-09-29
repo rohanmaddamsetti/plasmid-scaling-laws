@@ -64,6 +64,29 @@ PLASMID_LENGTH_THRESHOLD <- 500000
 METABOLIC_GENE_THRESHOLD <- 100
 
 
+make.PIRA.vs.naive.themisto.plot <- function(PIRA.vs.naive.themisto.df) {
+    PIRA.vs.naive.themisto.df %>%
+        ggplot(aes(
+            x = log10(ThemistoNaiveCopyNumber),
+            y = log10(PIRACopyNumber),
+            color = PIRA_low_PCN,
+            shape = InsufficientReads)) +
+        geom_point() +
+        geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+        scale_color_manual(values=c("black", "red")) +
+        theme_classic() +
+        xlab("log10(Naive Themisto PCN)")  +
+        ylab("log10(PIRA PCN)") +
+        guides(color = 'none', shape = 'none') +
+        ## add the linear regression.
+        geom_smooth(
+            method='lm',
+            aes(x=log10(ThemistoNaiveCopyNumber), y=log10(PIRACopyNumber)),
+            color="light blue",
+            formula=y~x)
+}
+
+
 filter.and.group.together.smaller.groups.in.the.correlate.column <- function(df, correlate_column_name_string, lumped_group_name, min_group_size = 50) {    
     ## this function filters data frames for groups with more than min_group_size data points in the column
     ## named in the string correlate_column_name_string, using tidy evaluation,
@@ -140,6 +163,21 @@ rank.correlate.column <- function(df, correlate_column_name_string) {
         inner_join(correlate.column.ranks) %>%
         ## and order the column by replicon length.
         mutate(!!correlate_column_name := fct_reorder(!!correlate_column_name, rank))
+}
+
+
+add_mean_PTU_length_column <- function(df, PTU_column_name_string) {
+    ## the relevant PTU column is named in the string correlate_column_name_string,
+    ## and parsed using tidy evaluation.
+    PTU_column_name <- sym(PTU_column_name_string)
+
+    mean.PTU.length.df <- df %>%
+        group_by(!!PTU_column_name) %>%
+        summarize(mean_PTU_length = mean(replicon_length))
+
+    ## join the mean PTU length column to the original dataframe.
+    df %>%
+        inner_join(mean.PTU.length.df)
 }
 
 
@@ -308,7 +346,7 @@ make.confint.figure.panel <- function(Table, order.by.total.plasmids, title,
 
 
 make_PCN_base_plot <- function(my.PCN.data) {
-    ## Make the basic plot for S6Fig, before adding the marginal histograms,
+    ## Make the basic plot for S2Fig, before adding the marginal histograms,
     ## or facetting by column
     my.PCN.data %>%
         ggplot(aes(
@@ -318,7 +356,7 @@ make_PCN_base_plot <- function(my.PCN.data) {
         geom_point(size=0.5,alpha=0.8) +
         geom_hline(yintercept=0,linetype="dashed",color="gray") +
         theme_classic() +
-        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="plasmid mobility") +
         ## make the points in the legend larger.
         guides(color = guide_legend(override.aes = list(size = 5))) +
         xlab("log10(length)")  +
@@ -359,19 +397,18 @@ make_normalized_PCN_base_plot <- function(my.PCN.data) {
 }
 
 
-make_PTU_length_rank_plot <- function(PTUs.with.PIRA.PCN.estimates, my.title) {
+make_PTU_length_rank_plot <- function(PTUs.with.PIRA.PCN.estimates) {
     PTUs.with.PIRA.PCN.estimates %>%
         ggplot(aes(
             x = rank,
             y = log10(replicon_length),
             color = PredictedMobility)) +
         geom_point(size=0.5,alpha=0.8) +
-        theme_classic() +
-        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+        theme_cowplot() + ## for 7pt margins
+        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="plasmid mobility") +
         xlab("PTUs")  +
         ylab("log10(length)") +
         guides(color = "none") +
-        ggtitle(my.title) +
         theme(
             axis.title.x = element_text(size=11),
             axis.title.y = element_text(size=11),
@@ -387,9 +424,31 @@ make_PTU_PCN_rank_plot <- function(PTUs.with.PIRA.PCN.estimates) {
             y = log10(PIRACopyNumber),
             color = PredictedMobility)) +
         geom_point(size=0.5,alpha=0.8) +
-        theme_classic() +
-        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="Plasmid Mobility") +
+        theme_cowplot() + ## for 7pt margins
+        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="plasmid mobility") +
         xlab("PTUs")  +
+        ylab("log10(copy number)") +
+        guides(color = "none") +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
+}
+
+
+make_PTU_mean_length_PCN_base_plot <- function(df_with_PCN_mean_lengths) {
+    ## Make the basic plot for S4Fig panels, before adding the marginal histograms or anything else.
+    df_with_PCN_mean_lengths %>%
+        ggplot(aes(
+            x = log10(mean_PTU_length),
+            y = log10(PIRACopyNumber),
+            color = PredictedMobility)) +
+        geom_point(size=0.5,alpha=0.8) +
+        geom_hline(yintercept=0,linetype="dashed",color="gray") +
+        theme_cowplot() + ## for 7pt margins
+        scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="plasmid mobility") +
+        xlab("log10(PTU mean length)")  +
         ylab("log10(copy number)") +
         guides(color = "none") +
         theme(
@@ -698,30 +757,6 @@ PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
 ## 1,563 plasmids have sufficient reads with PIRA, but not with the naive themisto read mapping.
 sum(PIRA.vs.naive.themisto.df$InsufficientReads == TRUE)
     
-
-make.PIRA.vs.naive.themisto.plot <- function(PIRA.vs.naive.themisto.df) {
-    PIRA.vs.naive.themisto.df %>%
-        ggplot(aes(
-            x = log10(ThemistoNaiveCopyNumber),
-            y = log10(PIRACopyNumber),
-            color = PIRA_low_PCN,
-            shape = InsufficientReads)) +
-        geom_point() +
-        geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
-        scale_color_manual(values=c("black", "red")) +
-        theme_classic() +
-        xlab("log10(Naive Themisto PCN)")  +
-        ylab("log10(PIRA PCN)") +
-        guides(color = 'none', shape = 'none') +
-        ## add the linear regression.
-        geom_smooth(
-            method='lm',
-            aes(x=log10(ThemistoNaiveCopyNumber), y=log10(PIRACopyNumber)),
-            color="light blue",
-            formula=y~x)
-}
-
-
 ## S1 Figure panel A remove points with insufficient reads.
 S1FigA <- PIRA.vs.naive.themisto.df %>%
     filter(InsufficientReads == FALSE) %>%
@@ -1290,7 +1325,11 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 ## Supplementary Figure S4.
 ## Plasmid length and copy number are conserved within plasmid taxonomic groups.
 
-## Supplementary Figure S4AB
+## IMPORTANT TODO: there is a bug, in which there are plasmids with NA PredictedMobility
+## in the Acman and Redondo-Salvo panels, but not in any of the other panels.
+## This doesn't change any message or anything, but needs to be sorted out.
+
+## Supplementary Figure S4ABC
 ## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
 ## have similar sizes and copy numbers.
 
@@ -1303,17 +1342,34 @@ Acman.cliques.with.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     inner_join(Acman.PTU.data) %>%
     rank.correlate.column("Clique")
 
+
 ## Acman cliques show a very limited size distribution.
 Acman.clique.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
-    make_PTU_length_rank_plot("PTUs defined by Acman et al. (2020)")
+    make_PTU_length_rank_plot()
 
+## plot copy numbers for all the PTUs
 Acman.clique.PCN.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
-make_PTU_PCN_rank_plot()
-
-S4FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A','B'), nrow=1)
+    make_PTU_PCN_rank_plot()
 
 
-## Supplementary Figure S4CD.
+## plot PCN against mean PTU length.
+Acman.clique.PCN.vs.mean.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
+    ## calculate mean PTU length and add as a column.
+    add_mean_PTU_length_column("Clique") %>%
+    make_PTU_mean_length_PCN_base_plot()
+
+S4FigABC_title <- ggdraw() + draw_label("PTUs defined by Acman et al. (2020)", size=10, fontface="bold")
+
+S4FigABC <- plot_grid(
+    S4FigABC_title,
+    plot_grid(Acman.clique.size.plot,
+              Acman.clique.PCN.plot,
+              Acman.clique.PCN.vs.mean.size.plot,
+              labels=c('A','B','C'), nrow=1),
+    nrow=2,rel_heights=c(0.1,1))
+
+
+## Supplementary Figure S4DEF.
 ## The same result holds for the PTUs in the Redondo-Salvo et al. (2020) paper.
 
 ## That is, PTUs  in the plasmid similarity network
@@ -1323,22 +1379,37 @@ S4FigAB <- plot_grid(Acman.clique.size.plot, Acman.clique.PCN.plot, labels=c('A'
 ## and small plasmids will not have a lot of shared sequence, by definition.
 
 ## 453 plasmids have copy numbers and assigned PTUs.
-PTU.full.PIRA.estimates <- PIRA.PCN.estimates %>%
+PTU.full.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     inner_join(RedondoSalvo.PTU.data) %>%
     rank.correlate.column("PTU")
 
 ## Redondo-Salvo cliques show a very limited size distribution.
-Redondo.Salvo.PTU.size.plot <- PTU.full.PIRA.estimates %>%
-    make_PTU_length_rank_plot("PTUs defined by\nRedondo-Salvo et al. (2020)")
+Redondo.Salvo.PTU.size.plot <- PTU.full.PIRA.PCN.estimates %>%
+    make_PTU_length_rank_plot()
 
-Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.estimates %>%
+Redondo.Salvo.PTU.PCN.plot <- PTU.full.PIRA.PCN.estimates %>%
     make_PTU_PCN_rank_plot()
 
-S4FigCD <- plot_grid(Redondo.Salvo.PTU.size.plot, Redondo.Salvo.PTU.PCN.plot, labels=c('C','D'), nrow=1)
+## plot PCN against mean PTU length.
+Redondo.Salvo.PCN.vs.mean.size.plot <- PTU.full.PIRA.PCN.estimates %>%
+    ## calculate mean PTU length and add as a column.
+    add_mean_PTU_length_column("PTU") %>%
+    make_PTU_mean_length_PCN_base_plot()
+
+S4FigDEF_title <- ggdraw() + draw_label("PTUs defined by Redondo-Salvo et al. (2020)", size=10, fontface="bold")
+
+S4FigDEF <- plot_grid(
+    S4FigDEF_title,
+    plot_grid(Redondo.Salvo.PTU.size.plot,
+              Redondo.Salvo.PTU.PCN.plot,
+              Redondo.Salvo.PCN.vs.mean.size.plot,
+              labels=c('D','E','F'), nrow=1),
+    nrow=2,
+    rel_heights=c(0.1,1))
 
 
 #########################################################
-## Supplementary Figure S4EFGH. MOB-Typer PTU and Rep type analysis.
+## Supplementary Figure S4GHI. MOB-Cluster PTU analysis
 
 ## First plot over primary cluster type.
 ## from $ mob_cluster -h:
@@ -1348,50 +1419,94 @@ MOB.typed.PIRA.clusters <- MOB.typed.PIRA.PCN.estimates %>%
     rank.correlate.column("primary_cluster_id")
     
 ## Make the plots.
-MOB.Typer.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
-    make_PTU_length_rank_plot("PTUs defined by MOB-Cluster\n(Mash distance < 0.06)")
+MOB.Cluster.PTU.size.plot <- MOB.typed.PIRA.clusters %>%
+    make_PTU_length_rank_plot()
 
-
-MOB.Typer.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
+MOB.Cluster.PTU.PCN.plot <- MOB.typed.PIRA.clusters %>%
     make_PTU_PCN_rank_plot()
 
-S4FigEF <- plot_grid(MOB.Typer.PTU.size.plot, MOB.Typer.PTU.PCN.plot, labels=c('E','F'), nrow=1)
+## plot PCN against mean PTU length.
+MOB.Cluster.PCN.vs.mean.size.plot <- MOB.typed.PIRA.clusters %>%
+    ## calculate mean PTU length and add as a column.
+    add_mean_PTU_length_column("primary_cluster_id") %>%
+    make_PTU_mean_length_PCN_base_plot()
 
+S4FigGHI_title <- ggdraw() + draw_label("PTUs defined by MOB-Cluster (Mash distance < 0.06)", size=10, fontface="bold")
+
+S4FigGHI <- plot_grid(
+    S4FigGHI_title,
+    plot_grid(MOB.Cluster.PTU.size.plot,
+              MOB.Cluster.PTU.PCN.plot,
+              MOB.Cluster.PCN.vs.mean.size.plot,
+              labels=c('G','H', 'I'), nrow=1),
+    nrow=2,rel_heights=c(0.1,1))
+
+
+#########################################################
+## Supplementary Figure S4JKL. MOB-Typer Rep type analysis.
 ## The same thing holds for rep protein typing.
 MOB.typed.PIRA.reptypes <- MOB.typed.PIRA.PCN.estimates %>%
     rank.correlate.column("rep_type.s.")
 
 ## MOB-typer Rep protein type classes by length
 MOB.Typer.reptype.size.plot <- MOB.typed.PIRA.reptypes %>%
-        make_PTU_length_rank_plot("PTUs defined by MOB-Typer\n(Rep protein typing)")
+        make_PTU_length_rank_plot()
 
 ## MOB-typer Rep protein type classes by PCN
 MOB.Typer.reptype.PCN.plot <- MOB.typed.PIRA.reptypes %>%
     make_PTU_PCN_rank_plot()
 
-S4FigGH <- plot_grid(MOB.Typer.reptype.size.plot, MOB.Typer.reptype.PCN.plot, labels=c('G','H'), nrow=1)
+MOB.Typer.PCN.vs.mean.size.plot <- MOB.typed.PIRA.reptypes %>%
+    ## calculate mean PTU length and add as a column.
+    add_mean_PTU_length_column("rep_type.s.") %>%
+    make_PTU_mean_length_PCN_base_plot()
+
+S4FigJKL_title <- ggdraw() + draw_label("PTUs defined by MOB-Typer (Rep protein typing)", size=10, fontface="bold")
+
+S4FigJKL <- plot_grid(
+    S4FigJKL_title,
+    plot_grid(
+        MOB.Typer.reptype.size.plot,
+        MOB.Typer.reptype.PCN.plot,
+        MOB.Typer.PCN.vs.mean.size.plot,
+        labels=c('J','K','L'), nrow=1),
+    nrow=2, rel_heights=c(0.1,1))
 
 ############################
-## Supplementary Figure S4IJ.
+## Supplementary Figure S4MNO.
 ## the same thing holds over Rep protein types in Ares-Arroyo et al. (2023).
 AresArroyo2023.typed.PIRA.reptypes <- PIRA.PCN.for.AresArroyo2023.data %>%
     rank.correlate.column("Replicase")
 
 ## Ares-Arroyo Rep protein type classes by length
 AresArroyo2023.reptype.size.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
-    make_PTU_length_rank_plot("PTUs defined by Rep types\nin Ares-Arroyo et al. (2023)")
+    make_PTU_length_rank_plot()
 
 ## Ares-Arroyo Rep protein type classes by PCN
 AresArroyo2023.reptype.PCN.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
     make_PTU_PCN_rank_plot()
 
-S4FigIJ <- plot_grid(AresArroyo2023.reptype.size.plot, AresArroyo2023.reptype.PCN.plot, labels=c('I','J'), nrow=1)
+AresArroyo2023.PCN.vs.mean.size.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
+    ## calculate mean PTU length and add as a column.
+    add_mean_PTU_length_column("Replicase") %>%
+    make_PTU_mean_length_PCN_base_plot()
+
+S4FigMNO_title <- ggdraw() + draw_label("PTUs defined by Rep types in Ares-Arroyo et al. (2023)", size=10, fontface="bold")
+
+S4FigMNO <- plot_grid(
+    S4FigMNO_title,
+    plot_grid(
+        AresArroyo2023.reptype.size.plot,
+        AresArroyo2023.reptype.PCN.plot,
+        AresArroyo2023.PCN.vs.mean.size.plot,
+        labels=c('M','N','O'), nrow=1),
+    nrow=2, rel_heights=c(0.1,1))
 
 S4Fig_title <- ggdraw() + draw_label("Length is more conserved than copy numbers within plasmid taxonomy units (PTUs)", fontface='bold')
 
 ## save the full plot.
-S4Fig <- plot_grid(S4Fig_title, S4FigAB, S4FigCD, S4FigEF, S4FigGH, S4FigIJ, rel_heights = c(0.15,1,1,1,1,1), ncol=1)
-ggsave("../results/S4Fig.pdf", S4Fig, width=8, height=12)
+S4Fig <- plot_grid(S4Fig_title, S4FigABC, S4FigDEF, S4FigGHI, S4FigJKL, S4FigMNO, rel_heights = c(0.15,1,1,1,1,1), ncol=1)
+ggsave("../results/S4Fig.pdf", S4Fig, width=8, height=13)
 
 
 ########################################
