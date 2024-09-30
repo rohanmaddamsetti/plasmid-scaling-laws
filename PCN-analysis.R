@@ -439,7 +439,7 @@ make_PTU_PCN_rank_plot <- function(PTUs.with.PIRA.PCN.estimates) {
 
 make_PTU_mean_length_PCN_base_plot <- function(df_with_PCN_mean_lengths) {
     ## Make the basic plot for S4Fig panels, before adding the marginal histograms or anything else.
-    df_with_PCN_mean_lengths %>%
+    my_base_plot <- df_with_PCN_mean_lengths %>%
         ggplot(aes(
             x = log10(mean_PTU_length),
             y = log10(PIRACopyNumber),
@@ -456,6 +456,10 @@ make_PTU_mean_length_PCN_base_plot <- function(df_with_PCN_mean_lengths) {
             axis.title.y = element_text(size=11),
             axis.text.x  = element_text(size=11),
             axis.text.y  = element_text(size=11))
+
+    plot_with_marginals <- ggExtra::ggMarginal(my_base_plot, groupColour = TRUE, groupFill = TRUE, margins="both")
+
+    return (plot_with_marginals)
 }
 
 
@@ -518,7 +522,8 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
             axis.title.y = element_text(size=11),
             axis.text.x  = element_text(size=11),
             axis.text.y  = element_text(size=11)) +
-        geom_line(data = chromosome.metabolic.scaling.fit.df, color = 'gray', linetype = "dashed")
+        geom_line(data = chromosome.metabolic.scaling.fit.df,
+                  color = 'black', linetype = "solid", size=0.8)
 }
 
 ################################################################################
@@ -1848,16 +1853,18 @@ Fig3.mean.metabolic.genes.per.length <-  metabolic.gene.plasmid.and.chromosome.d
 Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     geom_smooth(
-        data = Fig3.mean.metabolic.genes.per.length,
-        size = 0.4, alpha = 0.2, color = "black", se=FALSE)
+        ##data = Fig3.mean.metabolic.genes.per.length,
+        data = Fig3.mean.length.per.metabolic.gene.table,
+        size = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
    
 
 ## Fig3B: show generality over ecology.
 Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     geom_smooth(
-        data = Fig3.mean.metabolic.genes.per.length,
-        size = 0.2, alpha = 0.2, color = "black", se=FALSE) +
+        ##data = Fig3.mean.metabolic.genes.per.length,
+        data = Fig3.mean.length.per.metabolic.gene.table,
+        size = 0.8, alpha = 0.2, color = "dark gray", se=FALSE) +
     facet_wrap(.~Annotation, nrow=3)
 
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
@@ -1947,3 +1954,5 @@ S12Fig <- normalized.plasmid.DNA.content.data %>%
     theme_classic() +
     geom_vline(xintercept = log10(0.5), linetype = "dashed", color="light gray") +
     theme(strip.background = element_blank())
+## save the plot.
+ggsave("../results/S12Fig.pdf", S12Fig, height=10, width=8)
