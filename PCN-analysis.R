@@ -523,7 +523,7 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
             axis.text.x  = element_text(size=11),
             axis.text.y  = element_text(size=11)) +
         geom_line(data = chromosome.metabolic.scaling.fit.df,
-                  color = 'black', linetype = "solid", size=0.8)
+                  color = 'black', linetype = "solid", size=0.5)
 }
 
 ################################################################################
