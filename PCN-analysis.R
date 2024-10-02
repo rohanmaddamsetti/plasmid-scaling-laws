@@ -1719,9 +1719,57 @@ Fig2 <- plot_grid(Fig2A, Fig2B, labels = c("A", "B"), nrow=1)
 ## save the plot.
 ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 
+################################################################################
+## playing with non-coding picture.
+
+noncoding.fraction.data <- CDS.rRNA.fraction.data %>%
+    mutate(noncoding_length = replicon_length - CDS_length) %>%
+    mutate(noncoding_fraction = noncoding_length / replicon_length) %>%
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType))
+
+
+Fig2C_test <- noncoding.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(replicon_length),
+            y = log10(noncoding_length),
+            color = SeqType)) +
+    geom_point(size=0.5,alpha=0.8) +
+    xlab("log10(length)") +
+    ylab("log10(noncoding sequence length)") +
+    theme_classic() +
+    guides(color = "none") +
+    theme(strip.background = element_blank()) +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
+
+Fig2D_test <- noncoding.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(replicon_length),
+            y = noncoding_fraction,
+            color = SeqType)) +
+    geom_point(size=0.5,alpha=0.8) +
+    xlab("log10(length)") +
+    ylab("noncoding sequence fraction") +
+    theme_classic() +
+    guides(color = "none") +
+    theme(strip.background = element_blank()) +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11))
+
+
 
 ################################################################################
-## Supplementary Figure S8. Break down the result in Figure 3 by genus
+## Supplementary Figure S8. Break down the result in Figure 2 by genus
 ## to show universality of the CDS scaling relationship.
 
 ## Break down by taxonomic group.
