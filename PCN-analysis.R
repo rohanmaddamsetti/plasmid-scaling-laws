@@ -1031,7 +1031,7 @@ AIC(segmented.normalized.PCN.model)
 
 ################################################################################
 ## Figure 1BC and Supplementary Figure S2.
-## Plasmid copy number pipeline and Anticorrelation between plasmid length and copy number.
+## Plasmid copy number pipeline and inverse correlation between plasmid length and copy number.
 
 ## Supplementary Figure S3 shows the unnormalized anticorrelation.
 ## Break down this result by predicted plasmid mobility.
@@ -1129,6 +1129,14 @@ very.large.plasmids.by.mobility <- very.large.plasmids %>%
 ##   non-mobilizable 101
 ##              <NA>  31
 
+## get the percentages / numbers of predicted conjugative plasmids in the large.plasmids cluster.
+conjugative.plasmids <- PIRA.PCN.estimates %>%
+    filter(PredictedMobility == "conjugative")
+
+## 3126 conjugative plasmids
+nrow(conjugative.plasmids)
+## 3103 conjugative plasmids out of 3126 (99.3% are in the large cluster).
+nrow(filter(conjugative.plasmids, Size_Cluster == "Cluster_1"))
 
 ################################################################################
 ## Supplementary Figures S3. Break down the result in Figure 1 
