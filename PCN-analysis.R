@@ -49,7 +49,6 @@ library(ggExtra)
 library(ggrepel)
 library(viridis)
 
-
 ################################################################################
 ## Global variables and functions.
 
@@ -1704,8 +1703,50 @@ Fig2A <- CDS.rRNA.fraction.data %>%
                "chromid", SeqType)) %>%
     make_CDS_scaling_base_plot()
 
-## Fig 2B: show generality over ecology.
-Fig2B <- CDS.rRNA.fraction.data %>%
+## Fig 2B: noncoding fraction analysis.
+noncoding.fraction.data <- CDS.rRNA.fraction.data %>%
+    mutate(noncoding_length = replicon_length - CDS_length) %>%
+    mutate(noncoding_fraction = noncoding_length / replicon_length) %>%
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType))
+
+## make a dataframe to add the trace line for Fig 2B.
+Fig2B.mean.noncoding.fraction.per.length <- noncoding.fraction.data %>%
+    filter(SeqType != "chromosome") %>%
+    ## assign data into 100 bins by length
+    mutate(bin = ntile(replicon_length, 100)) %>%
+    group_by(bin) %>%
+    summarize(
+        noncoding_fraction = mean(noncoding_fraction),
+        replicon_length = mean(replicon_length))
+
+
+## now make Figure 2B.
+Fig2B <- noncoding.fraction.data %>%
+    ggplot(
+        aes(
+            x = log10(replicon_length),
+            y = noncoding_fraction,
+            color = SeqType)) +
+    geom_point(size=0.5,alpha=0.8) +
+    xlab("log10(length)") +
+    ylab("noncoding fraction") +
+    theme_classic() +
+    guides(color = "none") +
+    theme(strip.background = element_blank()) +
+    theme(
+        axis.title.x = element_text(size=11),
+        axis.title.y = element_text(size=11),
+        axis.text.x  = element_text(size=11),
+        axis.text.y  = element_text(size=11)) +
+        geom_smooth(
+        data = Fig2B.mean.noncoding.fraction.per.length,
+        size = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
+
+
+## Fig 2C: show generality over ecology.
+Fig2C <- CDS.rRNA.fraction.data %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
     ## that we don't accidentally filter out chromids when selecting plasmids.
@@ -1716,60 +1757,12 @@ Fig2B <- CDS.rRNA.fraction.data %>%
     facet_wrap(.~Annotation)
 
 
-## old Figure 2
-Fig2 <- plot_grid(Fig2A, Fig2B, labels = c("A", "B"), nrow=1)
+## Now put together the complete Figure 2.
+Fig2 <- plot_grid(
+    plot_grid(Fig2A, Fig2B, rel_heights=c(3,2), nrow=2, labels=c('A','B')),
+Fig2C, labels=c("",'C'),nrow=1, rel_widths=c(1,1.5))
 ## save the plot.
-ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
-
-
-
-
-## noncoding fraction analysis.
-noncoding.fraction.data <- CDS.rRNA.fraction.data %>%
-    mutate(noncoding_length = replicon_length - CDS_length) %>%
-    mutate(noncoding_fraction = noncoding_length / replicon_length) %>%
-    mutate(SeqType = ifelse(
-               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType))
-
-## Make Figure 2C.
-Fig2C <- noncoding.fraction.data %>%
-    ggplot(
-        aes(
-            x = log10(replicon_length),
-            y = noncoding_fraction,
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.8) +
-    xlab("log10(length)") +
-    ylab("noncoding fraction") +
-##    ylim(-2,0) +
-    theme_classic() +
-    guides(color = "none") +
-    theme(strip.background = element_blank()) +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
-
-
-##IMPORTANT:
-## PANEL A and PANEL B are square.
-## Then layout in Adobe.
-
-## TODO: fix the layout and update the figure captions to include the non-coding panel.
-## TODO: add the trace line for panel B.
-Fig2test <- plot_grid(
-    plot_grid(Fig2A, Fig2C, rel_heights=c(3,2), nrow=2, labels=c('A','C')),
-    Fig2B, labels=c("",'B'),nrow=1, rel_widths=c(1,1.5))
-
-## save the plot.
-ggsave("../results/Fig2test.pdf", Fig2test, height=4, width=8)
-
-################################################################################
-## playing with non-coding picture.
-
-
+ggsave("../results/Fig2.pdf", Fig2, height=5.325, width=7.1)
 
 
 ################################################################################
@@ -1902,12 +1895,9 @@ Fig3.mean.length.per.metabolic.gene.table <- metabolic.gene.plasmid.and.chromoso
 ## IMPORTANT POINT: The smoothed curve omits all points with zero metabolic genes.
 Fig3.mean.metabolic.genes.per.length <-  metabolic.gene.plasmid.and.chromosome.data %>%
     filter(SeqType != "chromosome") %>% 
-    ## only plot the trend for plasmids (exclude chromids) to show generality.
-    ##filter(SeqType == "plasmid") %>%
     group_by(Annotation, log10_replicon_length) %>%
     summarize(metabolic_protein_count = mean(metabolic_protein_count)) %>%
     mutate(log10_metabolic_protein_count = log10(metabolic_protein_count))
-
 
 ## Fig3A: show the combined plot
 Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
