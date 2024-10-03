@@ -75,7 +75,7 @@ make.PIRA.vs.naive.themisto.plot <- function(PIRA.vs.naive.themisto.df) {
         geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
         scale_color_manual(values=c("black", "red")) +
         theme_classic() +
-        xlab("log10(Naive Themisto PCN)")  +
+        xlab("log10(direct themisto PCN)")  +
         ylab("log10(PIRA PCN)") +
         guides(color = 'none', shape = 'none') +
         ## add the linear regression.
@@ -919,8 +919,8 @@ S1FigD <- naive.themisto.vs.naive.kallisto.df %>%
     geom_point(size=1) +
     geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
     theme_classic() +
-    xlab("log10(Naive Kallisto PCN)")  +
-    ylab("log10(Naive Themisto PCN)") +
+    xlab("log10(direct kallisto PCN)")  +
+    ylab("log10(direct themisto PCN)") +
     ## add the linear regression.
     geom_smooth(
         method='lm',
@@ -1715,13 +1715,16 @@ Fig2B <- CDS.rRNA.fraction.data %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(.~Annotation)
 
+
+## old Figure 2
 Fig2 <- plot_grid(Fig2A, Fig2B, labels = c("A", "B"), nrow=1)
 ## save the plot.
 ggsave("../results/Fig2.pdf", Fig2, height=4, width=7.1)
 
-################################################################################
-## playing with non-coding picture.
 
+
+
+## noncoding fraction analysis.
 noncoding.fraction.data <- CDS.rRNA.fraction.data %>%
     mutate(noncoding_length = replicon_length - CDS_length) %>%
     mutate(noncoding_fraction = noncoding_length / replicon_length) %>%
@@ -1729,26 +1732,8 @@ noncoding.fraction.data <- CDS.rRNA.fraction.data %>%
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
                "chromid", SeqType))
 
-
-Fig2C_test <- noncoding.fraction.data %>%
-    ggplot(
-        aes(
-            x = log10(replicon_length),
-            y = log10(noncoding_length),
-            color = SeqType)) +
-    geom_point(size=0.5,alpha=0.8) +
-    xlab("log10(length)") +
-    ylab("log10(noncoding sequence length)") +
-    theme_classic() +
-    guides(color = "none") +
-    theme(strip.background = element_blank()) +
-    theme(
-        axis.title.x = element_text(size=11),
-        axis.title.y = element_text(size=11),
-        axis.text.x  = element_text(size=11),
-        axis.text.y  = element_text(size=11))
-
-Fig2D_test <- noncoding.fraction.data %>%
+## Make Figure 2C.
+Fig2C <- noncoding.fraction.data %>%
     ggplot(
         aes(
             x = log10(replicon_length),
@@ -1756,7 +1741,8 @@ Fig2D_test <- noncoding.fraction.data %>%
             color = SeqType)) +
     geom_point(size=0.5,alpha=0.8) +
     xlab("log10(length)") +
-    ylab("noncoding sequence fraction") +
+    ylab("noncoding fraction") +
+##    ylim(-2,0) +
     theme_classic() +
     guides(color = "none") +
     theme(strip.background = element_blank()) +
@@ -1765,6 +1751,24 @@ Fig2D_test <- noncoding.fraction.data %>%
         axis.title.y = element_text(size=11),
         axis.text.x  = element_text(size=11),
         axis.text.y  = element_text(size=11))
+
+
+##IMPORTANT:
+## PANEL A and PANEL B are square.
+## Then layout in Adobe.
+
+## TODO: fix the layout and update the figure captions to include the non-coding panel.
+## TODO: add the trace line for panel B.
+Fig2test <- plot_grid(
+    plot_grid(Fig2A, Fig2C, rel_heights=c(3,2), nrow=2, labels=c('A','C')),
+    Fig2B, labels=c("",'B'),nrow=1, rel_widths=c(1,1.5))
+
+## save the plot.
+ggsave("../results/Fig2test.pdf", Fig2test, height=4, width=8)
+
+################################################################################
+## playing with non-coding picture.
+
 
 
 
