@@ -1566,6 +1566,10 @@ S6FigB <- RedondoSalvo.host.range.full.PIRA.estimates %>%
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
         color = Host_range)) +
+    xlab("log10(length)") +
+    ylab("log10(copy number)") +
+    ## rename the legend
+    labs(color = "host range") +
     geom_point(size=1,alpha=0.5) +
     theme_classic() +
     ggtitle("Host range annotated by\nRedondo-Salvo et al. (2020)") +
