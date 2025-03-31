@@ -483,6 +483,27 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
 }
 
 
+make_normalized_CDS_base_plot <- function(CDS.fraction.data) {
+    CDS.fraction.data %>%
+        ggplot(
+            aes(
+                x = log10(normalized_replicon_length),
+                y = log10(CDS_length),
+                color = SeqType)) +
+        geom_point(size=0.5,alpha=0.8) +
+        xlab("log10(length normalized by chromosome)") +
+        ylab("log10(coding sequence length)") +
+        theme_classic() +
+        guides(color = "none") +
+        theme(strip.background = element_blank()) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
+}
+
+
 make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromosome.data) {
 
     ## fit a linear regression to the chromosome data, and save the fit,
@@ -524,6 +545,28 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
         geom_line(data = chromosome.metabolic.scaling.fit.df,
                   color = 'black', linetype = "solid", size=0.5)
 }
+
+
+make_normalized_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromosome.data) {
+    metabolic.gene.plasmid.and.chromosome.data %>%
+        ggplot(
+            aes(
+                x = log10(normalized_replicon_length),
+                y = log10_metabolic_protein_count,
+                color = SeqType)) +
+        geom_point(size=0.5,alpha=0.8) +
+        xlab("log10(length normalized by chromosome)") +
+        ylab("log10(metabolic genes)") +
+        theme_classic() +
+        guides(color = "none") +
+        theme(strip.background = element_blank()) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
+}
+
 
 ################################################################################
 ## Import files for the superset of all complete genomes with plasmids.
@@ -957,6 +1000,43 @@ PIRA.PCN.estimates <- full.PIRA.estimates %>%
     ## create a column indicating how plasmids cluster by length.
     cluster_PIRA.PCN.estimates_by_plasmid_length()
 
+################################################################################
+## make Supplementary Data File 3 with means, confidence intervals,
+## and quantile statistics (including minima and maxima PCN per bin)
+## for plasmids binned every 1000bp in length.
+
+binned.PIRA.PCN.estimate.summary <- PIRA.PCN.estimates %>%
+    arrange(replicon_length) %>%
+    mutate(replicon_length_percentile = ntile(replicon_length, 100)) %>%
+    group_by(replicon_length_percentile) %>%
+    summarize(
+        mean_replicon_length = mean(replicon_length),
+        mean_normalized_replicon_length = mean(normalized_replicon_length),
+        mean_log10_replicon_length = mean(log10(replicon_length)),
+        mean_log10_normalized_replicon_length = mean(log10(normalized_replicon_length)),
+        mean_PCN = mean(PIRACopyNumber),
+        mean_log10_PCN = mean(log10(PIRACopyNumber)),
+        min_PCN = min(PIRACopyNumber),
+        max_PCN = max(PIRACopyNumber),
+        std_PCN = sd(PIRACopyNumber),
+        std_log10_PCN = sd(log10(PIRACopyNumber)),
+        count = n(),
+        ## calculate quantiles
+        q25_PCN = quantile(PIRACopyNumber, 0.25),
+        q50_PCN = quantile(PIRACopyNumber, 0.50),  ## Median
+        q75_PCN = quantile(PIRACopyNumber, 0.75),
+        q25_log10_PCN = quantile(log10(PIRACopyNumber), 0.25),
+        q50_log10_PCN = quantile(log10(PIRACopyNumber), 0.50),  ## Median
+        q75_log10_PCN = quantile(log10(PIRACopyNumber), 0.75),
+        ## normal approximation
+        CI_Lower_PCN = mean_PCN - 1.96 * (std_PCN / sqrt(count)),
+        CI_Upper_PCN = mean_PCN - 1.96 * (std_PCN / sqrt(count)),
+        CI_Lower_log10_PCN = mean_log10_PCN - 1.96 * (std_log10_PCN / sqrt(count)),
+        CI_Upper_log10_PCN = mean_log10_PCN + 1.96 * (std_log10_PCN / sqrt(count))
+    )
+
+## write this summary to disk.
+write.csv(binned.PIRA.PCN.estimate.summary, "../results/S3Data-PIRA-PCN-Kbp-bin-summary.csv")
 
 ################################################################################
 ## The data is best fit by piecewise regression, revealing a scaling law between length and copy number.
@@ -1027,6 +1107,14 @@ AIC(normalized.PCN.lm.model)
 AIC(second.order.normalized.PCN.lm.model)
 AIC(segmented.normalized.PCN.model)
 
+## get R^2 values for these models
+print("LINEAR MODEL WITH NORMALIZED LENGTH")
+summary(normalized.PCN.lm.model)
+print("QUADRATIC MODEL WITH NORMALIZED LENGTH")
+summary(second.order.normalized.PCN.lm.model)
+print("SEGMENTED MODEL WITH NORMALIZED LENGTH")
+summary(segmented.normalized.PCN.model)
+
 
 ################################################################################
 ## Figure 1BC and Supplementary Figure S2.
@@ -1074,7 +1162,7 @@ Fig1B_base <- PIRA.PCN.estimates %>%
     filter(!is.na(Annotation)) %>%
     filter.correlate.column("PredictedMobility") %>%
     make_normalized_PCN_base_plot() +
-    theme(strip.background = element_blank())
+     theme(strip.background = element_blank())
 
 ## Get the legend.
 Fig1BC_legend <- get_legend(Fig1B_base)
@@ -1097,6 +1185,38 @@ Fig1BC <- plot_grid(Fig1B, Fig1C, labels=c('B', 'C'), ncol=2, rel_widths = c(1, 
 Fig1BC_with_title_and_legend <- plot_grid(Fig1BC_title, Fig1BC, Fig1BC_legend, ncol=1, rel_heights = c(0.1,1,0.1))
 
 ggsave("../results/Fig1BC.pdf", Fig1BC_with_title_and_legend, height=4.5, width=7.25)
+
+
+## Show summary statistics on a version of Figure 1B for Reviewer 1.
+Fig1B.with.confint <- Fig1B_without_marginals +
+    geom_line(data = binned.PIRA.PCN.estimate.summary,
+        aes(
+            x = mean_log10_normalized_replicon_length,
+            y = mean_log10_PCN),
+        color='red') +
+        geom_line(data = binned.PIRA.PCN.estimate.summary,
+        aes(
+            x = mean_log10_normalized_replicon_length,
+            y = CI_Upper_log10_PCN),
+        color='black') +
+    geom_line(data = binned.PIRA.PCN.estimate.summary,
+        aes(
+            x = mean_log10_normalized_replicon_length,
+            y = CI_Lower_log10_PCN),
+        color='black') +
+    geom_line(data = binned.PIRA.PCN.estimate.summary,
+        aes(
+            x = mean_log10_normalized_replicon_length,
+            y = q25_log10_PCN),
+        color='blue') +
+    geom_line(data = binned.PIRA.PCN.estimate.summary,
+        aes(
+            x = mean_log10_normalized_replicon_length,
+            y = q75_log10_PCN),
+        color='blue')
+
+## make the figure for Reviewer 1.
+ggsave("../results/Fig1B-for-reviewer-1.pdf", Fig1B.with.confint, height=4.5, width=4.5)
 
 ################################################################################
 ## calculate basic statistics about the clusters of small and large plasmids.
@@ -1769,6 +1889,12 @@ Fig2C, labels=c("",'C'),nrow=1, rel_widths=c(1,1.5))
 ggsave("../results/Fig2.pdf", Fig2, height=5.325, width=7.1)
 
 
+## make plot for Yasa
+Fig2X <- make_normalized_CDS_base_plot(CDS.rRNA.fraction.data)
+## save the plot.
+ggsave("../results/normalizedFig2X.pdf", Fig2X, height=4, width=7.1)
+
+
 ################################################################################
 ## Supplementary Figure S8. Break down the result in Figure 2 by genus
 ## to show universality of the CDS scaling relationship.
@@ -1889,7 +2015,7 @@ chromosome.metabolic.scaling.model <- lm(
 summary(chromosome.metabolic.scaling.model)
 
 
-## make a table of the mean lengths per metabolic gene for plasmids & chromids for Fig3.
+## make a table of the mean lengths per metabolic gene for plasmids & chromids for Figure 3.
 Fig3.mean.length.per.metabolic.gene.table <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(SeqType != "chromosome") %>%
     group_by(Annotation, log10_metabolic_protein_count) %>%
@@ -1909,7 +2035,7 @@ Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
     geom_smooth(
         ##data = Fig3.mean.metabolic.genes.per.length,
         data = Fig3.mean.length.per.metabolic.gene.table,
-        size = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
+        linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
    
 
 ## Fig3B: show generality over ecology.
@@ -1918,13 +2044,42 @@ Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
     geom_smooth(
         ##data = Fig3.mean.metabolic.genes.per.length,
         data = Fig3.mean.length.per.metabolic.gene.table,
-        size = 0.8, alpha = 0.2, color = "dark gray", se=FALSE) +
+        linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE) +
     facet_wrap(.~Annotation, nrow=3)
 
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
 ## save the plot.
 ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
 
+## make plot for Yasa
+Fig3X <- make_normalized_metabolic_scaling_base_plot(metabolic.gene.plasmid.and.chromosome.data)
+## save the plot.
+ggsave("../results/normalizedFig3X.pdf", Fig3X, height=4, width=7.1)
+
+
+################################################################################
+## PLAYING AROUND. Make a similar figure to Figure 3, looking at numbers of ribosomal RNAs.
+## (this is not on log-scale).
+ribosomal.RNA.plot <- metabolic.gene.plasmid.and.chromosome.data %>%
+    mutate(log10_total_rRNA_count = log10(total_rRNA_count)) %>%
+    ggplot(
+        aes(
+            x = replicon_length,
+            y = total_rRNA_count,
+                color = SeqType)) +
+        geom_point(size=0.5,alpha=0.8) +
+        xlab("log10(length)") +
+        ylab("log10(total ribosomal RNAs)") +
+        theme_classic() +
+##        guides(color = "none") +
+        theme(strip.background = element_blank()) +
+        theme(
+            axis.title.x = element_text(size=11),
+            axis.title.y = element_text(size=11),
+            axis.text.x  = element_text(size=11),
+            axis.text.y  = element_text(size=11))
+
+ribosomal.RNA.plot
 
 ################################################################################
 ## Supplementary Figure S9. Break down the result in Figure 4 by genus
