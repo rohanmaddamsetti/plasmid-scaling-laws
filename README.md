@@ -17,7 +17,12 @@ Then, filter the prokaryotes.txt genome data for those that have complete genome
 and replace "GCA" with "GCF" throughout this file, so that RefSeq data and not Genbank data
 is accessed in all downstream steps:  
 
-python filter-genome-reports.py > ../results/complete-prokaryotes-with-plasmids.txt  
+python filter-genome-reports.py > ../results/complete-prokaryotes-with-plasmids.txt.  
+
+To preprocess metadata for PCN comparisons with the PCN data in Shaw et al. (2021) in
+Science Advances, run the following command:  
+
+python parse_REHAB_plasmids.py > ../results/NCBI_REHAB_plasmid_metadata.csv  
 
 Then, fetch genome annotation for each row in complete-prokaryotes-with-plasmids.txt,
 fetch the protein-coding genes for all chromosomes and plasmids for

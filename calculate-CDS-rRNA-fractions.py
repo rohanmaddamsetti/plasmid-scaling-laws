@@ -33,7 +33,9 @@ def main():
         for record in records:
             total_sequence_length = len(record.seq)
             cds_count = 0
-            cds_length = 0
+            ## count the number of distinct sites in protein-coding regions to
+            ## account for overlapping genes.
+            coding_positions_set = set()
 
             rRNA_5S_count = 0
             rRNA_5S_length = 0
@@ -47,7 +49,10 @@ def main():
                 my_seq_length = len(feature.location)
                 if feature.type == 'CDS':
                     cds_count += 1
-                    cds_length += my_seq_length
+                    for part in feature.location.parts:
+                        ## just in case genes are discontinuous
+                        ## (there shouldn't be introns but won't hurt)
+                        coding_positions_set.update(set(part))
                 elif feature.type == 'rRNA':
                     try: 
                         my_gene_product = feature.qualifiers['product'][0]
@@ -64,6 +69,7 @@ def main():
                         rRNA_23S_length += my_seq_length
 
             ## Calculate the fraction of sequence covered by CDS and rRNA.
+            cds_length = len(coding_positions_set)
             CDS_fraction = cds_length / total_sequence_length
             rRNA_5S_fraction = rRNA_5S_length / total_sequence_length
             rRNA_16S_fraction = rRNA_16S_length / total_sequence_length
