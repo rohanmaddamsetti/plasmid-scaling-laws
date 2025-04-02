@@ -1063,6 +1063,7 @@ binned.PIRA.PCN.estimate.summary <- PIRA.PCN.estimates %>%
     mutate(replicon_length_percentile = ntile(replicon_length, 100)) %>%
     group_by(replicon_length_percentile) %>%
     summarize(
+        count = n(),
         mean_replicon_length = mean(replicon_length),
         mean_normalized_replicon_length = mean(normalized_replicon_length),
         mean_log10_replicon_length = mean(log10(replicon_length)),
@@ -1073,7 +1074,6 @@ binned.PIRA.PCN.estimate.summary <- PIRA.PCN.estimates %>%
         max_PCN = max(PIRACopyNumber),
         std_PCN = sd(PIRACopyNumber),
         std_log10_PCN = sd(log10(PIRACopyNumber)),
-        count = n(),
         ## calculate quantiles
         q25_PCN = quantile(PIRACopyNumber, 0.25),
         q50_PCN = quantile(PIRACopyNumber, 0.50),  ## Median
@@ -1083,13 +1083,83 @@ binned.PIRA.PCN.estimate.summary <- PIRA.PCN.estimates %>%
         q75_log10_PCN = quantile(log10(PIRACopyNumber), 0.75),
         ## normal approximation
         CI_Lower_PCN = mean_PCN - 1.96 * (std_PCN / sqrt(count)),
-        CI_Upper_PCN = mean_PCN - 1.96 * (std_PCN / sqrt(count)),
+        CI_Upper_PCN = mean_PCN + 1.96 * (std_PCN / sqrt(count)),
         CI_Lower_log10_PCN = mean_log10_PCN - 1.96 * (std_log10_PCN / sqrt(count)),
         CI_Upper_log10_PCN = mean_log10_PCN + 1.96 * (std_log10_PCN / sqrt(count))
     )
 
 ## write this summary to disk.
 write.csv(binned.PIRA.PCN.estimate.summary, "../results/S3Data-PIRA-PCN-Kbp-bin-summary.csv")
+
+################################################################################
+## calculate basic statistics about the clusters of small and large plasmids.
+
+small.plasmids <- PIRA.PCN.estimates %>%
+    filter(Size_Cluster == "Cluster_2")
+## mean length of small plasmids is 6433 bp.
+mean(small.plasmids$replicon_length)
+## mean PCN of small plasmids is 28.4.
+mean(small.plasmids$PIRACopyNumber)
+
+
+large.plasmids <- PIRA.PCN.estimates %>%
+    filter(Size_Cluster == "Cluster_1")
+## mean length of large plasmids is 137704 bp.
+mean(large.plasmids$replicon_length)
+## mean PCN of large plasmids is 1.79.
+mean(large.plasmids$PIRACopyNumber)
+
+## examine the tail of very large plasmids that are longer than 500Kbp.
+very.large.plasmids <- large.plasmids %>%
+    filter(replicon_length > 500000)
+
+very.large.plasmids.by.mobility <- very.large.plasmids %>%
+    count(PredictedMobility)
+## Very large plasmids: these are chromids.
+##       conjugative  29
+##       mobilizable  28
+##   non-mobilizable 101
+##              <NA>  31
+
+## get the percentages / numbers of predicted conjugative plasmids in the large.plasmids cluster.
+conjugative.plasmids <- PIRA.PCN.estimates %>%
+    filter(PredictedMobility == "conjugative")
+
+## 3126 conjugative plasmids
+nrow(conjugative.plasmids)
+## 3103 conjugative plasmids out of 3126 (99.3% are in the large cluster).
+nrow(filter(conjugative.plasmids, Size_Cluster == "Cluster_1"))
+
+## Report summary statistics for the two clusters of large plasmids and small plasmids.
+clustered.plasmid.summary <- PIRA.PCN.estimates %>%
+    group_by(Size_Cluster) %>%
+    summarize(
+        mean_replicon_length = mean(replicon_length),
+        mean_normalized_replicon_length = mean(normalized_replicon_length),
+        min_replicon_length = min(replicon_length),
+        max_replicon_length = max(replicon_length),
+        std_replicon_length = sd(replicon_length),
+        mean_PCN = mean(PIRACopyNumber),
+        min_PCN = min(PIRACopyNumber),
+        max_PCN = max(PIRACopyNumber),
+        std_PCN = sd(PIRACopyNumber),
+        count = n(),
+        ## calculate quantiles
+        q25_PCN = quantile(PIRACopyNumber, 0.25),
+        q50_PCN = quantile(PIRACopyNumber, 0.50),  ## Median
+        q75_PCN = quantile(PIRACopyNumber, 0.75),
+        q25_length = quantile(replicon_length, 0.25),
+        q50_length = quantile(replicon_length, 0.50),  ## Median
+        q75_length = quantile(replicon_length, 0.75),
+        ## normal approximation
+        CI_Lower_PCN = mean_PCN - 1.96 * (std_PCN / sqrt(count)),
+        CI_Upper_PCN = mean_PCN + 1.96 * (std_PCN / sqrt(count)),
+        CI_Lower_length = mean_replicon_length - 1.96 * (std_replicon_length / sqrt(count)),
+        CI_Upper_length = mean_replicon_length + 1.96 * (std_replicon_length / sqrt(count)),
+    )
+
+## write this summary to disk.
+write.csv(clustered.plasmid.summary, "../results/Size-clustered-plasmid-summary.csv")
 
 ################################################################################
 ## The data is best fit by piecewise regression, revealing a scaling law between length and copy number.
@@ -1270,45 +1340,6 @@ Fig1B.with.confint <- Fig1B_without_marginals +
 
 ## make the figure for Reviewer 1.
 ggsave("../results/Fig1B-for-reviewer-1.pdf", Fig1B.with.confint, height=4.5, width=4.5)
-
-################################################################################
-## calculate basic statistics about the clusters of small and large plasmids.
-
-small.plasmids <- PIRA.PCN.estimates %>%
-    filter(Size_Cluster == "Cluster_2")
-## mean length of small plasmids is 6433 bp.
-mean(small.plasmids$replicon_length)
-## mean PCN of small plasmids is 28.4.
-mean(small.plasmids$PIRACopyNumber)
-
-
-large.plasmids <- PIRA.PCN.estimates %>%
-    filter(Size_Cluster == "Cluster_1")
-## mean length of large plasmids is 137704 bp.
-mean(large.plasmids$replicon_length)
-## mean PCN of large plasmids is 1.79.
-mean(large.plasmids$PIRACopyNumber)
-
-## examine the tail of very large plasmids that are longer than 500Kbp.
-very.large.plasmids <- large.plasmids %>%
-    filter(replicon_length > 500000)
-
-very.large.plasmids.by.mobility <- very.large.plasmids %>%
-    count(PredictedMobility)
-## Very large plasmids: these are chromids.
-##       conjugative  29
-##       mobilizable  28
-##   non-mobilizable 101
-##              <NA>  31
-
-## get the percentages / numbers of predicted conjugative plasmids in the large.plasmids cluster.
-conjugative.plasmids <- PIRA.PCN.estimates %>%
-    filter(PredictedMobility == "conjugative")
-
-## 3126 conjugative plasmids
-nrow(conjugative.plasmids)
-## 3103 conjugative plasmids out of 3126 (99.3% are in the large cluster).
-nrow(filter(conjugative.plasmids, Size_Cluster == "Cluster_1"))
 
 ################################################################################
 ## Supplementary Figures S3. Break down the result in Figure 1 
