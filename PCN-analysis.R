@@ -1410,11 +1410,37 @@ analyze.within.genome.correlations <- function(MIN_PLASMIDS_PER_GENOME=2, df=PIR
     print(mean(positive.within.genome.correlation.data.df$correlation))
 
     print("")
+    ## return all the data
+    return(within.genome.correlation.data.df)
 }
 
-analyze.within.genome.correlations(2)
+within.genome.correlation.data2 <- analyze.within.genome.correlations(2)
+within.genome.correlation.data3 <- analyze.within.genome.correlations(3)
 
-analyze.within.genome.correlations(3)
+## Reviewer 2 asked to look more closely at the genomes that show a positive correlation.
+## Any insights?
+
+positive.within.genome.correlation.data3 <- within.genome.correlation.data3 %>%
+        filter(correlation > 0)
+
+positive.within.genome.correlation.PCN.estimates3 <- PIRA.PCN.estimates %>%
+    filter(AnnotationAccession %in% positive.within.genome.correlation.data3$AnnotationAccession)
+
+## Let's rerun, restricting analysis to genomes that contain at least one "Cluster_2" plasmid
+
+genomes.with.small.plasmids <- unique(filter(PIRA.PCN.estimates, Size_Cluster == "Cluster_2")$AnnotationAccession)
+
+PIRA.PCN.estimates.for.genomes.with.small.plasmids <- filter(
+    PIRA.PCN.estimates, AnnotationAccession %in% genomes.with.small.plasmids)
+
+within.small.plasmid.containing.genome.correlation.data2 <- analyze.within.genome.correlations(2,
+                                                                                               PIRA.PCN.estimates.for.genomes.with.small.plasmids)
+
+within.small.plasmid.containing.genome.correlation.data3 <- analyze.within.genome.correlations(3,
+                                                                                               PIRA.PCN.estimates.for.genomes.with.small.plasmids)
+## This analysis suggests that the genomes with positive correlations between plasmid length and copy number
+## are largely genomes that ONLY contain large plasmids. It is possible that such positive correlations could
+## occur by change (assuming that these plasmids are largely fixed at PCN ~ 1).
 
 ################################################################################
 ## Small multicopy plasmid almost always coexist with large low-copy plasmids.
