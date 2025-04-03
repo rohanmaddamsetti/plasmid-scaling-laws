@@ -14,15 +14,15 @@ import urllib.request
 from os.path import basename, exists
 import os
 import subprocess
+from tqdm import tqdm
 
 ## imports for parallelization.
 import time
 import logging
-from tqdm.asyncio import tqdm as async_tqdm
 import asyncio
 import shutil
 from contextlib import asynccontextmanager
-
+##from tqdm.asyncio import tqdm as async_tqdm
 
 class RateLimiter:
     """Rate limiter to prevent overwhelming NCBI servers."""
@@ -102,6 +102,34 @@ def create_refseq_accession_to_ftp_path_tuples(prokaryotes_with_plasmids_file):
                 refseq_accession_to_ftp_path_tuples.append(my_tuple)
                 
     return refseq_accession_to_ftp_path_tuples
+
+
+def reference_genome_passes_md5_checksum(gbff_gz_file, md5_file):
+    with open(md5_file, "r") as checksum_fh:
+        target_string = "_genomic.gbff.gz"
+        for line in checksum_fh:
+            if target_string in line:          
+                my_target_checksum, my_target_filename = line.strip().split()
+                break
+    if sys.platform == "darwin":
+        my_md5_cmd = "md5" ## run md5 on my mac,
+    elif sys.platform == "linux":
+        my_md5_cmd = "md5sum" ## but run md5sum on DCC (linux)
+    else:
+        raise AssertionError("UNKNOWN PLATFORM")
+
+    ## run md5 on the local file and get the output.
+    md5_call = subprocess.run([my_md5_cmd, gbff_gz_file], capture_output=True, text=True)
+
+    if sys.platform == "darwin": ## then the checksum is the LAST 'word' in the output.
+        my_md5_checksum = md5_call.stdout.split()[-1].strip()
+    elif sys.platform == "linux": ## then the checksum is the FIRST 'word' in the output.
+        my_md5_checksum = md5_call.stdout.split()[0].strip()
+    else:
+        raise AssertionError("UNKNOWN PLATFORM")
+
+    ## verify that the checksums match.
+    return my_md5_checksum == my_target_checksum
 
 
 async def download_single_genome(ftp_path, reference_genome_dir):
