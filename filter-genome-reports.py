@@ -14,7 +14,7 @@ https://www.ncbi.nlm.nih.gov/datasets/docs/v2/troubleshooting/faq/#what-is-the-d
 Usage: python filter-genome-reports.py > ../results/complete-prokaryotes-with-plasmids.txt
 '''
 
-with open("../data/prokaryotes-2024-03-28.txt","r") as g_report:
+with open("../data/prokaryotes.txt","r") as g_report:
     for i, line in enumerate(g_report):
         line = line.strip()
         if i == 0: ## print the header.

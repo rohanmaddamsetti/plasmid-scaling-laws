@@ -9,6 +9,7 @@ NOTE: for path names to be processed properly, this script must be run
 from the src/ directory as python fetch-gbk-annotation.py.
 '''
 
+
 import urllib.request
 from os.path import basename, exists
 import gzip
