@@ -63,6 +63,34 @@ PLASMID_LENGTH_THRESHOLD <- 500000
 METABOLIC_GENE_THRESHOLD <- 100
 
 
+## cowplot bug workaround from https://github.com/wilkelab/cowplot/issues/202
+get_legend2 <- function(plot, legend = NULL) {
+    if (is.ggplot(plot)) {
+        gt <- ggplotGrob(plot)
+    } else {
+        if (is.grob(plot)) {
+            gt <- plot
+        } else {
+            stop("Plot object is neither a ggplot nor a grob.")
+        }
+    }
+    pattern <- "guide-box"
+    if (!is.null(legend)) {
+        pattern <- paste0(pattern, "-", legend)
+    }
+    indices <- grep(pattern, gt$layout$name)
+    not_empty <- !vapply(
+                      gt$grobs[indices], 
+                      inherits, what = "zeroGrob", 
+                      FUN.VALUE = logical(1)
+                  )
+    indices <- indices[not_empty]
+    if (length(indices) > 0) {
+        return(gt$grobs[[indices[1]]])
+    }
+    return(NULL)
+}
+
 make.PIRA.vs.naive.themisto.plot <- function(PIRA.vs.naive.themisto.df, show.linear.regression=TRUE) {
     figure.panel <- PIRA.vs.naive.themisto.df %>%
         ggplot(aes(
@@ -807,10 +835,13 @@ PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
-## 1,563 plasmids have sufficient reads with PIRA, but not with the naive themisto read mapping.
-sum(PIRA.vs.naive.themisto.df$InsufficientReads == TRUE)
+## 106 additional plasmids pass the read threshold by using PIRA.
+PIRA.vs.naive.themisto.df %>%
+    filter(ThemistoNaiveReadCount < MIN_READ_COUNT) %>%
+    filter(PIRAReadCount > MIN_READ_COUNT) %>%
+    nrow()
 
-## In S1 Figure panel A, show points with insufficient reads, and remove the linear regression.
+## In S1 Figure panel A, show points with insufficient themisto naive reads, and remove the linear regression.
 ## ## but let's include them to show how PIRA recovers PCN for more plasmids.
 S1FigA <- make.PIRA.vs.naive.themisto.plot(PIRA.vs.naive.themisto.df, FALSE) +
     ggtitle("PIRA recovers more plasmids\nby including multiread data")
@@ -1252,7 +1283,7 @@ S2FigA_base <- PIRA.PCN.estimates %>%
     theme(strip.background = element_blank())
 
 ## Get the legend.
-S2Fig_legend <- get_legend(S2FigA_base)
+S2Fig_legend <- get_legend2(S2FigA_base)
 
 ## draw the segmented regression,
 ## and remove the legend.
@@ -1288,7 +1319,7 @@ Fig1B_base <- PIRA.PCN.estimates %>%
      theme(strip.background = element_blank())
 
 ## Get the legend.
-Fig1BC_legend <- get_legend(Fig1B_base)
+Fig1BC_legend <- get_legend2(Fig1B_base)
 
 ## draw the segmented regression,
 ## and remove the legend.
@@ -1376,7 +1407,10 @@ S3FigC <- PIRA.PCN.estimates %>%
     guides(color = "none") +
     ggtitle("Microbial genera")
 
-S3Fig <- plot_grid(S3FigA, S3FigB, S3FigC, labels=c('A','B','C'), ncol = 1, rel_heights=c(1.5,2.5,3.5))
+
+S3Fig <- plot_grid(
+    plot_grid(S3FigA, S3FigB, S3FigC, labels=c('A','B','C'), ncol = 1, rel_heights=c(1.5,2.5,3.5)),
+    Fig1BC_legend, ncol=1, rel_heights=c(1,0.03))
 
 ## save the plot.
 ggsave("../results/S3Fig.pdf", S3Fig, height=11, width=7.5, limitsize=FALSE)
@@ -1747,7 +1781,7 @@ S4FigMNO <- plot_grid(
 S4Fig_title <- ggdraw() + draw_label("Length is more conserved than copy numbers within plasmid taxonomy units (PTUs)", fontface='bold')
 
 ## save the full plot.
-S4Fig <- plot_grid(S4Fig_title, S4FigABC, S4FigDEF, S4FigGHI, S4FigJKL, S4FigMNO, rel_heights = c(0.15,1,1,1,1,1), ncol=1)
+S4Fig <- plot_grid(S4Fig_title, S4FigABC, S4FigDEF, S4FigGHI, S4FigJKL, S4FigMNO, Fig1BC_legend, rel_heights = c(0.15,1,1,1,1,1,0.1), ncol=1)
 ggsave("../results/S4Fig.pdf", S4Fig, width=8, height=13)
 
 
@@ -1755,12 +1789,11 @@ ggsave("../results/S4Fig.pdf", S4Fig, width=8, height=13)
 ## Supplementary Figure S5. mobility group (relaxase) type analysis.
 
 ## plot over relaxase_type.
-S5Fig <- MOB.typed.PIRA.PCN.estimates %>%
+  S5Fig <- MOB.typed.PIRA.PCN.estimates %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("relaxase_type.s.", "All other relaxase types") %>%
     make_PCN_base_plot() +
     facet_wrap(relaxase_type.s. ~ ., ncol=4) +
-    ggtitle("MOB-Typer relaxase types") +
-    guides(color = "none")
+    ggtitle("MOB-Typer relaxase types")
 ## save the plot
 ggsave("../results/S5Fig.pdf", S5Fig)
 
@@ -1772,14 +1805,13 @@ ggsave("../results/S5Fig.pdf", S5Fig)
 ## plot over observed host range.
 ## This is "Taxon name of convergence of plasmids in MOB-suite plasmid DB",
 ## following the documentation here: https://github.com/phac-nml/mob-suite 
-S6FigA <- MOB.typed.PIRA.PCN.estimates %>%
+ S6FigA <- MOB.typed.PIRA.PCN.estimates %>%
     ## put new lines in the host ranges to improve the aspect ratio of the subpanels.
     mutate(observed_host_range_ncbi_name = str_replace_all(observed_host_range_ncbi_name, ",", ",\n")) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("observed_host_range_ncbi_name", "All other host ranges") %>%
     make_PCN_base_plot() +
     facet_wrap(observed_host_range_ncbi_name ~ ., nrow=3) +
-    ggtitle("Host range annotated by MOB-Typer") +
-    guides(color = "none")
+    ggtitle("Host range annotated by MOB-Typer")
 
 ## Supplementary Figure S7B.
 ## 415 plasmids have copy numbers and host ranges.
