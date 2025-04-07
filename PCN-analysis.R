@@ -363,7 +363,7 @@ make.confint.figure.panel <- function(Table, order.by.total.plasmids, title,
         theme_classic() +
         ggtitle(title) +
         ## plot CIs.
-        geom_errorbarh(aes(xmin=Left,xmax=Right), height=0.2, size=0.2) +
+        geom_errorbarh(aes(xmin=Left,xmax=Right), height=0.2, linewidth=0.2) +
         theme(
             axis.title.x = element_text(size=11),
             axis.title.y = element_text(size=11),
@@ -577,7 +577,7 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
             axis.text.x  = element_text(size=11),
             axis.text.y  = element_text(size=11)) +
         geom_line(data = chromosome.metabolic.scaling.fit.df,
-                  color = 'black', linetype = "solid", size=0.5)
+                  color = 'black', linetype = "solid", linewidth=0.5)
 }
 
 
@@ -1123,6 +1123,7 @@ binned.PIRA.PCN.estimate.summary <- PIRA.PCN.estimates %>%
 write.csv(binned.PIRA.PCN.estimate.summary, "../results/S3Data-PIRA-PCN-Kbp-bin-summary.csv")
 
 ################################################################################
+## Supplementary Data File 4.
 ## calculate basic statistics about the clusters of small and large plasmids.
 
 small.plasmids <- PIRA.PCN.estimates %>%
@@ -1190,7 +1191,7 @@ clustered.plasmid.summary <- PIRA.PCN.estimates %>%
     )
 
 ## write this summary to disk.
-write.csv(clustered.plasmid.summary, "../results/Size-clustered-plasmid-summary.csv")
+write.csv(clustered.plasmid.summary, "../results/S4Data-Size-clustered-plasmid-summary.csv")
 
 ################################################################################
 ## The data is best fit by piecewise regression, revealing a scaling law between length and copy number.
@@ -1431,6 +1432,8 @@ analyze.within.genome.correlations <- function(MIN_PLASMIDS_PER_GENOME=2, df=PIR
     negative.within.genome.correlation.data.df <- within.genome.correlation.data.df %>%
         filter(correlation < 0)
 
+    print("the number of genomes in this analysis:")
+    print(nrow(within.genome.correlation.data.df))
     print("the number of genomes with an inverse correlation")
     print(nrow(negative.within.genome.correlation.data.df))
     print("the average inverse correlation for these genomes:")
@@ -1460,21 +1463,25 @@ positive.within.genome.correlation.data3 <- within.genome.correlation.data3 %>%
 positive.within.genome.correlation.PCN.estimates3 <- PIRA.PCN.estimates %>%
     filter(AnnotationAccession %in% positive.within.genome.correlation.data3$AnnotationAccession)
 
-## Let's rerun, restricting analysis to genomes that contain at least one "Cluster_2" plasmid
+## Let's rerun, restricting analysis to genomes that contain at least one "Cluster_2" plasmid (small plasmids)
 
 genomes.with.small.plasmids <- unique(filter(PIRA.PCN.estimates, Size_Cluster == "Cluster_2")$AnnotationAccession)
 
 PIRA.PCN.estimates.for.genomes.with.small.plasmids <- filter(
     PIRA.PCN.estimates, AnnotationAccession %in% genomes.with.small.plasmids)
 
+## 2,008 genomes have small plasmids.
+length(genomes.with.small.plasmids)
+
 within.small.plasmid.containing.genome.correlation.data2 <- analyze.within.genome.correlations(2,
                                                                                                PIRA.PCN.estimates.for.genomes.with.small.plasmids)
 
 within.small.plasmid.containing.genome.correlation.data3 <- analyze.within.genome.correlations(3,
                                                                                                PIRA.PCN.estimates.for.genomes.with.small.plasmids)
+
 ## This analysis suggests that the genomes with positive correlations between plasmid length and copy number
 ## are largely genomes that ONLY contain large plasmids. It is possible that such positive correlations could
-## occur by change (assuming that these plasmids are largely fixed at PCN ~ 1).
+## occur by chance (assuming that these plasmids are largely fixed at PCN ~ 1).
 
 ################################################################################
 ## Small multicopy plasmid almost always coexist with large low-copy plasmids.
@@ -2008,7 +2015,7 @@ Fig2B <- noncoding.fraction.data %>%
         axis.text.y  = element_text(size=11)) +
         geom_smooth(
         data = Fig2B.mean.noncoding.fraction.per.length,
-        size = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
+        linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
 
 
 ## Fig 2C: show generality over ecology.
