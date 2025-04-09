@@ -20,6 +20,13 @@
 ## This might also take care of small plasmid contigs,
 ## but I should add an extra filtering step to remove these regardless.
 
+## CRITICAL TODO DURING REVISION:
+## examine NA values in PIRACopyNumber in PIRA.vs.naive.themisto.df,
+## when the value is defined for ThemistoNaiveCopyNumber.
+## by definition this should not happen.
+## examine the correlation coefficient calculations and work backwards from there.
+
+
 ## TODO WHEN RERUNNING FROM SCRATCH:
 ## Make sure all the genomes in ../results/gbk-annotation are consistent
 ## with the genomes annotated in computationally-annotated-genomes etc.
@@ -832,6 +839,9 @@ naive.themisto.PCN.estimates <- read.csv("../results/naive-themisto-PCN-estimate
 
 PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
     left_join(full.PIRA.estimates) %>%
+    ## for calculating correlation coefficients
+    mutate(log10_ThemistoNaiveCopyNumber = log10(ThemistoNaiveCopyNumber)) %>%
+    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber)) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -846,10 +856,21 @@ PIRA.vs.naive.themisto.df %>%
 S1FigA <- make.PIRA.vs.naive.themisto.plot(PIRA.vs.naive.themisto.df, FALSE) +
     ggtitle("PIRA recovers more plasmids\nby including multiread data")
 
+## Calculuate correlation coefficient for Figure S1A.
+cor(
+    PIRA.vs.naive.themisto.df$log10_ThemistoNaiveCopyNumber,
+    PIRA.vs.naive.themisto.df$log10_PIRACopyNumber, use="complete.obs")
+
 ## In S1 Figure panel B, remove points with insufficient reads,
 S1FigB <- PIRA.vs.naive.themisto.df %>%
     filter(InsufficientReads == FALSE) %>%
     make.PIRA.vs.naive.themisto.plot()
+
+## Calculuate correlation coefficient for Figure S1B.
+cor(
+    filter(PIRA.vs.naive.themisto.df, InsufficientReads==FALSE)$log10_ThemistoNaiveCopyNumber,
+    filter(PIRA.vs.naive.themisto.df, InsufficientReads==FALSE)$log10_PIRACopyNumber, use="complete.obs")
+
 
 ###################################################################################
 ## Supplementary Figure S1C
@@ -866,6 +887,9 @@ low.PCN.minimap2.estimates.df <- read.csv("../results/minimap2-PIRA-low-PCN-benc
 ## merge with PIRA estimates
 PIRA.vs.minimap2.df <- low.PCN.minimap2.estimates.df %>%
     left_join(full.PIRA.estimates) %>%
+    ## for calculating correlation coefficients
+    mutate(log10_minimap2_PIRA_CopyNumberEstimate = log10(minimap2_PIRA_CopyNumberEstimate)) %>%
+    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber)) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -888,6 +912,11 @@ S1FigC <- PIRA.vs.minimap2.df %>%
         aes(x=log10(minimap2_PIRA_CopyNumberEstimate), y=log10(PIRACopyNumber)),
         color="light blue",
         formula=y~x)
+
+## Calculuate correlation coefficient for Figure S1C.
+cor(
+    PIRA.vs.minimap2.df$log10_minimap2_PIRA_CopyNumberEstimate,
+    PIRA.vs.minimap2.df$log10_PIRACopyNumber, use="complete.obs")
 
 
 ## make a linear model and examine it.
@@ -943,6 +972,9 @@ low.PCN.breseq.estimate.df <- low.PCN.breseq.summary.df %>%
 ## merge with the PIRA estimates, and benchmark copy number estimates.
 PIRA.vs.breseq.df <- low.PCN.breseq.estimate.df %>%
     left_join(full.PIRA.estimates) %>%
+    ## for calculating correlation coefficients
+    mutate(log10_BreseqCopyNumberEstimate = log10(BreseqCopyNumberEstimate)) %>%
+    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber)) %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
@@ -966,6 +998,12 @@ S1FigD <- PIRA.vs.breseq.df %>%
         aes(x=log10(BreseqCopyNumberEstimate), y=log10(PIRACopyNumber)),
         color="light blue",
         formula=y~x)
+
+
+## Calculuate correlation coefficient for Figure S1D.
+cor(
+    PIRA.vs.breseq.df$log10_BreseqCopyNumberEstimate,
+    PIRA.vs.breseq.df$log10_PIRACopyNumber, use="complete.obs")
 
 ## make a linear model comparing breseq to PIRA estimates and examine it.
 breseq.PIRA.PCN.lm.model <- lm(
@@ -994,7 +1032,12 @@ kallisto.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
     ## IMPORTANT: remove plasmids with insufficient reads.
     filter(InsufficientReads == FALSE) %>%
     left_join(kallisto.replicon.PCN.estimates) %>%
-    filter(SeqType == "plasmid")
+    ## for calculating correlation coefficients
+    mutate(log10_KallistoNaiveCopyNumber = log10(KallistoNaiveCopyNumber)) %>%
+    mutate(log10_ThemistoNaiveCopyNumber = log10(ThemistoNaiveCopyNumber)) %>%
+    filter(SeqType == "plasmid") %>%
+    ## remove -Inf values
+    filter(log10_KallistoNaiveCopyNumber > -Inf)
 
 ## make Supplementary Figure S1E.
 S1FigE <- kallisto.vs.naive.themisto.df %>%
@@ -1010,6 +1053,13 @@ S1FigE <- kallisto.vs.naive.themisto.df %>%
         aes(x=log10(ThemistoNaiveCopyNumber), y=log10(KallistoNaiveCopyNumber)),
         color="light blue",
         formula=y~x)
+
+## Calculuate correlation coefficient for Figure S1E.
+cor(
+    kallisto.vs.naive.themisto.df$log10_KallistoNaiveCopyNumber,
+    kallisto.vs.naive.themisto.df$log10_ThemistoNaiveCopyNumber,
+    use="complete.obs")
+
 
 ################################################################################
 ## Supplementary Figure 1F. Benchmarking against external PCN estimates from Shaw et al. (2021)
@@ -1035,7 +1085,11 @@ Shaw2021.PCN.estimates <- read.csv("../data/Shaw2021_PCN_data.csv") %>%
 
 ## merge PCN estimates to compare.
 PIRA.vs.ShawPCN.df <- Shaw2021.PIRA.estimates %>%
-    inner_join(Shaw2021.PCN.estimates)
+    inner_join(Shaw2021.PCN.estimates) %>%
+    ## for calculating correlation coefficients
+    mutate(log10_Shaw2021_PCN = log10(Shaw2021_PCN)) %>%
+    mutate(log10_PIRACopyNumber = log10(PIRACopyNumber))
+    
 
 S1FigF <- PIRA.vs.ShawPCN.df %>%
     ggplot(aes(
@@ -1054,6 +1108,13 @@ S1FigF <- PIRA.vs.ShawPCN.df %>%
         color="light blue",
         formula=y~x) +
     ggtitle("PIRA recapitulates PCN estimates\nin Shaw et al. (2021)\nSupplementary Table S2")
+
+
+## Calculuate correlation coefficient for Figure S1F.
+cor(
+    PIRA.vs.ShawPCN.df$log10_Shaw2021_PCN,
+    PIRA.vs.ShawPCN.df$log10_PIRACopyNumber,
+    use="complete.obs")
 
 
 S1Fig <- plot_grid(
@@ -1231,6 +1292,15 @@ second.order.PCN.lm.model <- lm(
 AIC(PCN.lm.model)
 AIC(second.order.PCN.lm.model)
 AIC(segmented.PCN.model)
+
+## get R^2 values for these models
+print("UNNORMALIZED LINEAR MODEL")
+summary(PCN.lm.model)
+print("UNNORMALIZED QUADRATIC MODEL")
+summary(second.order.PCN.lm.model)
+print("UNNORMALIZED SEGMENTED MODEL")
+summary(segmented.PCN.model)
+
 
 ## We will add a segmented regression line to Fig1CD.
 ## first make a linear fit model with the normalized replicon length.
@@ -1785,7 +1855,7 @@ S4FigMNO <- plot_grid(
         labels=c('M','N','O'), nrow=1),
     nrow=2, rel_heights=c(0.1,1))
 
-S4Fig_title <- ggdraw() + draw_label("Length is more conserved than copy numbers within plasmid taxonomy units (PTUs)", fontface='bold')
+S4Fig_title <- ggdraw() + draw_label("The inverse power-law between plasmid length and PCN\nholds across plasmid taxonomic units (PTUs)", fontface='bold')
 
 ## save the full plot.
 S4Fig <- plot_grid(S4Fig_title, S4FigABC, S4FigDEF, S4FigGHI, S4FigJKL, S4FigMNO, Fig1BC_legend, rel_heights = c(0.15,1,1,1,1,1,0.1), ncol=1)
@@ -2006,7 +2076,6 @@ Fig2B <- noncoding.fraction.data %>%
     xlab("log10(length)") +
     ylab("noncoding fraction") +
     theme_classic() +
-    guides(color = "none") +
     theme(strip.background = element_blank()) +
     theme(
         axis.title.x = element_text(size=11),
@@ -2016,7 +2085,6 @@ Fig2B <- noncoding.fraction.data %>%
         geom_smooth(
         data = Fig2B.mean.noncoding.fraction.per.length,
         linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
-
 
 ## Fig 2C: show generality over ecology.
 Fig2C <- CDS.rRNA.fraction.data %>%
@@ -2032,16 +2100,12 @@ Fig2C <- CDS.rRNA.fraction.data %>%
 
 ## Now put together the complete Figure 2.
 Fig2 <- plot_grid(
-    plot_grid(Fig2A, Fig2B, rel_heights=c(3,2), nrow=2, labels=c('A','B')),
-Fig2C, labels=c("",'C'),nrow=1, rel_widths=c(1,1.5))
+    plot_grid(
+        Fig2A, Fig2B, rel_heights=c(3,2), nrow=2, labels=c('A','B')
+    ), Fig2C, labels=c("",'C'), nrow=1, rel_widths=c(1,1.5))
+
 ## save the plot.
 ggsave("../results/Fig2.pdf", Fig2, height=5.325, width=7.1)
-
-
-## make plot for Yasa
-Fig2X <- make_normalized_CDS_base_plot(CDS.rRNA.fraction.data)
-## save the plot.
-ggsave("../results/normalizedFig2X.pdf", Fig2X, height=4, width=7.1)
 
 
 ################################################################################
@@ -2199,11 +2263,6 @@ Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
 ## save the plot.
 ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
-
-## make plot for Yasa
-Fig3X <- make_normalized_metabolic_scaling_base_plot(metabolic.gene.plasmid.and.chromosome.data)
-## save the plot.
-ggsave("../results/normalizedFig3X.pdf", Fig3X, height=4, width=7.1)
 
 
 ################################################################################
