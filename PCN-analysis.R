@@ -2360,11 +2360,11 @@ chromosome.DNA.content.data <- full.PIRA.estimates %>%
     group_by(AnnotationAccession, Annotation) %>%
     summarize(chromosome.DNA.content = sum(RepliconDNAContent))
 
-normalized.plasmid.DNA.content.data <- full_join(plasmid.DNA.content.data, chromosome.DNA.content.data) %>%
+normalized.cellular.plasmid.DNA.content.data <- full_join(plasmid.DNA.content.data, chromosome.DNA.content.data) %>%
     group_by(AnnotationAccession, Annotation) %>%
     summarize(normalized.plasmid.DNA.content = plasmid.DNA.content / chromosome.DNA.content)
 
-S12Fig <- normalized.plasmid.DNA.content.data %>%
+S12Fig <- normalized.cellular.plasmid.DNA.content.data %>%
     ggplot(aes(x = log10(normalized.plasmid.DNA.content))) +
     geom_histogram(bins=100) +
     facet_grid(Annotation~.) +
@@ -2373,3 +2373,17 @@ S12Fig <- normalized.plasmid.DNA.content.data %>%
     theme(strip.background = element_blank())
 ## save the plot.
 ggsave("../results/S12Fig.pdf", S12Fig, height=10, width=8)
+
+################################################################################
+## Supplementary Figure S13. Plot plasmid DNA content normalized by chromosome DNA content.
+## indicated by the vertical dashed line.
+
+S13Fig <- normalized.plasmid.DNA.content.data %>%
+    ggplot(aes(x = log10(normalized.plasmid.DNA.content))) +
+    geom_histogram(bins=100) +
+    theme_classic() +
+    geom_vline(xintercept = log10(0.5), linetype = "dashed", color="light gray") +
+    theme(strip.background = element_blank())
+## save the plot.
+ggsave("../results/S12Fig.pdf", S12Fig, height=10, width=8)
+
