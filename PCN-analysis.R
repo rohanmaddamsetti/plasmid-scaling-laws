@@ -259,6 +259,24 @@ normalize.plasmid.lengths <- function(df.with.AnnotationAccessions) {
 }
 
 
+normalize.plasmid.DNA.content <- function(df.with.AnnotationAccessions) {
+    ## Make a column representing plasmid length normalized by chromosome length in each AnnotationAccession
+    ## Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
+    max_replicon_DNA_content <- df.with.AnnotationAccessions %>%
+        group_by(AnnotationAccession) %>%
+        summarise(max_replicon_DNA_content = max(RepliconDNAContent))
+    
+    ## update the df with the maximum replicon lengths and normalized
+    updated.df <- df.with.AnnotationAccessions %>%
+        left_join(max_replicon_DNA_content, by = "AnnotationAccession") %>%
+        ## Creating a new column 'normalized_RepliconDNAContent' by
+        ## dividing 'RepliconDNAContent' by 'max_replicon_DNA_content'
+        mutate(normalized_RepliconDNAContent = RepliconDNAContent / max_replicon_DNA_content)
+
+    return(updated.df)
+}
+
+
 remove.genomes.with.bad.chromosomes <- function(full.PIRA.estimates) {
     ## remove genomes where the longest replicon is not the chromosome.
     ## this can be caused by either misannotation of the chromosome/plasmid,
@@ -1342,38 +1360,38 @@ summary(segmented.normalized.PCN.model)
 
 
 ################################################################################
-## Figure 1BC and Supplementary Figure S2.
+## Figure 1BC and Supplementary Figures S2 and S3 (S3 made first).
 ## Plasmid copy number pipeline and inverse correlation between plasmid length and copy number.
 
 ## Supplementary Figure S3 shows the unnormalized anticorrelation.
 ## Break down this result by predicted plasmid mobility.
-S2FigA_base <- PIRA.PCN.estimates %>%
+S3FigA_base <- PIRA.PCN.estimates %>%
     filter(!is.na(Annotation)) %>%
     filter.correlate.column("PredictedMobility") %>%
     make_PCN_base_plot() +
     theme(strip.background = element_blank())
 
 ## Get the legend.
-S2Fig_legend <- get_legend2(S2FigA_base)
+S3Fig_legend <- get_legend2(S3FigA_base)
 
 ## draw the segmented regression,
 ## and remove the legend.
-S2FigA_without_marginals <- S2FigA_base +
+S3FigA_without_marginals <- S3FigA_base +
     geom_line(data = segmented.fit.df, color = 'maroon') +
     guides(color = "none")
 
 ## Add the marginal histograms
-S2FigA <- ggExtra::ggMarginal(S2FigA_without_marginals, groupColour = TRUE, groupFill = TRUE, margins="both") 
+S3FigA <- ggExtra::ggMarginal(S3FigA_without_marginals, groupColour = TRUE, groupFill = TRUE, margins="both") 
 
-## S2Fig panel B: facet by ecological annotation.
-S2FigB <- S2FigA_base + guides(color = "none") + facet_wrap(.~Annotation)
+## S3Fig panel B: facet by ecological annotation.
+S3FigB <- S3FigA_base + guides(color = "none") + facet_wrap(.~Annotation)
 
 ## make the panels without the legend
-S2FigAB <- plot_grid(S2FigA, S2FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
+S3FigAB <- plot_grid(S3FigA, S3FigB, labels=c('A', 'B'), ncol=2, rel_widths = c(1, 1))
 
-## make S2 Figure with the legend and save to file.
-S2Fig <- plot_grid(S2FigAB, S2Fig_legend, ncol=1, rel_heights = c(1,0.1))
-ggsave("../results/S2Fig.pdf", S2Fig, height=4.25, width=7.25)
+## make S3 Figure with the legend and save to file.
+S3Fig <- plot_grid(S3FigAB, S3Fig_legend, ncol=1, rel_heights = c(1,0.1))
+ggsave("../results/S3Fig.pdf", S3Fig, height=4.25, width=7.25)
 
 
 ## Figure 1BC.
@@ -1412,8 +1430,9 @@ Fig1BC_with_title_and_legend <- plot_grid(Fig1BC_title, Fig1BC, Fig1BC_legend, n
 ggsave("../results/Fig1BC.pdf", Fig1BC_with_title_and_legend, height=4.5, width=7.25)
 
 
+## Supplementary Figure S2.
 ## Show summary statistics on a version of Figure 1B for Reviewer 1.
-Fig1B.with.confint <- Fig1B_without_marginals +
+S2Fig <- Fig1B_without_marginals +
     geom_line(data = binned.PIRA.PCN.estimate.summary,
         aes(
             x = mean_log10_normalized_replicon_length,
@@ -1441,14 +1460,14 @@ Fig1B.with.confint <- Fig1B_without_marginals +
         color='blue')
 
 ## make the figure for Reviewer 1.
-ggsave("../results/Fig1B-for-reviewer-1.pdf", Fig1B.with.confint, height=4.5, width=4.5)
+ggsave("../results/S2Fig.pdf", S2Fig, height=4.5, width=4.5)
 
 ################################################################################
-## Supplementary Figures S3. Break down the result in Figure 1 
+## Supplementary Figure S4. Break down the result in Figure 1 
 ## by genus to show universality of the PCN vs. length anticorrelation.
 
-## Supplementary Figure S3 
-S3FigA <- PIRA.PCN.estimates %>%
+## Supplementary Figure S4 
+S4FigA <- PIRA.PCN.estimates %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column(
         "TaxonomicGroup", "All other\ntaxonomic groups") %>%
     make_PCN_base_plot() +
@@ -1458,7 +1477,7 @@ S3FigA <- PIRA.PCN.estimates %>%
     ggtitle("Taxonomic groups")
 
 
-S3FigB <- PIRA.PCN.estimates %>%
+S4FigB <- PIRA.PCN.estimates %>%
     ## put new lines after slasks to improve the aspect ratio of the subpanels.
     mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column(
@@ -1470,7 +1489,7 @@ S3FigB <- PIRA.PCN.estimates %>%
     ggtitle("Taxonomic subgroups")
 
 ## Break down by genus.
-S3FigC <- PIRA.PCN.estimates %>%
+S4FigC <- PIRA.PCN.estimates %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_PCN_base_plot() +
     facet_wrap(. ~ Genus, ncol = 7) +
@@ -1479,12 +1498,12 @@ S3FigC <- PIRA.PCN.estimates %>%
     ggtitle("Microbial genera")
 
 
-S3Fig <- plot_grid(
-    plot_grid(S3FigA, S3FigB, S3FigC, labels=c('A','B','C'), ncol = 1, rel_heights=c(1.5,2.5,3.5)),
+S4Fig <- plot_grid(
+    plot_grid(S4FigA, S4FigB, S4FigC, labels=c('A','B','C'), ncol = 1, rel_heights=c(1.5,2.5,3.5)),
     Fig1BC_legend, ncol=1, rel_heights=c(1,0.03))
 
 ## save the plot.
-ggsave("../results/S3Fig.pdf", S3Fig, height=11, width=7.5, limitsize=FALSE)
+ggsave("../results/S4Fig.pdf", S4Fig, height=11, width=7.5, limitsize=FALSE)
 
 
 ################################################################################
@@ -1675,14 +1694,14 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 
 
 ########################################
-## Supplementary Figure S4.
+## Supplementary Figure S5.
 ## Plasmid length and copy number are conserved within plasmid taxonomic groups.
 
 ## IMPORTANT TODO: there is a bug, in which there are plasmids with NA PredictedMobility
 ## in the Acman and Redondo-Salvo panels, but not in any of the other panels.
 ## This doesn't change any message or anything, but needs to be sorted out.
 
-## Supplementary Figure S4ABC
+## Supplementary Figure S5ABC
 ## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
 ## have similar sizes and copy numbers.
 
@@ -1711,10 +1730,10 @@ Acman.clique.PCN.vs.mean.size.plot <- Acman.cliques.with.PIRA.PCN.estimates %>%
     add_mean_PTU_length_column("Clique") %>%
     make_PTU_mean_length_PCN_base_plot()
 
-S4FigABC_title <- ggdraw() + draw_label("PTUs defined by Acman et al. (2020)", size=10, fontface="bold")
+S5FigABC_title <- ggdraw() + draw_label("PTUs defined by Acman et al. (2020)", size=10, fontface="bold")
 
-S4FigABC <- plot_grid(
-    S4FigABC_title,
+S5FigABC <- plot_grid(
+    S5FigABC_title,
     plot_grid(Acman.clique.size.plot,
               Acman.clique.PCN.plot,
               Acman.clique.PCN.vs.mean.size.plot,
@@ -1722,7 +1741,7 @@ S4FigABC <- plot_grid(
     nrow=2,rel_heights=c(0.1,1))
 
 
-## Supplementary Figure S4DEF.
+## Supplementary Figure S5DEF.
 ## The same result holds for the PTUs in the Redondo-Salvo et al. (2020) paper.
 
 ## That is, PTUs  in the plasmid similarity network
@@ -1749,10 +1768,10 @@ Redondo.Salvo.PCN.vs.mean.size.plot <- PTU.full.PIRA.PCN.estimates %>%
     add_mean_PTU_length_column("PTU") %>%
     make_PTU_mean_length_PCN_base_plot()
 
-S4FigDEF_title <- ggdraw() + draw_label("PTUs defined by Redondo-Salvo et al. (2020)", size=10, fontface="bold")
+S5FigDEF_title <- ggdraw() + draw_label("PTUs defined by Redondo-Salvo et al. (2020)", size=10, fontface="bold")
 
-S4FigDEF <- plot_grid(
-    S4FigDEF_title,
+S5FigDEF <- plot_grid(
+    S5FigDEF_title,
     plot_grid(Redondo.Salvo.PTU.size.plot,
               Redondo.Salvo.PTU.PCN.plot,
               Redondo.Salvo.PCN.vs.mean.size.plot,
@@ -1762,7 +1781,7 @@ S4FigDEF <- plot_grid(
 
 
 #########################################################
-## Supplementary Figure S4GHI. MOB-Cluster PTU analysis
+## Supplementary Figure S5GHI. MOB-Cluster PTU analysis
 
 ## First plot over primary cluster type.
 ## from $ mob_cluster -h:
@@ -1784,10 +1803,10 @@ MOB.Cluster.PCN.vs.mean.size.plot <- MOB.typed.PIRA.clusters %>%
     add_mean_PTU_length_column("primary_cluster_id") %>%
     make_PTU_mean_length_PCN_base_plot()
 
-S4FigGHI_title <- ggdraw() + draw_label("PTUs defined by MOB-Cluster (Mash distance < 0.06)", size=10, fontface="bold")
+S5FigGHI_title <- ggdraw() + draw_label("PTUs defined by MOB-Cluster (Mash distance < 0.06)", size=10, fontface="bold")
 
-S4FigGHI <- plot_grid(
-    S4FigGHI_title,
+S5FigGHI <- plot_grid(
+    S5FigGHI_title,
     plot_grid(MOB.Cluster.PTU.size.plot,
               MOB.Cluster.PTU.PCN.plot,
               MOB.Cluster.PCN.vs.mean.size.plot,
@@ -1796,7 +1815,7 @@ S4FigGHI <- plot_grid(
 
 
 #########################################################
-## Supplementary Figure S4JKL. MOB-Typer Rep type analysis.
+## Supplementary Figure S5JKL. MOB-Typer Rep type analysis.
 ## The same thing holds for rep protein typing.
 MOB.typed.PIRA.reptypes <- MOB.typed.PIRA.PCN.estimates %>%
     rank.correlate.column("rep_type.s.")
@@ -1814,10 +1833,10 @@ MOB.Typer.PCN.vs.mean.size.plot <- MOB.typed.PIRA.reptypes %>%
     add_mean_PTU_length_column("rep_type.s.") %>%
     make_PTU_mean_length_PCN_base_plot()
 
-S4FigJKL_title <- ggdraw() + draw_label("PTUs defined by MOB-Typer (Rep protein typing)", size=10, fontface="bold")
+S5FigJKL_title <- ggdraw() + draw_label("PTUs defined by MOB-Typer (Rep protein typing)", size=10, fontface="bold")
 
-S4FigJKL <- plot_grid(
-    S4FigJKL_title,
+S5FigJKL <- plot_grid(
+    S5FigJKL_title,
     plot_grid(
         MOB.Typer.reptype.size.plot,
         MOB.Typer.reptype.PCN.plot,
@@ -1826,7 +1845,7 @@ S4FigJKL <- plot_grid(
     nrow=2, rel_heights=c(0.1,1))
 
 ############################
-## Supplementary Figure S4MNO.
+## Supplementary Figure S5MNO.
 ## the same thing holds over Rep protein types in Ares-Arroyo et al. (2023).
 AresArroyo2023.typed.PIRA.reptypes <- PIRA.PCN.for.AresArroyo2023.data %>%
     rank.correlate.column("Replicase")
@@ -1844,10 +1863,10 @@ AresArroyo2023.PCN.vs.mean.size.plot <- AresArroyo2023.typed.PIRA.reptypes %>%
     add_mean_PTU_length_column("Replicase") %>%
     make_PTU_mean_length_PCN_base_plot()
 
-S4FigMNO_title <- ggdraw() + draw_label("PTUs defined by Rep types in Ares-Arroyo et al. (2023)", size=10, fontface="bold")
+S5FigMNO_title <- ggdraw() + draw_label("PTUs defined by Rep types in Ares-Arroyo et al. (2023)", size=10, fontface="bold")
 
-S4FigMNO <- plot_grid(
-    S4FigMNO_title,
+S5FigMNO <- plot_grid(
+    S5FigMNO_title,
     plot_grid(
         AresArroyo2023.reptype.size.plot,
         AresArroyo2023.reptype.PCN.plot,
@@ -1855,34 +1874,34 @@ S4FigMNO <- plot_grid(
         labels=c('M','N','O'), nrow=1),
     nrow=2, rel_heights=c(0.1,1))
 
-S4Fig_title <- ggdraw() + draw_label("The inverse power-law between plasmid length and PCN\nholds across plasmid taxonomic units (PTUs)", fontface='bold')
+S5Fig_title <- ggdraw() + draw_label("The inverse power-law between plasmid length and PCN\nholds across plasmid taxonomic units (PTUs)", fontface='bold')
 
 ## save the full plot.
-S4Fig <- plot_grid(S4Fig_title, S4FigABC, S4FigDEF, S4FigGHI, S4FigJKL, S4FigMNO, Fig1BC_legend, rel_heights = c(0.15,1,1,1,1,1,0.1), ncol=1)
-ggsave("../results/S4Fig.pdf", S4Fig, width=8, height=13)
+S5Fig <- plot_grid(S5Fig_title, S5FigABC, S5FigDEF, S5FigGHI, S5FigJKL, S5FigMNO, Fig1BC_legend, rel_heights = c(0.15,1,1,1,1,1,0.1), ncol=1)
+ggsave("../results/S5Fig.pdf", S5Fig, width=8, height=13)
 
 
 ########################################
-## Supplementary Figure S5. mobility group (relaxase) type analysis.
+## Supplementary Figure S6. mobility group (relaxase) type analysis.
 
 ## plot over relaxase_type.
-  S5Fig <- MOB.typed.PIRA.PCN.estimates %>%
+  S6Fig <- MOB.typed.PIRA.PCN.estimates %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("relaxase_type.s.", "All other relaxase types") %>%
     make_PCN_base_plot() +
     facet_wrap(relaxase_type.s. ~ ., ncol=4) +
     ggtitle("MOB-Typer relaxase types")
 ## save the plot
-ggsave("../results/S5Fig.pdf", S5Fig)
+ggsave("../results/S6Fig.pdf", S6Fig)
 
 
 ##############################
-## Supplementary Figures S6 Host range analysis.
+## Supplementary Figures S7 Host range analysis.
 
-## Supplementary Figure S6A
+## Supplementary Figure S7A
 ## plot over observed host range.
 ## This is "Taxon name of convergence of plasmids in MOB-suite plasmid DB",
 ## following the documentation here: https://github.com/phac-nml/mob-suite 
- S6FigA <- MOB.typed.PIRA.PCN.estimates %>%
+ S7FigA <- MOB.typed.PIRA.PCN.estimates %>%
     ## put new lines in the host ranges to improve the aspect ratio of the subpanels.
     mutate(observed_host_range_ncbi_name = str_replace_all(observed_host_range_ncbi_name, ",", ",\n")) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("observed_host_range_ncbi_name", "All other host ranges") %>%
@@ -1900,7 +1919,7 @@ RedondoSalvo.host.range.full.PIRA.estimates <- PIRA.PCN.estimates %>%
 ## This figure shows that copy number / plasmid size does not predict host range.
 ## there are narrow and broad host range plasmids both large and small.
 ## compare with the MOB-Typer result in this vein.
-S6FigB <- RedondoSalvo.host.range.full.PIRA.estimates %>%
+S7FigB <- RedondoSalvo.host.range.full.PIRA.estimates %>%
     ggplot(aes(
         x = log10(replicon_length),
         y = log10(PIRACopyNumber),
@@ -1916,23 +1935,23 @@ S6FigB <- RedondoSalvo.host.range.full.PIRA.estimates %>%
     ## make the points in the legend larger.
     guides(color = guide_legend(override.aes = list(size = 5)))
 
-S6Fig <- plot_grid(
-    S6FigA,
-    plot_grid(S6FigB,"", rel_widths=c(1.5,1)),
+S7Fig <- plot_grid(
+    S7FigA,
+    plot_grid(S7FigB,"", rel_widths=c(1.5,1)),
     labels=c('A','B'), ncol=1,
     rel_heights=c(2.5,1))
 ## save the plot
-ggsave("../results/S6Fig.pdf", S6Fig, height=8.5,width=7.1)
+ggsave("../results/S7Fig.pdf", S7Fig, height=8.5,width=7.1)
 
 
 ################################################################################
-## Supplementary Figure S7.
+## Supplementary Figure S8.
 
 ## This vector is used for ordering Annotation levels in this figure.
 order.by.total.plasmids <- make.plasmid.totals.col(PIRA.PCN.estimates)$Annotation
 
-## Supplementary Figure S7A. let's make a histogram of PCN in these data.
-S7FigA <- PIRA.PCN.estimates %>%
+## Supplementary Figure S8A. let's make a histogram of PCN in these data.
+S8FigA <- PIRA.PCN.estimates %>%
     ## order the Annotation levels.
     mutate(Annotation = factor(Annotation, levels = order.by.total.plasmids)) %>%
     ## TODO: fix upstream annotation so I don't have to do this filtering.
@@ -1953,7 +1972,7 @@ S7FigA <- PIRA.PCN.estimates %>%
         axis.text.x  = element_text(size=11),
         axis.text.y  = element_text(size=11))
 
-## Supplementary Figure S7BC.
+## Supplementary Figure S8BC.
 ## Examine the tails of the PCN distribution.
 ## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
 ## there is an enrichment of high PCN plasmids in human-impacted environments.
@@ -1982,7 +2001,7 @@ low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates) %>%
     filter(Annotation != "NA")
 
 ## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
-S7FigB <- make.confint.figure.panel(
+S8FigB <- make.confint.figure.panel(
                                      low.PCN.plasmids.table,
                                      order.by.total.plasmids,
                                      "Proportion of plasmids with PCN < 1")
@@ -1998,14 +2017,14 @@ high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates) %>%
     filter(Annotation != "blank")
 
 ## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
-S7FigC <- make.confint.figure.panel(
+S8FigC <- make.confint.figure.panel(
     high.PCN.plasmids.table,
     order.by.total.plasmids,
     "Proportion of plasmids with PCN > 50")
 
 ## save the figure.
-S7Fig <- plot_grid(S7FigA, S7FigB, S7FigC, labels=c('A','B','C'), ncol=1, rel_heights=c(2,1,1))
-ggsave("../results/S7Fig.pdf", S7Fig, height = 8, width = 5)
+S8Fig <- plot_grid(S8FigA, S8FigB, S8FigC, labels=c('A','B','C'), ncol=1, rel_heights=c(2,1,1))
+ggsave("../results/S8Fig.pdf", S8Fig, height = 8, width = 5)
 
 ## calculate the total number of plasmids,
 ## and the number of plasmids with PCN < 1 and PCN > 50.
@@ -2109,11 +2128,11 @@ ggsave("../results/Fig2.pdf", Fig2, height=5.325, width=7.1)
 
 
 ################################################################################
-## Supplementary Figure S8. Break down the result in Figure 2 by genus
+## Supplementary Figure S9. Break down the result in Figure 2 by genus
 ## to show universality of the CDS scaling relationship.
 
 ## Break down by taxonomic group.
-S8FigA <- CDS.rRNA.fraction.data %>%
+S9FigA <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other\ntaxonomic groups") %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
@@ -2128,7 +2147,7 @@ S8FigA <- CDS.rRNA.fraction.data %>%
     ggtitle("Taxonomic groups")
 
 ## Break down by taxonomic subgroup
-S8FigB <- CDS.rRNA.fraction.data %>%
+S9FigB <- CDS.rRNA.fraction.data %>%
     ## put new lines after slasks to improve the aspect ratio of the subpanels.
     mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicSubgroup", "All other\ntaxonomic subgroups") %>%
@@ -2145,7 +2164,7 @@ S8FigB <- CDS.rRNA.fraction.data %>%
     ggtitle("Taxonomic subgroups")
 
 ## Break down by genus.
-S8FigC <- CDS.rRNA.fraction.data %>%
+S9FigC <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
@@ -2161,10 +2180,10 @@ S8FigC <- CDS.rRNA.fraction.data %>%
 
 
 ## save the plot over two pages.
-S8FigAB_page <- plot_grid(S8FigA, S8FigB, labels=c("A","B"), ncol = 1, rel_heights=c(1.5,2))
-S8FigC_page <- plot_grid(S8FigC, labels=c("C"))
-ggsave("../results/S8FigAB.pdf", S8FigAB_page, width=9.5,height=11, limitsize=FALSE)
-ggsave("../results/S8FigC.pdf", S8FigC_page, width=13,height=15, limitsize=FALSE)
+S9FigAB_page <- plot_grid(S9FigA, S9FigB, labels=c("A","B"), ncol = 1, rel_heights=c(1.5,2))
+S9FigC_page <- plot_grid(S9FigC, labels=c("C"))
+ggsave("../results/S9FigAB.pdf", S9FigAB_page, width=9.5,height=11, limitsize=FALSE)
+ggsave("../results/S9FigC.pdf", S9FigC_page, width=13,height=15, limitsize=FALSE)
 
 
 ########################################################################
@@ -2290,13 +2309,13 @@ ribosomal.RNA.plot <- metabolic.gene.plasmid.and.chromosome.data %>%
 ribosomal.RNA.plot
 
 ################################################################################
-## Supplementary Figure S9. Break down the result in Figure 4 by genus
+## Supplementary Figure S10. Break down the result in Figure 4 by genus
 ## to show universality of the CDS scaling relationship among genera containing chromids.
 genera.containing.chromids <- filter(metabolic.gene.plasmid.and.chromosome.data, SeqType == "chromid")$Genus
 
 
 ## examining taxonomic groups 
-S9FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
+S10FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other\ntaxonomic groups") %>%
     make_metabolic_scaling_base_plot() +
@@ -2304,7 +2323,7 @@ S9FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
     ggtitle("Taxonomic groups")
 
 ## examining taxonomic subgroups
-S9FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
+S10FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
     ## put new lines after slasks to improve the aspect ratio of the subpanels.
     mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
@@ -2314,20 +2333,20 @@ S9FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
     facet_wrap(. ~ TaxonomicSubgroup, ncol=6) +
     ggtitle("Taxonomic subgroups")
 
-S9FigAB <- plot_grid(S9FigA, S9FigB, labels=c("A","B"),ncol =1, rel_heights=c(1.25,2))
+S10FigAB <- plot_grid(S10FigA, S10FigB, labels=c("A","B"),ncol =1, rel_heights=c(1.25,2))
 
 ## Break down by genus, only showing genera containing megaplasmids.
-S9FigC <- metabolic.gene.plasmid.and.chromosome.data %>%
+S10FigC <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(Genus %in% genera.containing.chromids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=5) +
     ggtitle("Microbial genera")
 
-S9Fig <- plot_grid(S9FigAB, S9FigC, labels = c("","C"), ncol=1, rel_heights=c(2,3.5))
+S10Fig <- plot_grid(S10FigAB, S10FigC, labels = c("","C"), ncol=1, rel_heights=c(2,3.5))
 
 ## save the plot.
-ggsave("../results/S9Fig.pdf", S9Fig, height=14, width=8.5,limitsize=FALSE)
+ggsave("../results/S10Fig.pdf", S10Fig, height=14, width=8.5,limitsize=FALSE)
 
 ## ChatGPT says these are the default 3 colors in ggplot2.
 ## "#F8766D" (a red shade)
@@ -2336,54 +2355,82 @@ ggsave("../results/S9Fig.pdf", S9Fig, height=14, width=8.5,limitsize=FALSE)
 
 ## as a control, examine those genera that don't contain megaplasmids.
 ## we see the same trend, but it is less obvious.
-S11Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
+S12Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(!(Genus %in% genera.containing.chromids)) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
     scale_color_manual(values=c("#00BA38","#619CFF")) +
     facet_wrap(. ~ Genus, ncol=6)
 ## save the plot.
-ggsave("../results/S11Fig.pdf", S11Fig, height=10, width=8)
+ggsave("../results/S12Fig.pdf", S12Fig, height=10, width=8)
 
 ################################################################################
-## Supplementary Figure S12. Plot plasmid DNA content normalized by chromosome DNA content.
-## plasmid DNA content is almost always < 0.5 of chromosome DNA content in the genome,
-## indicated by the vertical dashed line.
+## Supplementary Figure S11. Plot plasmid DNA content normalized by chromosome DNA content.
 
 plasmid.DNA.content.data <- full.PIRA.estimates %>%
-    filter(SeqType != "chromosome") %>%
-    group_by(AnnotationAccession, Annotation) %>%
-    summarize(plasmid.DNA.content = sum(RepliconDNAContent))
+    ## calculate normalized replicon DNA content
+    ## (normalized by highest DNA content replicon).
+    ## We need chromosomes in the data for this step.
+    normalize.plasmid.DNA.content() %>%
+    ## now remove chromosomes.
+    filter(SeqType == "plasmid") %>%
+    ## add Plasmid column to merge plasmid.mobility.data,
+    ## by splitting the SeqID string on the underscore and taking the second part.
+    mutate(Plasmid = sapply(strsplit(SeqID, "_"), function(x) x[2])) %>%
+    left_join(plasmid.mobility.data) %>%
+    ## The next two lines are to get segmented regression working, using library(segmented).
+    mutate(log10_normalized_replicon_length = log10(normalized_replicon_length)) %>%
+    mutate(log10_normalized_RepliconDNAContent = log10(normalized_RepliconDNAContent)) %>%
+    ## this next line is to check out the segmented regression
+    ## with the normalized replicon lengths.
+    mutate(log10_normalized_replicon_length = log10(normalized_replicon_length)) %>%
+    ## create a column indicating how plasmids cluster by length.
+    ## IMPORTANT: have to remove chromosomes before running this function.
+    cluster_PIRA.PCN.estimates_by_plasmid_length() %>%
+    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## but we have to make these annotations right before we make the figure, so
+    ## that we don't accidentally filter out chromids when selecting plasmids.
+    mutate(SeqType = ifelse(
+               SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
+               "chromid", SeqType))
 
-chromosome.DNA.content.data <- full.PIRA.estimates %>%
-    filter(SeqType == "chromosome") %>%
-    group_by(AnnotationAccession, Annotation) %>%
-    summarize(chromosome.DNA.content = sum(RepliconDNAContent))
 
-normalized.cellular.plasmid.DNA.content.data <- full_join(plasmid.DNA.content.data, chromosome.DNA.content.data) %>%
-    group_by(AnnotationAccession, Annotation) %>%
-    summarize(normalized.plasmid.DNA.content = plasmid.DNA.content / chromosome.DNA.content)
+## We will add a segmented regression line to S10Fig.
+## first make a linear fit model with the normalized replicon length.
+normalized.DNA.lm.model <- lm(
+    log10_normalized_RepliconDNAContent ~ log10_normalized_replicon_length,
+    data=plasmid.DNA.content.data)
 
-S12Fig <- normalized.cellular.plasmid.DNA.content.data %>%
-    ggplot(aes(x = log10(normalized.plasmid.DNA.content))) +
-    geom_histogram(bins=100) +
-    facet_grid(Annotation~.) +
-    theme_classic() +
-    geom_vline(xintercept = log10(0.5), linetype = "dashed", color="light gray") +
-    theme(strip.background = element_blank())
+#fit piecewise regression model based on the normalized.PCN.lm.model.
+segmented.normalized.DNA.model <- segmented(
+    normalized.DNA.lm.model,
+    seg.Z = ~log10_normalized_replicon_length,
+    psi = list(log10_normalized_replicon_length = -1.5))
+
+summary(segmented.normalized.DNA.model)
+
+## save the segmented regression fit as a dataframe.
+normalized.segmented.DNA.fit.df = data.frame(
+    log10_normalized_replicon_length = plasmid.DNA.content.data$log10_normalized_replicon_length,
+    log10_normalized_RepliconDNAContent = broken.line(segmented.normalized.DNA.model)$fit)
+
+S11Fig <- plasmid.DNA.content.data %>%
+    filter(!is.na(Annotation)) %>%
+    filter.correlate.column("PredictedMobility") %>%
+    ggplot(aes(
+        x = log10_normalized_replicon_length,
+        y = log10_normalized_RepliconDNAContent,
+        color = PredictedMobility)) +
+    geom_point(size=0.5,alpha=0.8) +
+    theme_cowplot() + ## for 7pt margins
+    scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="plasmid mobility") +
+    xlab("log10(normalized length)") +
+    ylab("log10(normalized plasmid DNA content)") +
+    geom_line(data = normalized.segmented.DNA.fit.df, color = 'maroon') +
+    theme(legend.position = "bottom")
+
 ## save the plot.
-ggsave("../results/S12Fig.pdf", S12Fig, height=10, width=8)
+ggsave("../results/S11Fig.pdf", S11Fig, height=6.25, width=6.25)
 
-################################################################################
-## Supplementary Figure S13. Plot plasmid DNA content normalized by chromosome DNA content.
-## indicated by the vertical dashed line.
 
-S13Fig <- normalized.plasmid.DNA.content.data %>%
-    ggplot(aes(x = log10(normalized.plasmid.DNA.content))) +
-    geom_histogram(bins=100) +
-    theme_classic() +
-    geom_vline(xintercept = log10(0.5), linetype = "dashed", color="light gray") +
-    theme(strip.background = element_blank())
-## save the plot.
-ggsave("../results/S12Fig.pdf", S12Fig, height=10, width=8)
 
