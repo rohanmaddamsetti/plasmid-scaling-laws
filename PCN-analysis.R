@@ -797,7 +797,7 @@ length(unique(full.PIRA.estimates$AnnotationAccession))
 nrow(filter(full.PIRA.estimates, SeqType=="plasmid"))
 
 ## write the normalized data to disk.
-write.csv(full.PIRA.estimates, "../results/S2Data-PIRA-PCN-estimates-with-normalization.csv")
+write.csv(full.PIRA.estimates, "../results/S2Data-PIRA-PCN-estimates-with-normalization.csv", quote=FALSE, row.names=FALSE)
 
 
 ## TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
@@ -1199,7 +1199,7 @@ binned.PIRA.PCN.estimate.summary <- PIRA.PCN.estimates %>%
     )
 
 ## write this summary to disk.
-write.csv(binned.PIRA.PCN.estimate.summary, "../results/S3Data-PIRA-PCN-Kbp-bin-summary.csv")
+write.csv(binned.PIRA.PCN.estimate.summary, "../results/S3Data-PIRA-PCN-Kbp-bin-summary.csv", quote=FALSE, row.names=FALSE)
 
 ################################################################################
 ## Supplementary Data File 4.
@@ -1270,7 +1270,7 @@ clustered.plasmid.summary <- PIRA.PCN.estimates %>%
     )
 
 ## write this summary to disk.
-write.csv(clustered.plasmid.summary, "../results/S4Data-Size-clustered-plasmid-summary.csv")
+write.csv(clustered.plasmid.summary, "../results/S4Data-Size-clustered-plasmid-summary.csv", quote=FALSE, row.names=FALSE)
 
 ################################################################################
 ## The data is best fit by piecewise regression, revealing a scaling law between length and copy number.
