@@ -1429,6 +1429,9 @@ Fig1BC_with_title_and_legend <- plot_grid(Fig1BC_title, Fig1BC, Fig1BC_legend, n
 
 ggsave("../results/Fig1BC.pdf", Fig1BC_with_title_and_legend, height=4.5, width=7.25)
 
+## Save Source Data for Figure 1BC.
+write.csv(PIRA.PCN.estimates, "../results/Source-Data/Fig1BC-Source-Data.csv", quote=FALSE, row.names=FALSE)
+
 
 ## Supplementary Figure S2.
 ## Show summary statistics on a version of Figure 1B for Reviewer 1.
@@ -1539,6 +1542,7 @@ analyze.within.genome.correlations <- function(MIN_PLASMIDS_PER_GENOME=2, df=PIR
     ## return all the data
     return(within.genome.correlation.data.df)
 }
+
 
 within.genome.correlation.data2 <- analyze.within.genome.correlations(2)
 within.genome.correlation.data3 <- analyze.within.genome.correlations(3)
@@ -1844,6 +1848,7 @@ S5FigJKL <- plot_grid(
         labels=c('J','K','L'), nrow=1),
     nrow=2, rel_heights=c(0.1,1))
 
+
 ############################
 ## Supplementary Figure S5MNO.
 ## the same thing holds over Rep protein types in Ares-Arroyo et al. (2023).
@@ -2049,6 +2054,7 @@ multicopy10.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 10) %>% 
 multicopy10.PCN.count
 multicopy10.PCN.count/PCN.count
 
+
 ###################################################################################
 ## Figure 2. Coding Sequences (CDS) on plasmids follow an empirical scaling law.
 
@@ -2126,6 +2132,11 @@ Fig2 <- plot_grid(
 ## save the plot.
 ggsave("../results/Fig2.pdf", Fig2, height=5.325, width=7.1)
 
+## Save Source Data for Figure 2AC.
+write.csv(CDS.rRNA.fraction.data, "../results/Source-Data/Fig2AC-Source-Data.csv", quote=FALSE, row.names=FALSE)
+
+## Save Source Data for Figure 2AB.
+write.csv(noncoding.fraction.data, "../results/Source-Data/Fig2B-Source-Data.csv", quote=FALSE, row.names=FALSE)
 
 ################################################################################
 ## Supplementary Figure S9. Break down the result in Figure 2 by genus
@@ -2282,6 +2293,9 @@ Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
 Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
 ## save the plot.
 ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
+
+## Save Source Data for Figure 3.
+write.csv(metabolic.gene.plasmid.and.chromosome.data, "../results/Source-Data/Fig3-Source-Data.csv", quote=FALSE, row.names=FALSE)
 
 
 ################################################################################
