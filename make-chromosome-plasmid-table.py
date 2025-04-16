@@ -6,6 +6,8 @@ make-chromosome-plasmid-table.py by Rohan Maddamsetti.
 This script reads in ../results/complete-prokaryotes-with-plasmids.txt.
 '''
 import os
+import gzip
+from tqdm import tqdm
 from Bio import SeqIO
 
 warning_count = 0
@@ -17,7 +19,7 @@ with open("../results/chromosome-plasmid-table.csv",'w') as out_fh:
     out_fh.write(header)
     ## open the genome report file, and parse line by line.
     with open("../results/complete-prokaryotes-with-plasmids.txt", "r") as genome_report_fh:
-        for i, line in enumerate(genome_report_fh):
+        for i, line in enumerate(tqdm(genome_report_fh)):
             line = line.strip()
             if i == 0: ## get the names of the columns from the header.
                 column_names_list = line.split('\t')
@@ -30,7 +32,7 @@ with open("../results/chromosome-plasmid-table.csv",'w') as out_fh:
             replicons = fields[8]
             ftp_path = fields[20]
             accession = os.path.basename(ftp_path)
-            my_annotation_file = "../results/gbk-annotation/" + accession + "_genomic.gbff"
+            my_annotation_file = "../results/gbk-annotation/" + accession + "_genomic.gbff.gz"
             ''' make sure that this file exists in the annotation directory--
             skip if this was not the case.
             this is important; we don't want to include genomes that were
@@ -43,7 +45,7 @@ with open("../results/chromosome-plasmid-table.csv",'w') as out_fh:
             found_genomes += 1
             
             ## get the SeqID and SeqType from the Genbank annotation file.
-            with open(my_annotation_file, "rt") as genome_fh:
+            with gzip.open(my_annotation_file, "rt") as genome_fh:
                 for i, replicon in enumerate(SeqIO.parse(genome_fh, "gb")):
                     SeqID = replicon.id
                     if "chromosome" in replicon.description or i == 0:

@@ -526,7 +526,7 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
         ggplot(
             aes(
                 x = log10(SeqLength),
-                y = log10(CDS_length),
+                y = log10(CodingLength),
                 color = SeqType)) +
         geom_point(size=0.5,alpha=0.8) +
         xlab("log10(length)") +
@@ -547,7 +547,7 @@ make_normalized_CDS_base_plot <- function(CDS.fraction.data) {
         ggplot(
             aes(
                 x = log10(normalized_replicon_length),
-                y = log10(CDS_length),
+                y = log10(CodingLength),
                 color = SeqType)) +
         geom_point(size=0.5,alpha=0.8) +
         xlab("log10(length normalized by chromosome)") +
@@ -731,6 +731,25 @@ CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     left_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths()
+
+names(CDS.rRNA.fraction.data)
+# [1] "AnnotationAccession"        "SeqID"                     
+# [3] "SeqLength"                  "CodingLength"              
+# [5] "coding_fraction"            "CDS_count"                 
+# [7] "summed_CDS_length"          "summed_CDS_fraction"       
+# [9] "rRNA_5S_count"              "rRNA_5S_length"            
+#[11] "rRNA_5S_fraction"           "rRNA_16S_count"            
+#[13] "rRNA_16S_length"            "rRNA_16S_fraction"         
+#[15] "rRNA_23S_count"             "rRNA_23S_length"           
+#[17] "rRNA_23S_fraction"          "total_rRNA_count"          
+#[19] "total_rRNA_length"          "total_rRNA_fraction"       
+#[21] "NCBI_Nucleotide_Accession"  "Organism"                  
+#[23] "Strain"                     "TaxonomicGroup"            
+#[25] "TaxonomicSubgroup"          "SeqType"                   
+#[27] "replicon_length"            "host"                      
+#[29] "isolation_source"           "Annotation"                
+#[31] "Genus"                      "max_replicon_length"       
+#[33] "normalized_replicon_length" 
 
 ################################################################################
 ## Get the PCN estimates. These are the main data for this paper.
@@ -1082,7 +1101,6 @@ cor(
 ################################################################################
 ## Supplementary Figure 1F. Benchmarking against external PCN estimates from Shaw et al. (2021)
 ## in Sciences Advances.
-
 
 Shaw2021_NCBI_metadata <- read.csv("../results/NCBI_REHAB_plasmid_metadata.csv")
 
@@ -1585,7 +1603,6 @@ within.small.plasmid.containing.genome.correlation.data3 <- analyze.within.genom
 ## relevant recent paper: "A cryptic plasmid is among the most numerous genetic elements in the human gut"
 ## in Cell.
 
-
 ## Group the data frame by AnnotationAccession and calculate the maximum replicon length in each group
 max.plasmid.lengths <- PIRA.PCN.estimates %>%
 group_by(AnnotationAccession, Annotation) %>%
@@ -2073,7 +2090,7 @@ Fig2A <- CDS.rRNA.fraction.data %>%
 
 ## Fig 2B: noncoding fraction analysis.
 noncoding.fraction.data <- CDS.rRNA.fraction.data %>%
-    mutate(noncoding_length = replicon_length - CDS_length) %>%
+    mutate(noncoding_length = replicon_length - CodingLength) %>%
     mutate(noncoding_fraction = noncoding_length / replicon_length) %>%
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
