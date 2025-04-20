@@ -2,12 +2,7 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## CRITICAL TODO DURING REVISION:
-## REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
-## in the Definition in the Genbank annotation. Right now I remove all sequences < 1000bp in length,
-## which is probably good enough.
-
-## CRITICAL TODO DURING REVISION:
+## TODO DURING REVISION:
 ## There are 483 genomes that DO NOT have ecological annotation-- these
 ## are genomes with "Chromosome" level assembly in the PCN pipeline,
 ## which are not found in the "Complete Genome" annotations used in the main
@@ -15,24 +10,17 @@
 ## used across the two analyses is causing this issue. This does not affect any fundamental
 ## analyses here, but this inconsistency is extremely annoying and needs to be fixed.
 
-## One simple choice would be to just remove all the chromosome-level assemblies,
-## and stick to 'Complete Genome' level assemblies throughout. This is probably the cleanest solution.
-## This might also take care of small plasmid contigs,
-## but I should add an extra filtering step to remove these regardless.
-
 ## CRITICAL TODO DURING REVISION:
 ## examine NA values in PIRACopyNumber in PIRA.vs.naive.themisto.df,
 ## when the value is defined for ThemistoNaiveCopyNumber.
 ## by definition this should not happen.
 ## examine the correlation coefficient calculations and work backwards from there.
 
-
 ## TODO WHEN RERUNNING FROM SCRATCH:
 ## Make sure all the genomes in ../results/gbk-annotation are consistent
 ## with the genomes annotated in computationally-annotated-genomes etc.
 ## (that is, there are no suppressed RefSeq genomes in this folder, and everything is annotated.)
 ## in the Annotation and SeqType columns, and rewrite upstream code to solve this problem.
-
 
 ## IMPORTANT: In Figures 2 and 3,
 ## I annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
@@ -765,9 +753,6 @@ names(CDS.rRNA.fraction.data)
 ## So, we need to combine the PIRA estimates with the subset of
 ## naive themisto estimates for which no multireads were called.
 PIRA.estimates <- read.csv("../results/PIRA-PCN-estimates.csv") %>%
-    ## SMALL TODO: In PCN_pipeline.py, make sure the ThemistoID_right column is dropped
-## and not written out to this CSV file.
-    select(-ThemistoID_right) %>%
     ## get rid of unneeded columns.
     select(-ThemistoID) %>%
     rename(CopyNumber = PIRA_CopyNumberEstimate)
@@ -805,8 +790,8 @@ full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.est
     ## estimate, or that have a 'plasmid' that has the max_replicon_length in the genome.
     remove.genomes.with.bad.chromosomes() %>%
     ## Remove outlier 'plasmids' < 1000bp, these are likely small, unassembled contigs.
-    ## CRITICAL TODO: REMOVE plasmids that are clearly contigs: those with "unlocalized" or "unplaced"
-    ## in the Definition in the Genbank annotation. Right now I remove all sequences < 1000bp in length,
+    ## some of these have "unlocalized" or "unplaced" in the Definition in the Genbank annotation,
+    ## if if they come from Complete Genomes. Right now I remove all sequences < 1000bp in length,
     ## which is probably good enough.
     filter(replicon_length > 1000)
 
