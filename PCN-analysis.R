@@ -8,7 +8,7 @@
 ## which are not found in the "Complete Genome" annotations used in the main
 ## ecological annotation pipeline. This inconsistency between the sets of genomes
 ## used across the two analyses is causing this issue. This does not affect any fundamental
-## analyses here, but this inconsistency is extremely annoying and needs to be fixed.
+## analyses here, but this inconsistency is extremely annoying.
 
 ## CRITICAL TODO DURING REVISION:
 ## examine NA values in PIRACopyNumber in PIRA.vs.naive.themisto.df,
