@@ -2,25 +2,11 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## TODO DURING REVISION:
-## There are 483 genomes that DO NOT have ecological annotation-- these
-## are genomes with "Chromosome" level assembly in the PCN pipeline,
-## which are not found in the "Complete Genome" annotations used in the main
-## ecological annotation pipeline. This inconsistency between the sets of genomes
-## used across the two analyses is causing this issue. This does not affect any fundamental
-## analyses here, but this inconsistency is extremely annoying.
-
 ## CRITICAL TODO DURING REVISION:
 ## examine NA values in PIRACopyNumber in PIRA.vs.naive.themisto.df,
 ## when the value is defined for ThemistoNaiveCopyNumber.
 ## by definition this should not happen.
 ## examine the correlation coefficient calculations and work backwards from there.
-
-## TODO WHEN RERUNNING FROM SCRATCH:
-## Make sure all the genomes in ../results/gbk-annotation are consistent
-## with the genomes annotated in computationally-annotated-genomes etc.
-## (that is, there are no suppressed RefSeq genomes in this folder, and everything is annotated.)
-## in the Annotation and SeqType columns, and rewrite upstream code to solve this problem.
 
 ## IMPORTANT: In Figures 2 and 3,
 ## I annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
