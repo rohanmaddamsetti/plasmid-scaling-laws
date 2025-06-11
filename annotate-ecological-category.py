@@ -21,7 +21,7 @@ Usage: python annotate-ecological-category.py > ../results/computationally-annot
 #############################################################################################
 
 animal_hosts = [
-    "coturnix coturnix", "micropterus salmoides",
+    "coturnix coturnix", "micropterus salmoides", "ixodes uriae",
     "macrotermes natalensis colony mn106", "kareius bicoloratus", "atrina pectinata",
     "melipona lateralis", "macaca assamensis", "costelytra zealandica", "ibex", "loach",
     "corcyra cephalonica", "coregonus peled", "jalysus wickhami", "laodelphax striatellus",
@@ -284,7 +284,7 @@ animal_hosts = [
 
 
 animal_isolation_sources = [
-    "bird (jay)", "perithecium", "faecal sample of a golden lion tamarin",
+    "bird (jay)", "perithecium", "faecal sample of a golden lion tamarin", "doi.org/10.3389/fmars.2022.801344",
     "andrias davidianus", "a strain isolated from ascites of an andrias davidianus by shanghai ocean university",
     "litopenaeus vannamei", "pike", "digestive tract of a zophobas atratus larvae", "hybrid catfish",
     "sea urchin; strongylocentrotus intermedius", "fly", "isolated from bluespotted cornetfish",
@@ -434,7 +434,7 @@ plant_isolation_sources = [
     "cassava root", "noni", "stem", "root nodule of vicia costata", "sap", "mulberry", "duranta erecta",
     "mulberry mosaic dwarf leaf", "surface-sterilized vetiver roots", "arctic grass", "geum aleppicum",
     "white-flowered calla lily", "luffa aegyptiaca", "root rhizomes", "tree", "sedge blades", "bolbostemmatis rhizoma",
-    "kumarahou flower", "the root nodule of glycyrrhiza uralensis", "saccharum officinarum",
+    "kumarahou flower", "the root nodule of glycyrrhiza uralensis", "saccharum officinarum", "rubus sp.",
     "flower of dendranthema zawadskii", "avicennia marina", "moss sample of penguin habitat",
     "bruguiera gymnorhiza", "calla lily", "mountain ginseng", "phyllosphere of grasses", "leaves",
     "4-year-old roots of korean ginseng", "new guinea impatiens", "mangrove", "algal mat",
@@ -454,7 +454,7 @@ plant_isolation_sources = [
     "sesbania spp. root nodule", "plant leaf", "origanum marjorana", "malus sp.", "algae",
     "flower of shittah tree", "himalayan blackberry", "endosphere environment", "plant tissue",
     "inner tissues of halophyte limonium sinense (girard) kuntze", "leaf", "hiacynth plant",
-    "root nodule of sesbania cannabina", "wood", "necrotic oak lesion", "tree root",
+    "root nodule of sesbania cannabina", "wood", "necrotic oak lesion", "tree root", "crown gall",
     "fallen leaves of virgin forest", "flower of chiness redbud", "calliandra haematocephalus",
     "flower of rhododendron sclippenbachii", "plant xylem"]
 
@@ -548,6 +548,7 @@ agri_isolation_sources = [
     "noduls from roots of medicago sativa", "cilantro", "rice root", "rice leaf", "maize leaf",
     "naturally-infected soybean tissue", "soybean", "citrus orchard", "tomato", "vegetable plot",
     "naturally-infected soybean leaf tissue", "apple tree", "banana", "cabbage seeds",
+    "diseased leaves of kiwifruit", "maguey plantation", "diseased onion (allium cepa)",
     "white nectarines fire pearl variety", "soybean nodules", "field isolate", "brazil nut tree leaves",
     "phyllosphere of musa spp. aaa cv. grand naine. leaf number 10"]
 
@@ -817,7 +818,7 @@ livestock_hosts = [
 
 
 livestock_isolation_sources = [
-    "livestock manure", "pig feed", "swine faeces",
+    "livestock manure", "pig feed", "swine faeces", "pig rectum feces",
     "anaerobic effluent of swine manure", "rabbit liver", "ovis aries", "laying hen", "swab samples of pig",
     "swine preevisceration carcass swab", "air sacs", "sus scrofa domesticus", "rumen contents",
     "liquid joint sample of pig", "air sac of a pipped embryo", "weaned piglets", "guinea pig", "porcine tongue",
@@ -877,7 +878,7 @@ anthropogenic_hosts = ["sewage", "soil (polluted)", "dsmz strain", "laboratory",
 
 
 anthropogenic_isolation_sources = [
-    "hopper", "isp2",
+    "hopper", "isp2", "leaves of cigar",
     "biogas digestate", "ventilator shelf_p101_bu22", "infusion stand_p63_bu16",
     "polyester fabric recovered from compost", "luria bertani broth miller", "medium 987",
     "mutant of streptomyces rimosus subsp. rimosus r7", "out-of-house environment",
@@ -974,7 +975,7 @@ anthropogenic_isolation_sources = [
     "anodic biofilm of glucose-fed microbial", "milk powder production facility",
     "coke and gas plant treatment facilities", "liquid-air interface biofilm",
     "rubber production plant territory", "laboratory stock", "air conditioning system",
-    "ensuite 7/8", "river sediment polluted by acid mine drainage",
+    "ensuite 7/8", "river sediment polluted by acid mine drainage", "hospital sample",
     "environmental swab sponge bakery assembly production room",
     "microbial mats from zloty stok gold mine", "acid mine decant and tailings from uranium mine",
     "sedimentation pond in a zinc factory", "acid mine drainage", "filter from dairy farm",
@@ -1084,7 +1085,7 @@ na_hosts = ["environmental", "jamiecosley", "environment", "not available: not c
             "ucc strain", "natural / free-living", "obscured"]
 
 na_isolation_sources = [
-    "bacillus thuringiensis ssp. tenebrionis (btt)", "tibet", "henan",
+    "bacillus thuringiensis ssp. tenebrionis (btt)", "tibet", "henan", "pre-treated sample",
     "the strain was isolated from guangdong province; china in 2020-12", "passage", "cicc",
     "environmental material [envo:00010483]", "japan", "mssing", "nanchang", "environmetal",
     "envo:00010483", "not provided; submitted under migs 2.1", "huangshui", "shanghai", "ucc strain",
