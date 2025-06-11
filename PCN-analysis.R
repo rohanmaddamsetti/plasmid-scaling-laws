@@ -626,6 +626,8 @@ gbk.annotation <- read.csv("../results/computationally-annotated-gbk-annotation-
 ## generated from the table of complete genomes with plasmids.
 replicon.annotation.data <- read.csv("../results/chromosome-plasmid-table.csv") %>%
     left_join(gbk.annotation) %>%
+    ## turn NA values to Unannotated.
+    mutate(Annotation = replace_na(Annotation,"Unannotated")) %>%
     ## Annotate the genera.
     mutate(Genus = stringr::word(Organism, 1))
 
@@ -787,7 +789,7 @@ length(unique(full.PIRA.estimates$AnnotationAccession))
 nrow(filter(full.PIRA.estimates, SeqType=="plasmid"))
 
 ## write the normalized data to disk.
-write.csv(full.PIRA.estimates, "../results/S2Data-PIRA-PCN-estimates-with-normalization.csv", quote=FALSE, row.names=FALSE)
+write.csv(full.PIRA.estimates, "../results/S1Data-PIRA-PCN-estimates-with-normalization.csv", quote=FALSE, row.names=FALSE)
 
 
 ## TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
@@ -888,7 +890,9 @@ cor(
 low.PCN.minimap2.estimates.df <- read.csv("../results/minimap2-PIRA-low-PCN-benchmark-estimates.csv") %>%
     rename("minimap2ReadCount" = ReadCount) %>%
     select("AnnotationAccession", "SeqID", "SeqType", "ThemistoID", "replicon_length",
-           "minimap2ReadCount", "minimap2_PIRA_CopyNumberEstimate") %>%
+           "minimap2ReadCount", "PIRA_CopyNumberEstimate") %>%
+    ## rename the minimap2 PCN estimate column for the merge.
+    rename(minimap2_PIRA_CopyNumberEstimate = PIRA_CopyNumberEstimate) %>%
         ## IMPORTANT: only examine plasmids.
     filter(SeqType == "plasmid")
 
@@ -955,9 +959,14 @@ PCN.benchmark.metadata.df <- full.PIRA.estimates %>%
 
 ## now get the breseq coverage results for the benchmarking genomes.
 low.PCN.breseq.summary.df <- read.csv("../results/breseq-low-PCN-benchmark-estimates.csv") %>%
+    ## handle the case where mean.coverage from breseq is in square brackets.
+    ## this requires trimming and explicit conversion to numeric.
+    mutate(mean_coverage = str_replace(mean_coverage,"\\[|\\]", "")) %>%
+    mutate(mean_coverage = as.numeric(mean_coverage)) %>%
     left_join(PCN.benchmark.metadata.df) %>%
     ## remove rows with missing coverage
     filter(!is.na(mean_coverage))
+
 
 ## make a separate df with a column for the coverage for the longest replicon in each genome
 low.PCN.breseq.chromosomal.coverage.df <- low.PCN.breseq.summary.df %>%
@@ -1188,7 +1197,7 @@ binned.PIRA.PCN.estimate.summary <- PIRA.PCN.estimates %>%
     )
 
 ## write this summary to disk.
-write.csv(binned.PIRA.PCN.estimate.summary, "../results/S3Data-PIRA-PCN-Kbp-bin-summary.csv", quote=FALSE, row.names=FALSE)
+write.csv(binned.PIRA.PCN.estimate.summary, "../results/S2Data-PIRA-PCN-Kbp-bin-summary.csv", quote=FALSE, row.names=FALSE)
 
 ################################################################################
 ## Supplementary Data File 4.
@@ -1259,7 +1268,7 @@ clustered.plasmid.summary <- PIRA.PCN.estimates %>%
     )
 
 ## write this summary to disk.
-write.csv(clustered.plasmid.summary, "../results/S4Data-Size-clustered-plasmid-summary.csv", quote=FALSE, row.names=FALSE)
+write.csv(clustered.plasmid.summary, "../results/S3Data-Size-clustered-plasmid-summary.csv", quote=FALSE, row.names=FALSE)
 
 ################################################################################
 ## The data is best fit by piecewise regression, revealing a scaling law between length and copy number.
