@@ -782,9 +782,9 @@ full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.est
     ## which is probably good enough.
     filter(replicon_length > 1000)
 
-## 4,512 genomes in the final PCN dataset.
+## 4,834 genomes in the final PCN dataset.
 length(unique(full.PIRA.estimates$AnnotationAccession))
-## 11,338 plasmids in the final PCN dataset.
+## 12,006 plasmids in the final PCN dataset.
 nrow(filter(full.PIRA.estimates, SeqType=="plasmid"))
 
 ## write the normalized data to disk.
@@ -2105,7 +2105,8 @@ Fig2B_base <- noncoding.fraction.data %>%
         axis.text.y  = element_text(size=11)) +
     ## legend settings.
     theme(legend.position = "bottom") +
-    guides(color = guide_legend(title = "replicon type")) +
+    ## make the points in the legend larger.
+    guides(color = guide_legend(title = "replicon type", override.aes = list(size = 5))) +
     geom_smooth(
         data = Fig2B.mean.noncoding.fraction.per.length,
         linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
@@ -2288,7 +2289,8 @@ Fig3A_base <- metabolic.gene.plasmid.and.chromosome.data %>%
         linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE) +
     ## legend settings.
     theme(legend.position = "bottom") +
-    guides(color = guide_legend(title = "replicon type"))
+    ## make the points in the legend larger.
+    guides(color = guide_legend(title = "replicon type", override.aes = list(size = 5)))
 
 ## Get the legend.
 Fig3_legend <- get_legend2(Fig3A_base)
