@@ -703,8 +703,8 @@ metabolic.genes.in.chromosomes <- chromosome.proteins.in.KEGG.metabolism %>%
 CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     ## make the dataframe compatible with replicon.annotation.data,
     mutate(NCBI_Nucleotide_Accession = str_remove(SeqID, "N(C|Z)_")) %>%
-    ## and join.
-    left_join(replicon.annotation.data) %>%
+    ## and right join to replicon.annotation.data to get rid of odd sequences.
+    right_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths()
 
