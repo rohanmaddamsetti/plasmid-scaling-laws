@@ -568,7 +568,6 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
         xlab("log10(length)") +
         ylab("log10(metabolic genes)") +
         theme_classic() +
-        guides(color = "none") +
         theme(strip.background = element_blank()) +
         theme(
             axis.title.x = element_text(size=11),
@@ -2088,7 +2087,7 @@ Fig2B.mean.noncoding.fraction.per.length <- noncoding.fraction.data %>%
 
 
 ## now make Figure 2B.
-Fig2B <- noncoding.fraction.data %>%
+Fig2B_base <- noncoding.fraction.data %>%
     ggplot(
         aes(
             x = log10(replicon_length),
@@ -2104,9 +2103,18 @@ Fig2B <- noncoding.fraction.data %>%
         axis.title.y = element_text(size=11),
         axis.text.x  = element_text(size=11),
         axis.text.y  = element_text(size=11)) +
-        geom_smooth(
+    ## legend settings.
+    theme(legend.position = "bottom") +
+    guides(color = guide_legend(title = "replicon type")) +
+    geom_smooth(
         data = Fig2B.mean.noncoding.fraction.per.length,
         linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
+
+## Get the legend.
+Fig2_legend <- get_legend2(Fig2B_base)
+
+## remove the legend from Figure 2B.
+Fig2B <- Fig2B_base + guides(color = "none")
 
 ## Fig 2C: show generality over ecology.
 Fig2C <- CDS.rRNA.fraction.data %>%
@@ -2123,11 +2131,13 @@ Fig2C <- CDS.rRNA.fraction.data %>%
 ## Now put together the complete Figure 2.
 Fig2 <- plot_grid(
     plot_grid(
+        plot_grid(
         Fig2A, Fig2B, rel_heights=c(3,2), nrow=2, labels=c('A','B')
-    ), Fig2C, labels=c("",'C'), nrow=1, rel_widths=c(1,1.5))
+        ), Fig2C, labels=c("",'C'), nrow=1, rel_widths=c(1,1.5)),
+    Fig2_legend, nrow=2, rel_heights=c(1,0.1))
 
 ## save the plot.
-ggsave("../results/Fig2.pdf", Fig2, height=5.325, width=7.1)
+ggsave("../results/Fig2.pdf", Fig2, height=5.9, width=7.1)
 
 ## Save Source Data for Figure 2AC.
 write.csv(CDS.rRNA.fraction.data, "../results/Source-Data/Fig2AC-Source-Data.csv", quote=FALSE, row.names=FALSE)
@@ -2270,13 +2280,21 @@ Fig3.mean.metabolic.genes.per.length <-  metabolic.gene.plasmid.and.chromosome.d
     mutate(log10_metabolic_protein_count = log10(metabolic_protein_count))
 
 ## Fig3A: show the combined plot
-Fig3A <- metabolic.gene.plasmid.and.chromosome.data %>%
+Fig3A_base <- metabolic.gene.plasmid.and.chromosome.data %>%
     make_metabolic_scaling_base_plot() +
     geom_smooth(
         ##data = Fig3.mean.metabolic.genes.per.length,
         data = Fig3.mean.length.per.metabolic.gene.table,
-        linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
-   
+        linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE) +
+    ## legend settings.
+    theme(legend.position = "bottom") +
+    guides(color = guide_legend(title = "replicon type"))
+
+## Get the legend.
+Fig3_legend <- get_legend2(Fig3A_base)
+
+## remove the legend from Figure 3A.
+Fig3A <- Fig3A_base + guides(color = "none")
 
 ## Fig3B: show generality over ecology.
 Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
@@ -2285,11 +2303,15 @@ Fig3B <- metabolic.gene.plasmid.and.chromosome.data %>%
         ##data = Fig3.mean.metabolic.genes.per.length,
         data = Fig3.mean.length.per.metabolic.gene.table,
         linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE) +
-    facet_wrap(.~Annotation, nrow=3)
+    facet_wrap(.~Annotation, nrow=3) +
+    guides(color = "none")
 
-Fig3 <- plot_grid(Fig3A, Fig3B, labels = c('A', 'B'))
+Fig3 <- plot_grid(
+    plot_grid(Fig3A, Fig3B, labels = c('A', 'B')),
+    Fig3_legend, nrow=2, rel_heights=c(1,0.1))
+
 ## save the plot.
-ggsave("../results/Fig3.pdf", Fig3, height=4, width=7.1)
+ggsave("../results/Fig3.pdf", Fig3, height=4.2, width=7.1)
 
 ## Save Source Data for Figure 3.
 write.csv(metabolic.gene.plasmid.and.chromosome.data, "../results/Source-Data/Fig3-Source-Data.csv", quote=FALSE, row.names=FALSE)
