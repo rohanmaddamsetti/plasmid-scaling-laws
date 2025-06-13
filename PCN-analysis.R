@@ -512,7 +512,10 @@ make_CDS_scaling_base_plot <- function(CDS.fraction.data) {
             axis.title.x = element_text(size=11),
             axis.title.y = element_text(size=11),
             axis.text.x  = element_text(size=11),
-            axis.text.y  = element_text(size=11))
+            axis.text.y  = element_text(size=11)) +
+        ## make the colors more legible.
+        scale_color_manual(values=c("chromosome" = "#00BA38", "megaplasmid" = "#F8766D", "plasmid" = "#619CFF"))
+    
 }
 
 
@@ -533,7 +536,10 @@ make_normalized_CDS_base_plot <- function(CDS.fraction.data) {
             axis.title.x = element_text(size=11),
             axis.title.y = element_text(size=11),
             axis.text.x  = element_text(size=11),
-            axis.text.y  = element_text(size=11))
+            axis.text.y  = element_text(size=11)) +
+        ## make the colors more legible.
+        scale_color_manual(values=c("chromosome" = "#00BA38", "megaplasmid" = "#F8766D", "plasmid" = "#619CFF"))
+    
 }
 
 
@@ -574,6 +580,9 @@ make_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.and.chromoso
             axis.title.y = element_text(size=11),
             axis.text.x  = element_text(size=11),
             axis.text.y  = element_text(size=11)) +
+        ## make the colors more legible.
+        scale_color_manual(values=c("chromosome" = "#00BA38", "megaplasmid" = "#F8766D", "plasmid" = "#619CFF")) +
+        ## plot chromosome scaling.
         geom_line(data = chromosome.metabolic.scaling.fit.df,
                   color = 'black', linetype = "solid", linewidth=0.5)
 }
@@ -596,7 +605,9 @@ make_normalized_metabolic_scaling_base_plot <- function(metabolic.gene.plasmid.a
             axis.title.x = element_text(size=11),
             axis.title.y = element_text(size=11),
             axis.text.x  = element_text(size=11),
-            axis.text.y  = element_text(size=11))
+            axis.text.y  = element_text(size=11)) +
+        ## make the colors more legible.
+        scale_color_manual(values=c("chromosome" = "#00BA38", "megaplasmid" = "#F8766D", "plasmid" = "#619CFF"))
 }
 
 
@@ -789,13 +800,6 @@ nrow(filter(full.PIRA.estimates, SeqType=="plasmid"))
 
 ## write the normalized data to disk.
 write.csv(full.PIRA.estimates, "../results/S1Data-PIRA-PCN-estimates-with-normalization.csv", quote=FALSE, row.names=FALSE)
-
-
-## TODO: fix upstream annotation so I don't have to do this filtering to exclude NA Annotations.
-## TODO: FIGURE OUT WHY 1946 GENOMES ARE NOT ANNOTATED RIGHT.
-## This is actually not critical for the PCN analysis, but would be nice to have this fixed.
-unannotated.full.PIRA.estimates <- full.PIRA.estimates %>%
-    filter(is.na(Annotation) | (Annotation == "blank") | Annotation == "NA")
 
 
 ################################################################################
@@ -1223,7 +1227,7 @@ very.large.plasmids <- large.plasmids %>%
 
 very.large.plasmids.by.mobility <- very.large.plasmids %>%
     count(PredictedMobility)
-## Very large plasmids: these are chromids.
+## Very large plasmids: these are megaplasmids.
 ##       conjugative  29
 ##       mobilizable  28
 ##   non-mobilizable 101
@@ -1433,6 +1437,8 @@ write.csv(PIRA.PCN.estimates, "../results/Source-Data/Fig1BC-Source-Data.csv", q
 ## Supplementary Figure S2.
 ## Show summary statistics on a version of Figure 1B for Reviewer 1.
 S2Fig <- Fig1B_without_marginals +
+    ## make the points in the legend larger.
+    guides(color = guide_legend(override.aes = list(size = 5))) +
     geom_line(data = binned.PIRA.PCN.estimate.summary,
         aes(
             x = mean_log10_normalized_replicon_length,
@@ -1460,7 +1466,7 @@ S2Fig <- Fig1B_without_marginals +
         color='blue')
 
 ## make the figure for Reviewer 1.
-ggsave("../results/S2Fig.pdf", S2Fig, height=4.5, width=4.5)
+ggsave("../results/S2Fig.pdf", S2Fig, height=5, width=5)
 
 ################################################################################
 ## Supplementary Figure S4. Break down the result in Figure 1 
@@ -2103,10 +2109,12 @@ Fig2B_base <- noncoding.fraction.data %>%
         axis.title.y = element_text(size=11),
         axis.text.x  = element_text(size=11),
         axis.text.y  = element_text(size=11)) +
+    ## make the colors more legible.
+    scale_color_manual(values=c("chromosome" = "#00BA38", "megaplasmid" = "#F8766D", "plasmid" = "#619CFF")) +
     ## legend settings.
     theme(legend.position = "bottom") +
     ## make the points in the legend larger.
-    guides(color = guide_legend(title = "replicon type", override.aes = list(size = 5))) +
+    guides(color = guide_legend(reverse = TRUE, title = "replicon type", override.aes = list(size = 5))) +
     geom_smooth(
         data = Fig2B.mean.noncoding.fraction.per.length,
         linewidth = 0.8, alpha = 0.2, color = "dark gray", se=FALSE)
@@ -2290,7 +2298,7 @@ Fig3A_base <- metabolic.gene.plasmid.and.chromosome.data %>%
     ## legend settings.
     theme(legend.position = "bottom") +
     ## make the points in the legend larger.
-    guides(color = guide_legend(title = "replicon type", override.aes = list(size = 5)))
+    guides(color = guide_legend(reverse = TRUE, title = "replicon type", override.aes = list(size = 5)))
 
 ## Get the legend.
 Fig3_legend <- get_legend2(Fig3A_base)
@@ -2355,7 +2363,8 @@ S10FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other\ntaxonomic groups") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicGroup, nrow = 1) +
-    ggtitle("Taxonomic groups")
+    ggtitle("Taxonomic groups") +
+    guides(color = "none")
 
 ## examining taxonomic subgroups
 S10FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
@@ -2366,7 +2375,8 @@ S10FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
         "TaxonomicSubgroup", "All other\ntaxonomic subgroups") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup, ncol=6) +
-    ggtitle("Taxonomic subgroups")
+    ggtitle("Taxonomic subgroups") +
+    guides(color = "none")
 
 S10FigAB <- plot_grid(S10FigA, S10FigB, labels=c("A","B"),ncol =1, rel_heights=c(1.25,2))
 
@@ -2376,7 +2386,8 @@ S10FigC <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=5) +
-    ggtitle("Microbial genera")
+    ggtitle("Microbial genera") +
+    guides(color = "none")
 
 S10Fig <- plot_grid(S10FigAB, S10FigC, labels = c("","C"), ncol=1, rel_heights=c(2,3.5))
 
@@ -2395,6 +2406,7 @@ S12Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
     scale_color_manual(values=c("#00BA38","#619CFF")) +
+    guides(color = "none") +
     facet_wrap(. ~ Genus, ncol=6)
 ## save the plot.
 ggsave("../results/S12Fig.pdf", S12Fig, height=10, width=8)
@@ -2459,6 +2471,8 @@ S11Fig <- plasmid.DNA.content.data %>%
     geom_point(size=0.5,alpha=0.8) +
     theme_cowplot() + ## for 7pt margins
     scale_color_manual(values=c("#fc8d62","#66c2a5","#8da0cb"), name="plasmid mobility") +
+    ## make the points in the legend larger.
+    guides(color = guide_legend(override.aes = list(size = 5))) +
     xlab("log10(normalized length)") +
     ylab("log10(normalized plasmid DNA content)") +
     geom_line(data = normalized.segmented.DNA.fit.df, color = 'maroon') +
