@@ -2059,12 +2059,12 @@ multicopy10.PCN.count/PCN.count
 
 ## Fig 2A: show the combined plot
 Fig2A <- CDS.rRNA.fraction.data %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
-    ## that we don't accidentally filter out chromids when selecting plasmids.
+    ## that we don't accidentally filter out megaplasmids when selecting plasmids.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType)) %>%
+               "megaplasmid", SeqType)) %>%
     make_CDS_scaling_base_plot()
 
 ## Fig 2B: noncoding fraction analysis.
@@ -2073,7 +2073,7 @@ noncoding.fraction.data <- CDS.rRNA.fraction.data %>%
     mutate(noncoding_fraction = noncoding_length / replicon_length) %>%
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType))
+               "megaplasmid", SeqType))
 
 ## make a dataframe to add the trace line for Fig 2B.
 Fig2B.mean.noncoding.fraction.per.length <- noncoding.fraction.data %>%
@@ -2119,12 +2119,12 @@ Fig2B <- Fig2B_base + guides(color = "none")
 
 ## Fig 2C: show generality over ecology.
 Fig2C <- CDS.rRNA.fraction.data %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
-    ## that we don't accidentally filter out chromids when selecting plasmids.
+    ## that we don't accidentally filter out megaplasmids when selecting plasmids.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType)) %>%
+               "megaplasmid", SeqType)) %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(.~Annotation)
 
@@ -2153,12 +2153,12 @@ write.csv(noncoding.fraction.data, "../results/Source-Data/Fig2B-Source-Data.csv
 ## Break down by taxonomic group.
 S9FigA <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other\ntaxonomic groups") %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
-    ## that we don't accidentally filter out chromids when selecting plasmids.
+    ## that we don't accidentally filter out megaplasmids when selecting plasmids.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType)) %>%
+               "megaplasmid", SeqType)) %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicGroup, ncol=6) +
     ## improve the y-axis labels.
@@ -2170,12 +2170,12 @@ S9FigB <- CDS.rRNA.fraction.data %>%
     ## put new lines after slasks to improve the aspect ratio of the subpanels.
     mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicSubgroup", "All other\ntaxonomic subgroups") %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
-    ## that we don't accidentally filter out chromids when selecting plasmids.
+    ## that we don't accidentally filter out megaplasmids when selecting plasmids.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType)) %>%
+               "megaplasmid", SeqType)) %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicSubgroup, ncol=6) +
     ## improve the y-axis labels.
@@ -2185,12 +2185,12 @@ S9FigB <- CDS.rRNA.fraction.data %>%
 ## Break down by genus.
 S9FigC <- CDS.rRNA.fraction.data %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
-    ## that we don't accidentally filter out chromids when selecting plasmids.
+    ## that we don't accidentally filter out megaplasmids when selecting plasmids.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType)) %>%
+               "megaplasmid", SeqType)) %>%
     make_CDS_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=10) +
     ## improve the y-axis labels.
@@ -2212,7 +2212,7 @@ ggsave("../results/S9FigC.pdf", S9FigC_page, width=13,height=15, limitsize=FALSE
 ## values created by a plasmid/chromosome not being included in these data.
 
 ## IMPORTANT: removing plasmids longer than 500kB removes the scaling law.
-## Therefore, the metabolic.scaling law largely holds for chromids and chromosomes.
+## Therefore, the metabolic.scaling law largely holds for megaplasmids and chromosomes.
 
 metabolic.gene.plasmid.data <- plasmid.length.data %>%
     left_join(metabolic.genes.in.plasmids) %>%
@@ -2238,10 +2238,10 @@ metabolic.gene.plasmid.and.chromosome.data <- metabolic.gene.plasmid.data %>%
     full_join(metabolic.gene.chromosome.data) %>%
     ## TODO: filter upstream Annotation so I don't need to do this ad hoc filtering here.
     filter(!is.na(Annotation)) %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB.
+    ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType)) %>%
+               "megaplasmid", SeqType)) %>%
     ## The next two lines is for convenience when plotting the emergent metabolic scaling fit.
     mutate(log10_replicon_length = log10(replicon_length)) %>%
     mutate(log10_metabolic_protein_count = log10(metabolic_protein_count))
@@ -2266,7 +2266,7 @@ chromosome.metabolic.scaling.model <- lm(
 summary(chromosome.metabolic.scaling.model)
 
 
-## make a table of the mean lengths per metabolic gene for plasmids & chromids for Figure 3.
+## make a table of the mean lengths per metabolic gene for plasmids & megaplasmids for Figure 3.
 Fig3.mean.length.per.metabolic.gene.table <- metabolic.gene.plasmid.and.chromosome.data %>%
     filter(SeqType != "chromosome") %>%
     group_by(Annotation, log10_metabolic_protein_count) %>%
@@ -2345,13 +2345,13 @@ ribosomal.RNA.plot
 
 ################################################################################
 ## Supplementary Figure S10. Break down the result in Figure 4 by genus
-## to show universality of the CDS scaling relationship among genera containing chromids.
-genera.containing.chromids <- filter(metabolic.gene.plasmid.and.chromosome.data, SeqType == "chromid")$Genus
+## to show universality of the CDS scaling relationship among genera containing megaplasmids.
+genera.containing.megaplasmids <- filter(metabolic.gene.plasmid.and.chromosome.data, SeqType == "megaplasmid")$Genus
 
 
 ## examining taxonomic groups 
 S10FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter(Genus %in% genera.containing.chromids) %>%
+    filter(Genus %in% genera.containing.megaplasmids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("TaxonomicGroup", "All other\ntaxonomic groups") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ TaxonomicGroup, nrow = 1) +
@@ -2359,7 +2359,7 @@ S10FigA <- metabolic.gene.plasmid.and.chromosome.data %>%
 
 ## examining taxonomic subgroups
 S10FigB <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter(Genus %in% genera.containing.chromids) %>%
+    filter(Genus %in% genera.containing.megaplasmids) %>%
     ## put new lines after slasks to improve the aspect ratio of the subpanels.
     mutate(TaxonomicSubgroup = str_replace_all(TaxonomicSubgroup, "/", "/\n")) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column(
@@ -2372,7 +2372,7 @@ S10FigAB <- plot_grid(S10FigA, S10FigB, labels=c("A","B"),ncol =1, rel_heights=c
 
 ## Break down by genus, only showing genera containing megaplasmids.
 S10FigC <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter(Genus %in% genera.containing.chromids) %>%
+    filter(Genus %in% genera.containing.megaplasmids) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
     facet_wrap(. ~ Genus, ncol=5) +
@@ -2391,7 +2391,7 @@ ggsave("../results/S10Fig.pdf", S10Fig, height=14, width=8.5,limitsize=FALSE)
 ## as a control, examine those genera that don't contain megaplasmids.
 ## we see the same trend, but it is less obvious.
 S12Fig <- metabolic.gene.plasmid.and.chromosome.data %>%
-    filter(!(Genus %in% genera.containing.chromids)) %>%
+    filter(!(Genus %in% genera.containing.megaplasmids)) %>%
     filter.and.group.together.smaller.groups.in.the.correlate.column("Genus", "All other genera") %>%
     make_metabolic_scaling_base_plot() +
     scale_color_manual(values=c("#00BA38","#619CFF")) +
@@ -2422,12 +2422,12 @@ plasmid.DNA.content.data <- full.PIRA.estimates %>%
     ## create a column indicating how plasmids cluster by length.
     ## IMPORTANT: have to remove chromosomes before running this function.
     cluster_PIRA.PCN.estimates_by_plasmid_length() %>%
-    ## IMPORTANT: annotate chromids as plasmids that are longer than 500kB,
+    ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
-    ## that we don't accidentally filter out chromids when selecting plasmids.
+    ## that we don't accidentally filter out megaplasmids when selecting plasmids.
     mutate(SeqType = ifelse(
                SeqType == "plasmid" & replicon_length > PLASMID_LENGTH_THRESHOLD,
-               "chromid", SeqType))
+               "megaplasmid", SeqType))
 
 
 ## We will add a segmented regression line to S10Fig.
