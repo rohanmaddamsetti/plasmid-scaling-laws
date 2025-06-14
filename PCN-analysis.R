@@ -1326,7 +1326,7 @@ segmented.normalized.PCN.model <- segmented(
     seg.Z = ~log10_normalized_replicon_length,
     psi = list(log10_normalized_replicon_length = -1.5))
 
-## the breakpoint is at -1.761. 10^-1.761 = 1.73% of the length of the chromosome.
+## the breakpoint is at -1.735. 10^-1.735 = 1.84% of the length of the chromosome.
 summary(segmented.normalized.PCN.model)
 
 ## save the segmented regression fit as a dataframe.
