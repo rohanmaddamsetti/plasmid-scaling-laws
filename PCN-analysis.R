@@ -2,12 +2,6 @@
 ## analyze the plasmid copy number results made by
 ## PCN-pipeline.py.
 
-## CRITICAL TODO DURING REVISION:
-## examine NA values in PIRACopyNumber in PIRA.vs.naive.themisto.df,
-## when the value is defined for ThemistoNaiveCopyNumber.
-## by definition this should not happen.
-## examine the correlation coefficient calculations and work backwards from there.
-
 ## IMPORTANT: In Figures 2 and 3,
 ## I annotate megaplasmid/chromids to differentiate them from plasmids, based on size.
 ## The metabolic scaling law emerges in chromids.
@@ -718,25 +712,6 @@ CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths()
 
-names(CDS.rRNA.fraction.data)
-# [1] "AnnotationAccession"        "SeqID"                     
-# [3] "SeqLength"                  "CodingLength"              
-# [5] "coding_fraction"            "CDS_count"                 
-# [7] "summed_CDS_length"          "summed_CDS_fraction"       
-# [9] "rRNA_5S_count"              "rRNA_5S_length"            
-#[11] "rRNA_5S_fraction"           "rRNA_16S_count"            
-#[13] "rRNA_16S_length"            "rRNA_16S_fraction"         
-#[15] "rRNA_23S_count"             "rRNA_23S_length"           
-#[17] "rRNA_23S_fraction"          "total_rRNA_count"          
-#[19] "total_rRNA_length"          "total_rRNA_fraction"       
-#[21] "NCBI_Nucleotide_Accession"  "Organism"                  
-#[23] "Strain"                     "TaxonomicGroup"            
-#[25] "TaxonomicSubgroup"          "SeqType"                   
-#[27] "replicon_length"            "host"                      
-#[29] "isolation_source"           "Annotation"                
-#[31] "Genus"                      "max_replicon_length"       
-#[33] "normalized_replicon_length" 
-
 ################################################################################
 ## Get the PCN estimates. These are the main data for this paper.
 ## IMPORTANT NOTE: We only have PCN estimates for ~10,000 plasmids in ~4,500 genomes,
@@ -770,8 +745,6 @@ no.multiread.naive.themisto.estimates <- read.csv("../results/naive-themisto-PCN
 
   
 ## now merge the datasets together.
-## CRITICAL TODO: fix upstream annotation so that we don't have any
-## "NA" or "blank" Annotation genomes in full.PIRA.estimates.
 full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.estimates) %>%
     ## rename columns to so that we can compare estimates for benchmarking.
     rename(
@@ -858,7 +831,29 @@ PIRA.vs.naive.themisto.df <- naive.themisto.PCN.estimates %>%
     ## color points with PIRA PCN < 0.8
     mutate(PIRA_low_PCN = ifelse(PIRACopyNumber< 0.8, TRUE, FALSE))
 
-## 106 additional plasmids pass the read threshold by using PIRA.
+
+## some quick quality control:
+## examine NA values in PIRACopyNumber in PIRA.vs.naive.themisto.df,
+## when the value is defined for ThemistoNaiveCopyNumber.
+## by definition this should not happen.
+## examine the correlation coefficient calculations and work backwards from there.
+missing.PIRA.values.df <- PIRA.vs.naive.themisto.df %>%
+    filter(is.na(PIRACopyNumber))
+
+## by inspection, a small number of cases come from genomes that have
+## problematic misannotation (such as plasmids that are actually chromosomes).
+sufficient.read.missing.PIRA.values.df <- missing.PIRA.values.df %>%
+    filter(InsufficientReads == FALSE)
+
+## majority are plasmids with insufficient reads; looks like these failed earlier
+## quality control checks and so PIRA was not used to calculate their PCN.
+insufficient.read.missing.PIRA.values.df <- missing.PIRA.values.df %>%
+    filter(InsufficientReads == TRUE)
+
+
+## OK-- back to the actual analysis!!
+
+## 103 additional plasmids pass the read threshold by using PIRA.
 PIRA.vs.naive.themisto.df %>%
     filter(ThemistoNaiveReadCount < MIN_READ_COUNT) %>%
     filter(PIRAReadCount > MIN_READ_COUNT) %>%
