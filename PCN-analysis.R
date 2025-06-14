@@ -263,6 +263,22 @@ remove.genomes.with.bad.chromosomes <- function(full.PIRA.estimates) {
 }
 
 
+remove.genomes.with.no.PIRA.plasmid.estimates <- function(full.PIRA.estimates) {
+    ## remove genomes that have PIRA estimates for the chromosome, but
+    ## not for any plasmids after data filtering.
+
+    PIRA.PCN.estimates <- full.PIRA.estimates %>%
+        filter(SeqType == "plasmid")
+
+    genomes.with.plasmids <- unique(
+        PIRA.PCN.estimates$AnnotationAccession
+    )
+    ## only keep genomes with plasmids with PIRA estimates.
+    full.PIRA.estimates %>%
+        filter(AnnotationAccession %in% genomes.with.plasmids)
+}
+
+
 ## calculate the number of plasmids in each ecological category.
 make.plasmid.totals.col <- function(PIRA.PCN.estimates) {
     plasmid.totals <- PIRA.PCN.estimates %>%
@@ -712,9 +728,15 @@ CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     ## add a column for nomalized plasmid lengths.
     normalize.plasmid.lengths()
 
+## get counts of genomes and plasmids in CDS.rRNA.fraction.data.
+length(unique(CDS.rRNA.fraction.data$AnnotationAccession)) ## 18253 genomes
+
+nrow(filter(CDS.rRNA.fraction.data, SeqType=="plasmid")) ## 48814 plasmids
+
+
 ################################################################################
 ## Get the PCN estimates. These are the main data for this paper.
-## IMPORTANT NOTE: We only have PCN estimates for ~10,000 plasmids in ~4,500 genomes,
+## IMPORTANT NOTE: We only have PCN estimates for ~12,000 plasmids in ~4,600 genomes,
 ## for which we can find linked short-read data in the NCBI Sequencing Read Archive (SRA).
 ## This is a subset of the genomes and plasmids considered in this paper.
 
@@ -764,9 +786,12 @@ full.PIRA.estimates <- full_join(no.multiread.naive.themisto.estimates, PIRA.est
     ## some of these have "unlocalized" or "unplaced" in the Definition in the Genbank annotation,
     ## if if they come from Complete Genomes. Right now I remove all sequences < 1000bp in length,
     ## which is probably good enough.
-    filter(replicon_length > 1000)
+    filter(replicon_length > 1000) %>%
+    ## Find and remove genomes that don't have any PCN estimates, after all this filtering.
+    remove.genomes.with.no.PIRA.plasmid.estimates()
 
-## 4,834 genomes in the final PCN dataset.
+
+## 4,644 genomes in the final PCN dataset.
 length(unique(full.PIRA.estimates$AnnotationAccession))
 ## 12,006 plasmids in the final PCN dataset.
 nrow(filter(full.PIRA.estimates, SeqType=="plasmid"))
@@ -1203,17 +1228,17 @@ write.csv(binned.PIRA.PCN.estimate.summary, "../results/S2Data-PIRA-PCN-Kbp-bin-
 
 small.plasmids <- PIRA.PCN.estimates %>%
     filter(Size_Cluster == "Cluster_2")
-## mean length of small plasmids is 6433 bp.
+## mean length of small plasmids is 6579 bp.
 mean(small.plasmids$replicon_length)
-## mean PCN of small plasmids is 28.4.
+## mean PCN of small plasmids is 28.1.
 mean(small.plasmids$PIRACopyNumber)
 
 
 large.plasmids <- PIRA.PCN.estimates %>%
     filter(Size_Cluster == "Cluster_1")
-## mean length of large plasmids is 137704 bp.
+## mean length of large plasmids is 141607 bp.
 mean(large.plasmids$replicon_length)
-## mean PCN of large plasmids is 1.79.
+## mean PCN of large plasmids is 1.89.
 mean(large.plasmids$PIRACopyNumber)
 
 ## examine the tail of very large plasmids that are longer than 500Kbp.
@@ -1222,19 +1247,20 @@ very.large.plasmids <- large.plasmids %>%
 
 very.large.plasmids.by.mobility <- very.large.plasmids %>%
     count(PredictedMobility)
+
 ## Very large plasmids: these are megaplasmids.
-##       conjugative  29
+##       conjugative  31
 ##       mobilizable  28
-##   non-mobilizable 101
-##              <NA>  31
+##   non-mobilizable 103
+##              <NA>  67
 
 ## get the percentages / numbers of predicted conjugative plasmids in the large.plasmids cluster.
 conjugative.plasmids <- PIRA.PCN.estimates %>%
     filter(PredictedMobility == "conjugative")
 
-## 3126 conjugative plasmids
+## 3203 conjugative plasmids
 nrow(conjugative.plasmids)
-## 3103 conjugative plasmids out of 3126 (99.3% are in the large cluster).
+## 3181 conjugative plasmids out of 3203 (99.3% are in the large cluster).
 nrow(filter(conjugative.plasmids, Size_Cluster == "Cluster_1"))
 
 ## Report summary statistics for the two clusters of large plasmids and small plasmids.
@@ -1283,7 +1309,7 @@ segmented.PCN.model <- segmented(
     seg.Z = ~log10_replicon_length,
     psi = list(log10_replicon_length = 5))
 
-## the breakpoint is at 4.75. 10^4.75 = 56,234bp.
+## the breakpoint is at 4.753. 10^4.753 = 56,624bp.
 ## So plasmids above ~60Kbp have a flatter slope.
 summary(segmented.PCN.model)
 
@@ -1541,8 +1567,10 @@ analyze.within.genome.correlations <- function(MIN_PLASMIDS_PER_GENOME=2, df=PIR
     return(within.genome.correlation.data.df)
 }
 
-
+## analyze genomes with 2 or more plasmids.
 within.genome.correlation.data2 <- analyze.within.genome.correlations(2)
+
+##analyze genomes with 3 or more plasmids.
 within.genome.correlation.data3 <- analyze.within.genome.correlations(3)
 
 ## Reviewer 2 asked to look more closely at the genomes that show a positive correlation.
@@ -1600,18 +1628,18 @@ max.and.min.plasmid.lengths <- max.plasmid.lengths %>%
     inner_join(min.plasmid.lengths) %>%
     inner_join(max.PCNs)
 
-## 11388 plasmids
+## 12,006 plasmids
 PIRA.PCN.estimates %>% nrow()
 
-## these 11,388 plasmids are found in 4,317 genomes.
+## these 12,006 plasmids are found in 4,644 genomes.
 PIRA.PCN.estimates %>%
     count(AnnotationAccession) %>%
     nrow()
 
-##4317 genomes containing plasmids
+##4,644 genomes containing plasmids
 nrow(max.and.min.plasmid.lengths)
 
-## only 1688 of these have plasmids found by themselves: 1688/4317 = 39.1%
+## only 1834 of these have plasmids found by themselves: 1834/4644 = 39.5%
 max.and.min.plasmid.lengths %>%
     filter(max_replicon_length == min_replicon_length) %>%
     nrow()
@@ -1620,23 +1648,23 @@ max.and.min.plasmid.lengths %>%
 max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids <- max.and.min.plasmid.lengths %>%
     filter(max_PCN > 10)
 
-##1314 genomes containing multicopy plasmids here
+##1440 genomes containing multicopy plasmids here
 nrow(max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids)
 
-## only 159 are found by themselves: 159/1314 = 12%
+## only 184 are found by themselves: 184/1440 = 13%
 max.and.min.plasmid.lengths.filtered.for.multicopy.plasmids %>%
     filter(max_replicon_length == min_replicon_length) %>%
     nrow()
 
 ## This is obviously statistically significant.
-binom.test(x=159,n=1314, p = (1688/4317))
+binom.test(x=184,n=1440, p = (1834/4644))
 
 ################################################################################
 ## Examination of Plasmid length and copy number across genetic correlates
 ## from plasmid typing metadata.
 
 ## Get the MOB-Typer results that Hye-in generated.
-## This has 10,261 annotated plasmids with PCN data.
+## This has 12,006 annotated plasmids with PCN data.
 MOB.typed.PIRA.PCN.estimates <- PIRA.PCN.estimates %>%
     left_join(MOBTyper.results)
 
@@ -1688,7 +1716,7 @@ PIRA.PCN.for.Coluzzi2022.plasmid.metadata <- read.csv(
 ## Analyze PCN in context of the correlates in the Ares-Arroyo et al. (2023) paper.
 ## "Origins of transfer establish networks of functional dependencies for plasmid transfer by conjugation"
 ## I renamed the Plasmid column to SeqID by hand when reformatting, for the join to work.
-## I have PCN for 917 plasmids in these data.
+## I have PCN for 1034 plasmids in these data.
 PIRA.PCN.for.AresArroyo2023.data <- read.csv(
     "../data/Ares-Arroyo2023-SupplementaryData/reformatted_Table_S1.csv") %>%
     inner_join(PIRA.PCN.estimates)
@@ -1697,10 +1725,6 @@ PIRA.PCN.for.AresArroyo2023.data <- read.csv(
 ########################################
 ## Supplementary Figure S5.
 ## Plasmid length and copy number are conserved within plasmid taxonomic groups.
-
-## IMPORTANT TODO: there is a bug, in which there are plasmids with NA PredictedMobility
-## in the Acman and Redondo-Salvo panels, but not in any of the other panels.
-## This doesn't change any message or anything, but needs to be sorted out.
 
 ## Supplementary Figure S5ABC
 ## Cliques of plasmids in the Acman et al. (2020) plasmid similarity network
@@ -1979,16 +2003,16 @@ S8FigA <- PIRA.PCN.estimates %>%
 ## are low PCN (PCN < 1) and high PCN (PCN > 50) plasmids associated with any ecology?
 ## there is an enrichment of high PCN plasmids in human-impacted environments.
 
-## How many total plasmids? 11,338.
+## How many total plasmids? 12,006.
 PIRA.PCN.estimates %>%
     nrow()
 
-## How many plasmids have PCN < 1? 2,376.
+## How many plasmids have PCN < 1? 2,487.
 PIRA.PCN.estimates %>%
     filter(PIRACopyNumber < 1) %>%
     nrow()
 
-## How many plasmids have PCN >= 1? 8,962
+## How many plasmids have PCN >= 1? 9,519
 PIRA.PCN.estimates %>%
     filter(PIRACopyNumber >= 1) %>%
     nrow()
@@ -1997,10 +2021,7 @@ PIRA.PCN.estimates %>%
 ## calculate the fraction of low PCN plasmids in each category.
 ## Make Z-distributed confidence intervals for the fraction of isolates with
 ## PCN < 1.
-
-low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates) %>%
-    ## TODO: fix upstream annotation so I don't have to do this filtering.
-    filter(Annotation != "NA")
+low.PCN.plasmids.table <- make.lowPCN.table(PIRA.PCN.estimates)
 
 ## plot the confidence intervals to see if there is any enrichment of low PCN plasmids in any ecological category.
 S8FigB <- make.confint.figure.panel(
@@ -2012,11 +2033,7 @@ S8FigB <- make.confint.figure.panel(
 ## there is an enrichment of  PCN > 50 plasmids in human-impacted environments.
 ## Make Z-distributed confidence intervals for the fraction of isolates with
 ## PCN > 50.
-
-high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates) %>%
-    ## TODO: fix upstream annotation so I don't have to do this filtering.
-    filter(Annotation != "NA") %>%
-    filter(Annotation != "blank")
+high.PCN.plasmids.table <- make.highPCN.table(PIRA.PCN.estimates)
 
 ## plot the confidence intervals to see if there is any enrichment of high PCN plasmids in any ecological category.
 S8FigC <- make.confint.figure.panel(
@@ -2030,23 +2047,23 @@ ggsave("../results/S8Fig.pdf", S8Fig, height = 8, width = 5)
 
 ## calculate the total number of plasmids,
 ## and the number of plasmids with PCN < 1 and PCN > 50.
-PCN.count <- nrow(PIRA.PCN.estimates) ## 11,338 plasmids here
+PCN.count <- nrow(PIRA.PCN.estimates) ## 12,006 plasmids here
 PCN.count
 
-## There are 2376 plasmids with PCN < 1 in these data.
+## There are 2487 plasmids with PCN < 1 in these data.
 ## this is 21% of plasmids
 low.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber < 1) %>% nrow()
 low.PCN.count
 low.PCN.count/PCN.count
 
-## There are 527 plasmids with PCN > 50 in these data.
-## This is 4.6% of plasmids.
+## There are 537 plasmids with PCN > 50 in these data.
+## This is 4.5% of plasmids.
 high.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 50) %>% nrow()
 high.PCN.count
 high.PCN.count/PCN.count
 
-## There are 2434 plasmids with PCN > 10 in these data
-## This is 21.5% of plasmids.
+## There are 2588 plasmids with PCN > 10 in these data
+## This is 21.6% of plasmids.
 multicopy10.PCN.count <- PIRA.PCN.estimates %>% filter(PIRACopyNumber > 10) %>% nrow()
 multicopy10.PCN.count
 multicopy10.PCN.count/PCN.count
