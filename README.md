@@ -2,7 +2,7 @@
 
 
 ## Software requirements
-## Python 3.10+
+## Python 3.12+
 
 ## COMPUTATIONAL PROTOCOL
 
