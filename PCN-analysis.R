@@ -685,6 +685,10 @@ replicon.length.data <- read.csv("../results/replicon-lengths-and-protein-counts
 ## Get the length of each plasmid, and number of proteins on them.
 plasmid.length.data <- replicon.length.data %>%
     filter(SeqType == "plasmid") %>%
+    ## to keep consistency across all analyses, remove plasmids smaller than 1KBp.
+    filter(replicon_length > 1000) %>%
+    ## must be at least one protein-coding gene on the plasmids in this analysis.
+    filter(protein_count > 0) %>%
     ## replace prefixes, for merging in the mobility results.
     mutate(Plasmid = str_replace(SeqID, "N[CZ]_","")) %>%
     ## join the mobility results.
@@ -726,12 +730,22 @@ CDS.rRNA.fraction.data <- read.csv("../results/CDS-rRNA-fractions.csv") %>%
     ## and right join to replicon.annotation.data to get rid of odd sequences.
     right_join(replicon.annotation.data) %>%
     ## add a column for nomalized plasmid lengths.
-    normalize.plasmid.lengths()
+    normalize.plasmid.lengths() %>%
+    ## to keep consistency across all analyses, remove plasmids smaller than 1KBp.
+    filter(replicon_length > 1000) %>%
+    ## must be at least one protein-coding gene on the plasmids in this analysis.
+    ## I found 180 plasmids with no genes, before filtering.
+    ## after manually examining some cases, clear that the big plasmids 
+    ## almost certainly have genes-- just not annotated in the specific files
+    ## I downloaded-- sometimes genes present in the NCBI annotations
+    ## online on Genbank and RefSeq. So, remove these cases.
+    filter(CDS_count > 0)
+
 
 ## get counts of genomes and plasmids in CDS.rRNA.fraction.data.
 length(unique(CDS.rRNA.fraction.data$AnnotationAccession)) ## 18253 genomes
 
-nrow(filter(CDS.rRNA.fraction.data, SeqType=="plasmid")) ## 48814 plasmids
+nrow(filter(CDS.rRNA.fraction.data, SeqType=="plasmid")) ## 48569 plasmids
 
 
 ################################################################################
@@ -2077,6 +2091,9 @@ multicopy10.PCN.count/PCN.count
 
 ## Fig 2A: show the combined plot
 Fig2A <- CDS.rRNA.fraction.data %>%
+    ## there are 180 plasmids that have no annotated genes; many of these are likely
+    ## artifacts of the particular annotations I downloaded. Remove these 180 outliers.
+    filter(CDS_count > 0) %>%
     ## IMPORTANT: annotate megaplasmids as plasmids that are longer than 500kB,
     ## but we have to make these annotations right before we make the figure, so
     ## that we don't accidentally filter out megaplasmids when selecting plasmids.
